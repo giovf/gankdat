@@ -1,0 +1,44 @@
+# gankdat — https://gankdat.com
+# Crawlers welcome, AI crawlers included. Machine-readable surfaces:
+#   https://gankdat.com/llms.txt       LLM-oriented summary of the API
+#   https://gankdat.com/openapi.json   OpenAPI 3.1 spec
+#   https://gankdat.com/mcp            MCP server (Streamable HTTP)
+
+User-agent: *
+Disallow: /account
+Disallow: /v1/auth/
+
+# Explicitly welcome AI crawlers (same rules as everyone else).
+User-agent: GPTBot
+Disallow: /account
+Disallow: /v1/auth/
+
+User-agent: OAI-SearchBot
+Disallow: /account
+Disallow: /v1/auth/
+
+User-agent: ChatGPT-User
+Disallow: /account
+Disallow: /v1/auth/
+
+User-agent: ClaudeBot
+Disallow: /account
+Disallow: /v1/auth/
+
+User-agent: Claude-User
+Disallow: /account
+Disallow: /v1/auth/
+
+User-agent: PerplexityBot
+Disallow: /account
+Disallow: /v1/auth/
+
+User-agent: Google-Extended
+Disallow: /account
+Disallow: /v1/auth/
+
+User-agent: CCBot
+Disallow: /account
+Disallow: /v1/auth/
+
+Sitemap: https://gankdat.com/sitemap.xml

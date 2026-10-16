@@ -1,0 +1,13 @@
+{
+  "name": "gankdat-apify-uk-companies",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Apify actor: New UK Companies (Companies House) \u2014 incorporations this week via gankdat.com",
+  "scripts": {
+    "start": "node src/main.mjs"
+  },
+  "dependencies": {
+    "apify": "^3.4.0"
+  }
+}

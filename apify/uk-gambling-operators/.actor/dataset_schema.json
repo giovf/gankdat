@@ -1,0 +1,102 @@
+{
+  "actorSpecification": 1,
+  "fields": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": ["string", "null"]
+      },
+      "record_type": {
+        "type": ["string", "null"]
+      },
+      "account_number": {
+        "type": ["string", "null"]
+      },
+      "operator_name": {
+        "type": ["string", "null"]
+      },
+      "licence_number": {
+        "type": ["string", "null"]
+      },
+      "status": {
+        "type": ["string", "null"]
+      },
+      "is_active": {
+        "type": "boolean"
+      },
+      "licence_type": {
+        "type": ["string", "null"]
+      },
+      "activities": {
+        "type": ["string", "null"]
+      },
+      "start_date": {
+        "type": ["string", "null"]
+      },
+      "end_date": {
+        "type": ["string", "null"]
+      },
+      "trading_names": {
+        "type": ["string", "null"]
+      },
+      "domain_name": {
+        "type": ["string", "null"]
+      },
+      "local_authority": {
+        "type": ["string", "null"]
+      },
+      "address": {
+        "type": ["string", "null"]
+      },
+      "city": {
+        "type": ["string", "null"]
+      },
+      "postcode": {
+        "type": ["string", "null"]
+      },
+      "outward_code": {
+        "type": ["string", "null"]
+      },
+      "register_url": {
+        "type": ["string", "null"]
+      },
+      "change": {
+        "type": ["string", "null"]
+      },
+      "changed_at": {
+        "type": ["string", "null"]
+      }
+    }
+  },
+  "views": {
+    "overview": {
+      "title": "Overview",
+      "transformation": {
+        "fields": [
+          "id",
+          "record_type",
+          "account_number",
+          "operator_name",
+          "licence_number",
+          "status",
+          "is_active",
+          "licence_type",
+          "activities",
+          "start_date",
+          "end_date",
+          "trading_names",
+          "domain_name",
+          "local_authority",
+          "address",
+          "city",
+          "postcode",
+          "outward_code",
+          "register_url"
+        ]
+      },
+      "display": {
+        "component": "table"
+      }
+    }
+  }
+}

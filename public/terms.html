@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="canonical" href="https://gankdat.com/terms" />
+    <title>gankdat — Terms of Service</title>
+    <style>
+      :root {
+        --bg: #0a0a0a;
+        --panel: #111315;
+        --green: #00ff41;
+        --magenta: #ff007f;
+        --line: #2a2e33;
+        --fg: #e6e8ea;
+        --muted: #8b9299;
+        --accent: #00ff41;
+        --sans: Inter, Geist, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        --mono:
+          'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      * {
+        box-sizing: border-box;
+        border-radius: 0;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font: 15px/1.7 var(--sans);
+      }
+      main {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 24px 20px 72px;
+      }
+      h1 {
+        font: 800 1.9rem var(--sans);
+        letter-spacing: -0.02em;
+      }
+      h2 {
+        margin-top: 34px;
+        font: 700 0.82rem var(--mono);
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--fg);
+      }
+      h2::before {
+        content: '// ';
+        color: var(--green);
+      }
+      h3 {
+        font-size: 1rem;
+        margin: 20px 0 6px;
+      }
+      a {
+        color: var(--green);
+      }
+      code {
+        font-family: var(--mono);
+        background: var(--panel);
+        border: 1px solid var(--line);
+        padding: 1px 5px;
+        font-size: 0.85em;
+      }
+      .top {
+        color: var(--muted);
+        font: 0.82rem var(--mono);
+      }
+      .top a {
+        color: var(--muted);
+      }
+      .muted {
+        color: var(--muted);
+      }
+      .note {
+        border: 1px dashed var(--line);
+        padding: 12px 16px;
+        color: var(--muted);
+        font: 0.85rem var(--mono);
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 12px 0;
+        font-size: 0.92rem;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--line);
+        vertical-align: top;
+      }
+      th {
+        color: var(--muted);
+        font: 700 0.72rem var(--mono);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="top"><a href="/">← home</a></p>
+      <h1>Terms of Service</h1>
+      <p class="muted">
+        Last updated: 9 July 2026. gankdat ("we", "us") is operated from the United Kingdom by its
+        operator. Contact: <a href="mailto:info@gankdat.com">info@gankdat.com</a>.
+      </p>
+
+      <h2>1. The agreement</h2>
+      <p>
+        gankdat is the trading name of Giovanni Funaro, a sole trader in the United Kingdom ("we",
+        "us"). gankdat provides programmatic access to public datasets, normalized into one clean
+        JSON schema and served via a REST API, an MCP endpoint for AI agents, and pay-per-request
+        endpoints. By creating an account, creating an API key, or using the API — including via an
+        AI agent acting for you — you agree to these terms. The service is intended for business and
+        professional use.
+      </p>
+
+      <h2>2. Accounts &amp; API keys</h2>
+      <ul>
+        <li>
+          Your account identity is your email address; sign-in is by emailed one-time link. Use an
+          address you control — it is where billing and service notices go.
+        </li>
+        <li>
+          API keys are shown once at creation and stored by us only as hashes. Keep them
+          confidential: <strong>you are responsible for all activity under your keys</strong>,
+          including by your applications and agents. Revoke a key immediately from your dashboard if
+          it may be compromised.
+        </li>
+        <li>
+          Keys belong to the account that created them and share that account's plan and monthly
+          allowance.
+        </li>
+      </ul>
+
+      <h2>3. Free tier &amp; fair use</h2>
+      <p>
+        The free tier provides a limited monthly request allowance per account for evaluation and
+        light use. Creating multiple accounts to multiply free allowances is not permitted. We may
+        adjust free-tier limits over time.
+      </p>
+
+      <h2>4. Paid plans &amp; billing</h2>
+      <ul>
+        <li>
+          Paid plans are monthly subscriptions billed via Stripe in GBP — or in USD/EUR, selected
+          automatically at checkout by your location. They <strong>renew automatically</strong> each
+          month until cancelled.
+        </li>
+        <li>
+          Cancel any time from the billing portal ("Manage billing" on your dashboard); cancellation
+          takes effect at the end of the paid period, and you keep your allowance until then.
+        </li>
+        <li>
+          Credit allowances reset each billing period and do not roll over. One subscription covers
+          every dataset in the catalog.
+        </li>
+        <li>
+          If a renewal payment fails, Stripe retries; if payment ultimately cannot be collected,
+          your account returns to the free tier.
+        </li>
+        <li>
+          We may change prices with at least 30 days' notice; changes apply from your next billing
+          period. Taxes (e.g. VAT) are added where the law requires.
+        </li>
+      </ul>
+
+      <h2>5. Refunds</h2>
+      <p>
+        If something is wrong — an outage, a billing mistake, a plan that didn't do what we said —
+        email <a href="mailto:info@gankdat.com">info@gankdat.com</a> within 14 days and we will put
+        it right, including refunds where appropriate. We don't refund simply for unused allowance.
+        Nothing in these terms reduces rights you have by law.
+      </p>
+
+      <h2>6. Pay-per-request (x402) and credit packs (PayPal)</h2>
+      <p>
+        Endpoints under <code>/x402/</code> accept per-request payment in USDC on the Base network,
+        with no account required. A payment is complete when it settles on-chain; settled payments
+        are <strong>non-refundable</strong> (we could not identify the payer to refund them). The
+        response to a paid request is delivered at the time of settlement.
+      </p>
+      <p>
+        Credit packs are one-off purchases of credits for an account, paid through PayPal in USD and
+        added to a top-up balance that is spent once the month's plan allowance is used up; they do
+        not expire and do not renew. While the PayPal AI Hackathon runs (to 2026-11-12) the PayPal
+        checkout is PayPal's <strong>sandbox</strong>: it accepts test accounts only and no real
+        money changes hands. Section 5 (refunds) applies to packs bought with real money if the
+        checkout ever goes live, which we will announce here first.
+      </p>
+
+      <h2>7. Your use of the data — per-dataset licences</h2>
+      <p>
+        Each dataset in the catalog carries its own source licence and personal-data posture, set
+        out in this table. If a dataset ever lacks an entry here, the defaults apply: Open
+        Government Licence v3 and Blind Mode.
+      </p>
+      <table>
+        <tr>
+          <th>Dataset</th>
+          <th>Source</th>
+          <th>Licence</th>
+          <th>Personal data</th>
+        </tr>
+        <tr>
+          <td><code>uk-planning</code></td>
+          <td>planning.data.gov.uk (official government feed)</td>
+          <td>
+            <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+              >OGL v3</a
+            >, Crown copyright — attribute the originating body if you republish
+          </td>
+          <td>
+            <strong>Blind Mode</strong>: applicant names and contact details are dropped at ingest,
+            never stored or served
+          </td>
+        </tr>
+        <tr>
+          <td><code>uk-tenders</code></td>
+          <td>Find a Tender (official OCDS feed)</td>
+          <td>
+            <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+              >OGL v3</a
+            >, Crown copyright — attribute the originating body if you republish
+          </td>
+          <td>
+            <strong>Blind Mode</strong>: contact and personal fields are dropped at ingest, never
+            stored or served
+          </td>
+        </tr>
+        <tr>
+          <td><code>uk-contract-awards</code></td>
+          <td>Contracts Finder OCDS search API (Cabinet Office; official award notices)</td>
+          <td>
+            <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+              >Open Government Licence v3</a
+            >
+            (declared in every response) — attribute Contracts Finder if you republish
+          </td>
+          <td>
+            <strong>Blind Mode</strong>: buyer and supplier organisation fields only; party contact
+            persons, emails and phones in the source notices are never fetched, stored, or served
+          </td>
+        </tr>
+        <tr>
+          <td><code>uk-sanctions</code></td>
+          <td>UK Sanctions List (FCDO official publication)</td>
+          <td>
+            <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+              >OGL v3</a
+            >, Crown copyright — attribute the originating body if you republish
+          </td>
+          <td>
+            <strong>As published, minimized</strong>: this dataset inherently names designated
+            persons and entities, published by government for compliance purposes. We serve
+            designation data (names, aliases, regime, dates, countries) and drop dates of birth,
+            identity/passport numbers, contact details, and birth places at ingest.
+            <em>Conditions:</em> use only for compliance, due-diligence, risk, research, or
+            journalistic purposes; results are a screening aid, not legal advice — verify matches
+            against the
+            <a href="https://www.gov.uk/government/publications/the-uk-sanctions-list"
+              >official list</a
+            >
+            before acting.
+          </td>
+        </tr>
+        <tr>
+          <td><code>eu-ted</code></td>
+          <td>
+            TED — Tenders Electronic Daily (official EU procurement journal, api.ted.europa.eu)
+          </td>
+          <td>
+            <a href="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32011D0833"
+              >Commission Decision 2011/833/EU</a
+            >
+            — free reuse, including commercial, with source acknowledgement (© European Union,
+            ted.europa.eu)
+          </td>
+          <td>
+            <strong>Blind Mode</strong>: only organisation-level fields are ingested; buyer contact
+            persons and personal fields in the source notices are never fetched, stored, or served
+          </td>
+        </tr>
+        <tr>
+          <td><code>sam-exclusions</code></td>
+          <td>SAM.gov Exclusions (US GSA official API)</td>
+          <td>
+            US Government work (public domain). Address fields licensed from Dun &amp; Bradstreet
+            are removed at ingest and never served; where any D&amp;B Open Data appears, D&amp;B is
+            the data source and bulk dissemination of it is not permitted
+          </td>
+          <td>
+            <strong>As published, minimized</strong>: this dataset inherently names excluded persons
+            and entities, published by the US government for award-eligibility compliance. We serve
+            exclusion facts (name, classification, type, program, agency, UEI/CAGE, dates) and drop
+            all addresses, SSN/TIN/NPI identifiers, and free-text comments at ingest.
+            <em>Conditions:</em> use only for compliance, due-diligence, risk, research, or
+            journalistic purposes; results are a screening aid, not legal advice — verify matches
+            against <a href="https://sam.gov/search/?index=ex">SAM.gov</a> before acting.
+          </td>
+        </tr>
+        <tr>
+          <td><code>uk-insolvency</code></td>
+          <td>The Gazette — corporate insolvency notices (official UK public record)</td>
+          <td>
+            <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+              >OGL v3</a
+            >, Crown copyright — attribute The Gazette if you republish
+          </td>
+          <td>
+            <strong>Blind Mode</strong>: corporate-notices-only slice; person fields and notice text
+            in the source (which name individuals and insolvency practitioners) are never ingested,
+            stored, or served — only company-level facts (name, notice type/code, dates)
+          </td>
+        </tr>
+        <tr>
+          <td><code>uk-companies</code></td>
+          <td>
+            Companies House advanced-search API (official; register public under the Companies Act
+            2006)
+          </td>
+          <td>Crown copyright — attribute Companies House if you republish</td>
+          <td>
+            <strong>Blind Mode</strong>: company-level fields only (name, number, type, SIC codes,
+            incorporation date, registered-office locality/postcode); officer and PSC data are never
+            ingested, and address lines are dropped at ingest
+          </td>
+        </tr>
+        <tr>
+          <td><code>uk-company-profiles</code></td>
+          <td>
+            Companies House public data API — company profile, charges, filing history and
+            persons-with-significant-control resources, read on request (official; register public
+            under the Companies Act 2006)
+          </td>
+          <td>Crown copyright — attribute Companies House if you republish</td>
+          <td>
+            <strong>Blind Mode</strong>: organisation-level fields only. Officer resources are never
+            called; individual persons with significant control are dropped whole at ingest (only
+            corporate and legal-person entries and the counts are kept); filing events carry the
+            form type and description code, never the person's name; charge holders and
+            registered-office address lines are dropped. Each lookup is cached for 24 hours
+          </td>
+        </tr>
+        <tr>
+          <td><code>uk-food-hygiene</code></td>
+          <td>
+            Food Standards Agency — Food Hygiene Rating Scheme open-data file (official, all UK)
+          </td>
+          <td>
+            <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+              >Open Government Licence v3</a
+            >
+            — attribute the Food Standards Agency; rating <em>artwork</em> is not covered and is not
+            served
+          </td>
+          <td>
+            <strong>Business data</strong>: trading name, type, trading address and rating fields as
+            published (the FSA withholds addresses of businesses trading from a private address);
+            the operator's free-text "right to reply" comment is dropped at ingest
+          </td>
+        </tr>
+        <tr>
+          <td><code>uk-sponsors</code></td>
+          <td>Home Office — register of Worker and Temporary Worker licensed sponsors (GOV.UK)</td>
+          <td>
+            <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+              >Open Government Licence v3</a
+            >
+            — attribute the Home Office / GOV.UK if you republish
+          </td>
+          <td>
+            <strong>No personal data</strong>: organisation name, location, licence type/rating and
+            route only
+          </td>
+        </tr>
+        <tr>
+          <td><code>uk-charities</code></td>
+          <td>
+            Charity Commission for England and Wales — register of charities, daily public extract
+          </td>
+          <td>
+            <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+              >Open Government Licence v3</a
+            >
+            — acknowledge the Charity Commission as the source; do not misrepresent it
+          </td>
+          <td>
+            <strong>Blind Mode</strong>: organisation-level fields only. Contact address lines,
+            phone and email are dropped at ingest (postcode kept); the trustee extract is never
+            ingested
+          </td>
+        </tr>
+        <tr>
+          <td><code>uk-care-locations</code></td>
+          <td>Care Quality Commission — weekly care directory of regulated locations in England</td>
+          <td>
+            <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+              >Open Government Licence v3</a
+            >
+            — attribute the Care Quality Commission if you republish
+          </td>
+          <td>
+            <strong>Location-level data</strong>: name, address and area, services, provider, latest
+            check date. The public phone-number column is dropped at ingest; the monthly file with
+            registered-manager names is never ingested
+          </td>
+        </tr>
+        <tr>
+          <td><code>uk-schools</code></td>
+          <td>
+            Department for Education — Get Information About Schools (daily establishment extract),
+            with Ofsted monthly inspection-outcome management information joined by URN
+          </td>
+          <td>
+            <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+              >Open Government Licence v3</a
+            >
+            — attribute the Department for Education and Ofsted if you republish
+          </td>
+          <td>
+            <strong>Establishment-level data</strong>: name, type and phase, status, address and
+            area, website, capacity and pupil numbers, trust, and the latest Ofsted rating. Head
+            teacher names and the telephone column are dropped at ingest; GIAS's governors extract
+            is never ingested
+          </td>
+        </tr>
+        <tr>
+          <td><code>nhs-ods</code></td>
+          <td>
+            NHS England — Organisation Data Service nightly organisation extracts (GP practices, NHS
+            trusts and sites, pharmacies, dental practices, independent healthcare providers)
+          </td>
+          <td>
+            <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+              >Open Government Licence v3</a
+            >
+            — attribute NHS England (Organisation Data Service) if you republish
+          </td>
+          <td>
+            <strong>Organisation-level data</strong>: ODS code, name, type, status, region and ICB
+            codes, address, open and close dates, parent organisation. The telephone column is
+            dropped at ingest; the practitioner files (named GPs and dentists) are never ingested
+          </td>
+        </tr>
+        <tr>
+          <td><code>uk-trademark-journal</code></td>
+          <td>
+            Intellectual Property Office — weekly Trade Marks Journal (applications accepted and
+            published for opposition), XML edition
+          </td>
+          <td>
+            <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+              >Open Government Licence v3</a
+            >
+            — attribute the Intellectual Property Office if you republish
+          </td>
+          <td>
+            <strong>Public register data, reduced to organisation level</strong>: application
+            number, mark text and type, classes and goods/services, dates, journal issue. An
+            applicant or representative name is kept only when it is an organisation (corporate
+            designator present); individual applicants are recorded as "individual or
+            unincorporated" without a name, addresses are reduced to the country, and mark images
+            are never stored
+          </td>
+        </tr>
+        <tr>
+          <td><code>uk-gambling-operators</code></td>
+          <td>
+            Gambling Commission — business licence register and premises licence register (daily
+            public register files)
+          </td>
+          <td>
+            <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+              >Open Government Licence v3</a
+            >
+            — attribute the Gambling Commission if you republish
+          </td>
+          <td>
+            <strong>Statutory public register, organisation level</strong>: licence number, status,
+            type, activities and dates, the licensed business and its trading names, registered
+            website domains, and business premises with their licensing authority and address. The
+            personal licence registers (management and functional licences held by individuals) are
+            never ingested
+          </td>
+        </tr>
+      </table>
+      <p>Rules that apply to every dataset:</p>
+      <ul>
+        <li>
+          You may use API responses in your own products, analyses, and services, including
+          commercially, subject to the dataset's source licence above.
+        </li>
+        <li>
+          You may <strong>not</strong> resell, mirror, or redistribute the API itself (i.e. offering
+          our service, or wholesale access to it, as your product).
+        </li>
+        <li>
+          Where a dataset runs <strong>Blind Mode</strong>, you may not use it to attempt to
+          identify or profile individuals, alone or combined with other sources. If we add a dataset
+          that inherently consists of personal data published by government for a specific purpose
+          (for example a compliance list), its table entry will say so and state any additional use
+          conditions — those conditions are part of these terms for that dataset.
+        </li>
+      </ul>
+
+      <h2>8. Data disclaimer</h2>
+      <p>
+        Data is normalized and cached from official feeds and provided <strong>"as is"</strong>. We
+        do not guarantee accuracy, completeness, or timeliness (each response carries a
+        <code>last_refreshed_at</code> timestamp), and nothing served by the API is legal,
+        financial, or professional advice. For decisions that matter, verify against the official
+        source.
+      </p>
+
+      <h2>9. Acceptable use</h2>
+      <ul>
+        <li>
+          No unlawful use, and no use that disrupts, overloads, reverse-engineers, or circumvents
+          the service's security, rate limits, or metering.
+        </li>
+        <li>
+          No attempting to re-identify individuals from any data, alone or combined with other
+          sources.
+        </li>
+        <li>
+          Respect the rate limits and allowances of your plan; automated/agent traffic is welcome
+          within them.
+        </li>
+      </ul>
+
+      <h2>10. Availability &amp; changes to the service</h2>
+      <p>
+        We aim for high availability but offer no formal SLA at this stage; the service may be
+        interrupted or updated. Datasets may be added to the catalog, and we may modify or retire a
+        dataset — where a retirement affects paying customers we will give reasonable notice.
+      </p>
+
+      <h2>11. Intellectual property</h2>
+      <p>
+        The platform — API, software, normalization logic, schema, and documentation — is ours. The
+        underlying government data remains Crown copyright under the OGL. Your applications are
+        yours.
+      </p>
+
+      <h2>12. Liability</h2>
+      <p>
+        To the fullest extent permitted by law: the service is provided without warranties; we are
+        not liable for indirect or consequential loss, lost profits, or decisions made in reliance
+        on the data; and our total liability arising from the service in any 12-month period is
+        capped at the fees you paid us in that period (or £100 if you paid none). Nothing in these
+        terms excludes liability that cannot lawfully be excluded, including for fraud or for death
+        or personal injury caused by negligence.
+      </p>
+
+      <h2>13. Suspension &amp; termination</h2>
+      <p>
+        You may stop using the service and cancel at any time. We may suspend or revoke keys, or
+        terminate accounts, for breach of these terms, abuse, or non-payment — where practical we
+        will warn you first. Sections that by nature survive (data licence obligations, liability,
+        governing law) survive termination.
+      </p>
+
+      <h2>14. General</h2>
+      <p>
+        These terms are the whole agreement between us about the service. If part of them is found
+        unenforceable, the rest stands. We may assign this agreement to a successor operator of the
+        service (for example, a company formed to run it); you will be notified and your service is
+        unaffected. Our not enforcing a term is not a waiver of it.
+      </p>
+
+      <h2>15. Governing law</h2>
+      <p>
+        These terms are governed by the laws of England and Wales, and the courts of England and
+        Wales have exclusive jurisdiction — except that nothing prevents either of us relying on
+        mandatory consumer protections where they apply.
+      </p>
+
+      <h2>16. Changes &amp; contact</h2>
+      <p>
+        We may update these terms; material changes will be posted here with a new date and, for
+        account holders, notified by email when they matter. Continued use after a change takes
+        effect is acceptance. Questions: <a href="mailto:info@gankdat.com">info@gankdat.com</a>.
+      </p>
+    </main>
+  </body>
+</html>

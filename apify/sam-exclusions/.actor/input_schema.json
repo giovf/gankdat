@@ -1,0 +1,77 @@
+{
+  "title": "US Federal Exclusions (SAM.gov) — debarment list — filters",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "mode": {
+      "title": "Mode",
+      "type": "string",
+      "description": "Current records (default), or only the records added, removed or changed since a date — schedule a daily run in changes mode to monitor the register and pay only for what changed.",
+      "editor": "select",
+      "enum": ["data", "changes"],
+      "enumTitles": ["Current records", "Changes since a date (monitor)"],
+      "default": "data"
+    },
+    "since": {
+      "title": "Changes since",
+      "type": "string",
+      "description": "Changes mode only: YYYY-MM-DD. Default: the last 7 days. The feed keeps 90 days.",
+      "editor": "textfield",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "change": {
+      "title": "Change type",
+      "type": "string",
+      "description": "Changes mode only: one kind of change. Default: all three.",
+      "editor": "select",
+      "enum": ["added", "removed", "changed"],
+      "enumTitles": ["Added to the register", "Removed from the register", "Changed"]
+    },
+    "name": {
+      "title": "Name contains",
+      "type": "string",
+      "description": "Filter: Name contains (case-insensitive substring match).",
+      "editor": "textfield"
+    },
+    "classification": {
+      "title": "Classification",
+      "type": "string",
+      "description": "Individual, Firm, Special Entity Designation, Vessel",
+      "editor": "textfield"
+    },
+    "excluding_agency": {
+      "title": "Excluding agency contains",
+      "type": "string",
+      "description": "e.g. HHS, OFAC, OPM, DOJ",
+      "editor": "textfield"
+    },
+    "exclusion_program": {
+      "title": "Exclusion program contains",
+      "type": "string",
+      "description": "Reciprocal, Procurement, Nonprocurement",
+      "editor": "textfield"
+    },
+    "activation_date_after": {
+      "title": "Activated on or after",
+      "type": "string",
+      "description": "YYYY-MM-DD",
+      "editor": "textfield",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "q": {
+      "title": "Free-text search",
+      "type": "string",
+      "description": "Filter: Free-text search (case-insensitive substring match).",
+      "editor": "textfield"
+    },
+    "max_results": {
+      "title": "Maximum results",
+      "type": "integer",
+      "description": "Stop after this many records (you are charged per result).",
+      "default": 1000,
+      "minimum": 1,
+      "maximum": 100000
+    }
+  },
+  "required": []
+}

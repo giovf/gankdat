@@ -1,0 +1,91 @@
+{
+  "actorSpecification": 1,
+  "fields": {
+    "type": "object",
+    "properties": {
+      "ocid": {
+        "type": ["string", "null"]
+      },
+      "notice_id": {
+        "type": ["string", "null"]
+      },
+      "award_id": {
+        "type": ["string", "null"]
+      },
+      "title": {
+        "type": ["string", "null"]
+      },
+      "description": {
+        "type": ["string", "null"]
+      },
+      "buyer": {
+        "type": ["string", "null"]
+      },
+      "buyer_id": {
+        "type": ["string", "null"]
+      },
+      "supplier": {
+        "type": ["string", "null"]
+      },
+      "supplier_id": {
+        "type": ["string", "null"]
+      },
+      "supplier_company_number": {
+        "type": ["string", "null"]
+      },
+      "award_status": {
+        "type": ["string", "null"]
+      },
+      "award_value_amount": {
+        "type": ["number", "null"]
+      },
+      "award_value_currency": {
+        "type": ["string", "null"]
+      },
+      "award_date": {
+        "type": ["string", "null"]
+      },
+      "contract_start": {
+        "type": ["string", "null"]
+      },
+      "contract_end": {
+        "type": ["string", "null"]
+      },
+      "cpv_codes": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "category": {
+        "type": ["string", "null"]
+      },
+      "procurement_method": {
+        "type": ["string", "null"]
+      },
+      "published_at": {
+        "type": ["string", "null"]
+      }
+    }
+  },
+  "views": {
+    "overview": {
+      "title": "Overview",
+      "transformation": {
+        "fields": [
+          "supplier",
+          "buyer",
+          "title",
+          "award_value_amount",
+          "award_date",
+          "contract_end",
+          "category",
+          "supplier_company_number"
+        ]
+      },
+      "display": {
+        "component": "table"
+      }
+    }
+  }
+}

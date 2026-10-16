@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <title>Your account — gankdat</title>
+    <meta name="robots" content="noindex" />
+    <style>
+      :root {
+        --bg: #0a0a0a;
+        --panel: #111315;
+        --panel2: #16191c;
+        --green: #00ff41;
+        --magenta: #ff007f;
+        --border: #2a2e33;
+        --fg: #e6e8ea;
+        --muted: #8b9299;
+        --amber: #ffbd2e;
+        --sans: Inter, Geist, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        --mono:
+          'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      * {
+        box-sizing: border-box;
+        border-radius: 0;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font: 15px/1.6 var(--sans);
+      }
+      main {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 0 20px 80px;
+      }
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 18px 20px;
+        border-bottom: 1px solid var(--border);
+      }
+      header a {
+        color: var(--muted);
+        text-decoration: none;
+        margin-left: 18px;
+        font: 0.85rem var(--mono);
+      }
+      header a:hover {
+        color: var(--green);
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font: 700 1rem var(--mono);
+        color: var(--fg) !important;
+        margin: 0 !important;
+      }
+      .brand img {
+        width: 22px;
+        height: 20px;
+        image-rendering: pixelated;
+      }
+      .brand b {
+        color: var(--green);
+      }
+      h1 {
+        font: 800 1.7rem var(--sans);
+        letter-spacing: -0.02em;
+        margin: 36px 0 6px;
+      }
+      h2 {
+        font: 700 0.78rem var(--mono);
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        color: var(--muted);
+        margin: 34px 0 10px;
+      }
+      h2::before {
+        content: '// ';
+        color: var(--green);
+      }
+      .muted {
+        color: var(--muted);
+      }
+      a {
+        color: var(--green);
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        padding: 18px;
+        margin: 14px 0;
+      }
+      input[type='email'],
+      input[type='text'] {
+        width: 100%;
+        padding: 11px 14px;
+        border: 1px solid var(--border);
+        background: var(--panel2);
+        color: var(--fg);
+        font: 0.92rem var(--mono);
+      }
+      input:focus {
+        outline: none;
+        border-color: var(--green);
+        box-shadow: 0 0 14px rgba(0, 255, 65, 0.15);
+      }
+      input::placeholder {
+        color: var(--muted);
+      }
+      button {
+        padding: 10px 16px;
+        border: 1px solid var(--green);
+        background: var(--green);
+        color: #0a0a0a;
+        font: 600 0.85rem var(--mono);
+        cursor: pointer;
+      }
+      button:hover {
+        box-shadow: 0 0 18px rgba(0, 255, 65, 0.3);
+      }
+      button:disabled {
+        opacity: 0.55;
+        cursor: default;
+        box-shadow: none;
+      }
+      button.ghost {
+        background: transparent;
+        color: var(--green);
+      }
+      button.ghost:hover {
+        background: rgba(0, 255, 65, 0.06);
+        box-shadow: none;
+      }
+      button.danger {
+        background: transparent;
+        color: var(--magenta);
+        border-color: var(--magenta);
+        padding: 5px 11px;
+        font-size: 0.75rem;
+      }
+      button.danger:hover {
+        background: rgba(255, 0, 127, 0.07);
+        box-shadow: none;
+      }
+      .row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .spread {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .pill {
+        display: inline-block;
+        padding: 2px 10px;
+        border: 1px solid var(--green);
+        color: var(--green);
+        font: 600 0.72rem var(--mono);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      .pill::before {
+        content: '[ ';
+      }
+      .pill::after {
+        content: ' ]';
+      }
+      .bar {
+        height: 12px;
+        border: 1px solid var(--border);
+        background: var(--panel2);
+        overflow: hidden;
+        margin: 8px 0;
+        padding: 2px;
+      }
+      .bar > span {
+        display: block;
+        height: 100%;
+        background: repeating-linear-gradient(90deg, var(--green) 0 8px, transparent 8px 11px);
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 6px;
+        font: 0.85rem var(--mono);
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 9px 8px;
+        border-bottom: 1px solid var(--border);
+      }
+      th {
+        color: var(--muted);
+        font: 700 0.68rem var(--mono);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+      }
+      .banner {
+        margin: 16px 0 0;
+        padding: 12px 16px;
+        border: 1px solid var(--border);
+        background: var(--panel);
+        font: 0.85rem var(--mono);
+      }
+      .banner.ok {
+        border-color: var(--green);
+        background: rgba(0, 255, 65, 0.05);
+      }
+      .banner.err {
+        border-color: var(--magenta);
+        background: rgba(255, 0, 127, 0.05);
+      }
+      .hidden {
+        display: none;
+      }
+      .plan-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1px;
+        background: var(--border);
+        border: 1px solid var(--border);
+        margin-top: 6px;
+      }
+      .plan {
+        background: var(--panel);
+        padding: 16px 14px;
+        text-align: center;
+      }
+      .plan b {
+        font: 700 0.8rem var(--mono);
+        text-transform: lowercase;
+      }
+      .plan b::before {
+        content: '> ';
+        color: var(--green);
+      }
+      .plan .p {
+        color: var(--muted);
+        font: 0.72rem var(--mono);
+        margin: 4px 0 12px;
+      }
+      .plan button {
+        width: 100%;
+      }
+      .modal {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+        background: rgba(5, 6, 8, 0.75);
+        padding: 20px;
+      }
+      .modal.open {
+        display: flex;
+      }
+      .modal-card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        max-width: 560px;
+        width: 100%;
+        padding: 24px;
+        position: relative;
+        box-shadow: 0 0 60px rgba(0, 255, 65, 0.07);
+      }
+      .modal-close {
+        position: absolute;
+        top: 8px;
+        right: 10px;
+        background: none;
+        border: 0;
+        color: var(--muted);
+        font-size: 1.6rem;
+        line-height: 1;
+        cursor: pointer;
+        padding: 2px 8px;
+      }
+      .modal-close:hover {
+        color: var(--fg);
+        box-shadow: none;
+      }
+      .modal-key {
+        background: #050608;
+        border: 1px solid var(--border);
+        padding: 0;
+        margin: 14px 0;
+        display: flex;
+        align-items: stretch;
+      }
+      .modal-key code {
+        flex: 1;
+        padding: 13px 14px;
+        font: 13.5px/1.5 var(--mono);
+        color: var(--fg);
+        word-break: break-all;
+        user-select: all;
+      }
+      .icon-btn {
+        flex: none;
+        background: var(--panel2);
+        border: 0;
+        border-left: 1px solid var(--border);
+        color: var(--green);
+        cursor: pointer;
+        padding: 0 14px;
+        line-height: 0;
+      }
+      .icon-btn:hover {
+        background: rgba(0, 255, 65, 0.08);
+        box-shadow: none;
+      }
+      .copied {
+        margin-left: 12px;
+        color: var(--green);
+        font: 600 0.8rem var(--mono);
+      }
+      body.modal-open {
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <a class="brand" href="/"
+        ><img src="/icon-raccoon.svg" alt="" /><span><b>&gt;_</b> gankdat</span></a
+      >
+      <nav>
+        <a href="/">/home</a>
+        <a href="/docs">/docs</a>
+        <a href="#" id="nav-signout" class="hidden">sign out</a>
+      </nav>
+    </header>
+    <main>
+      <div id="banner" class="banner hidden" role="status" aria-live="polite"></div>
+
+      <!-- Signed-out: request a magic link -->
+      <section id="signin" class="hidden">
+        <h1>Sign in</h1>
+        <p class="muted">Enter your email and we'll send a one-time sign-in link — no password.</p>
+        <div class="card">
+          <form id="login-form" class="row">
+            <input
+              type="email"
+              id="login-email"
+              placeholder="you@company.com"
+              required
+              autocomplete="email"
+              style="flex: 1; min-width: 220px"
+            />
+            <button type="submit" id="login-btn">send magic link</button>
+          </form>
+          <!-- CAPTCHA slot: populated only when a Turnstile site key is configured
+           in /js/account.js (dark by default). -->
+          <div id="turnstile-slot" style="margin-top: 12px"></div>
+          <p
+            id="login-msg"
+            class="muted hidden"
+            style="margin: 12px 0 0; font-family: var(--mono); font-size: 0.82rem"
+          ></p>
+        </div>
+        <p class="muted">No account yet? Signing in creates one — keys are managed right here.</p>
+      </section>
+
+      <!-- Signed-in dashboard -->
+      <section id="dashboard" class="hidden">
+        <div class="spread">
+          <h1 style="margin-bottom: 0">Your account</h1>
+          <span
+            class="muted"
+            id="acct-email"
+            style="font-family: var(--mono); font-size: 0.85rem"
+          ></span>
+        </div>
+
+        <h2>plan &amp; usage</h2>
+        <div class="card">
+          <div class="spread">
+            <div>Current plan: <span class="pill" id="acct-plan">free</span></div>
+            <div id="billing-actions"></div>
+          </div>
+          <div style="margin-top: 12px">
+            <div class="spread">
+              <span
+                class="muted"
+                id="usage-label"
+                style="font-family: var(--mono); font-size: 0.78rem"
+                >usage this month</span
+              ><span
+                class="muted"
+                id="usage-nums"
+                style="font-family: var(--mono); font-size: 0.78rem"
+              ></span>
+            </div>
+            <div class="bar"><span id="usage-bar" style="width: 0%"></span></div>
+          </div>
+        </div>
+
+        <div id="upgrade" class="hidden">
+          <h2>upgrade</h2>
+          <p class="muted">
+            One subscription covers every dataset. Credits are shared across the catalog.
+          </p>
+          <div class="plan-grid">
+            <div class="plan">
+              <b>grep</b>
+              <div class="p">1,000 credits / mo</div>
+              <button class="buy" data-plan="saver">£5/mo</button>
+            </div>
+            <div class="plan">
+              <b>cron</b>
+              <div class="p">5,000 credits / mo</div>
+              <button class="buy" data-plan="starter">£23/mo</button>
+            </div>
+            <div class="plan">
+              <b>daemon</b>
+              <div class="p">20,000 credits / mo</div>
+              <button class="buy" data-plan="growth">£79/mo</button>
+            </div>
+            <div class="plan">
+              <b>kernel</b>
+              <div class="p">100,000 credits / mo</div>
+              <button class="buy" data-plan="scale">£239/mo</button>
+            </div>
+          </div>
+          <p class="muted" style="font: 0.72rem var(--mono)">
+            prices in GBP; checkout bills USD/EUR automatically if you're outside the UK.
+          </p>
+        </div>
+
+        <div id="credit-packs" class="hidden">
+          <h2>credit packs</h2>
+          <p class="muted">
+            One-off credits on top of any plan, free included: spent once the month's allowance is
+            gone, never expire. Paid with PayPal.
+          </p>
+          <div class="plan-grid">
+            <div class="plan">
+              <b>1k</b>
+              <div class="p">1,000 credits</div>
+              <button class="buy-pack" data-pack="pack_1k">$8</button>
+            </div>
+            <div class="plan">
+              <b>5k</b>
+              <div class="p">5,000 credits</div>
+              <button class="buy-pack" data-pack="pack_5k">$35</button>
+            </div>
+            <div class="plan">
+              <b>20k</b>
+              <div class="p">20,000 credits</div>
+              <button class="buy-pack" data-pack="pack_20k">$120</button>
+            </div>
+          </div>
+          <p class="muted" style="font: 0.72rem var(--mono)">
+            PayPal sandbox while the PayPal AI Hackathon runs: test accounts only, no real money
+            moves. Agents buy the same packs with the buy_credits MCP tool.
+          </p>
+        </div>
+
+        <h2 class="spread">
+          <span>api keys</span><button id="new-key" class="ghost">+ create key</button>
+        </h2>
+        <div class="card">
+          <table>
+            <thead>
+              <tr>
+                <th>name</th>
+                <th>created</th>
+                <th>status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="keys-body">
+              <tr>
+                <td colspan="4" class="muted">loading…</td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="muted" style="font: 0.72rem var(--mono); margin: 10px 0 0">
+            keys are shown once at creation and stored only as a hash — we can't display them again.
+            lost one? create a new key; it keeps your plan.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <!-- Create-key modal: name it (optional), then the one-time reveal -->
+    <div
+      id="key-modal"
+      class="modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="km-title"
+      aria-hidden="true"
+    >
+      <div class="modal-card">
+        <button id="km-close" class="modal-close" type="button" aria-label="Close">&times;</button>
+        <div id="km-create">
+          <h2 id="km-title" style="margin: 0 24px 4px 0">create api key</h2>
+          <p class="muted" style="margin: 0.2rem 0 0; font-size: 0.88rem">
+            Name it so you can tell your keys apart later (optional).
+          </p>
+          <form id="km-form" class="row" style="margin-top: 14px">
+            <input
+              type="text"
+              id="km-name"
+              placeholder='e.g. "prod", "laptop"'
+              maxlength="100"
+              style="flex: 1; min-width: 200px"
+            />
+            <button type="submit" id="km-submit">create key</button>
+          </form>
+        </div>
+        <div id="km-reveal" class="hidden">
+          <h2 style="margin: 0 24px 4px 0">[LOOT SECURED]</h2>
+          <p class="muted" style="margin: 0.2rem 0 0; font-size: 0.88rem">
+            Shown once. Copy it now — it can't be recovered after you close this.
+          </p>
+          <div class="modal-key">
+            <code id="km-value"></code>
+            <button
+              id="km-copy"
+              class="icon-btn"
+              type="button"
+              aria-label="Copy key"
+              title="Copy key"
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <rect x="9" y="9" width="13" height="13" rx="2" />
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+              </svg>
+            </button>
+          </div>
+          <span id="km-copied" class="copied" role="status" aria-live="polite"></span>
+        </div>
+      </div>
+    </div>
+
+    <script src="/js/account.js" defer></script>
+  </body>
+</html>

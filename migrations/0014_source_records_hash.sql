@@ -1,0 +1,12 @@
+-- Delta refresh (cloudflare-usage-breakdown, build 2026-10-04). Every nightly D1
+-- refresh wrote a whole new generation of every register and deleted the old
+-- one — ~1M rows inserted and ~1M deleted a day (each with two index entries)
+-- while the registers themselves change by well under 1% a day; D1 bills rows
+-- written, and the 2026-10-01 budget alert put metered usage at three times
+-- the Workers Paid baseline. The refresh now keeps the live generation and
+-- upserts only the rows whose content changed, inserting the new ids and
+-- deleting the vanished ones. A 53-bit hash of each record's JSON, written at
+-- ingest, is what the next refresh compares against without reading the
+-- record text back. Rows written before this migration have no hash, so the
+-- first refresh after it is one last full reload (which writes the hashes).
+ALTER TABLE source_records ADD COLUMN record_hash INTEGER;

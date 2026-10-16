@@ -1,0 +1,83 @@
+[
+  {
+    "id": "063318-2026",
+    "ocid": "ocds-h6vhtk-060718",
+    "date": "2026-07-06T16:09:27+01:00",
+    "tag": ["award", "contract"],
+    "initiationType": "tender",
+    "language": "en",
+    "buyer": { "id": "GB-COH-10760863", "name": "HORNCHURCH ACADEMY TRUST" },
+    "parties": [
+      {
+        "name": "HORNCHURCH ACADEMY TRUST",
+        "id": "GB-COH-10760863",
+        "roles": ["buyer"],
+        "contactPoint": { "email": "finance@fixture.example" }
+      }
+    ],
+    "tender": {
+      "id": "PP-10183a",
+      "title": "Facilities Management Open Framework",
+      "description": "Framework for facilities management services across academy sites",
+      "status": "complete",
+      "procurementMethod": "open",
+      "mainProcurementCategory": "services",
+      "value": { "amount": 1250000, "currency": "GBP" },
+      "tenderPeriod": { "endDate": "2026-08-15T12:00:00+01:00" },
+      "items": [
+        {
+          "id": "1",
+          "classification": { "scheme": "CPV", "id": "79993000" },
+          "additionalClassifications": [{ "scheme": "CPV", "id": "50700000" }]
+        }
+      ]
+    }
+  },
+  {
+    "id": "063319-2026",
+    "ocid": "ocds-h6vhtk-060719",
+    "date": "2026-07-05T09:30:00+01:00",
+    "tag": ["tender"],
+    "initiationType": "tender",
+    "language": "en",
+    "buyer": { "id": "GB-LAE-HAV", "name": "London Borough of Havering" },
+    "parties": [],
+    "tender": {
+      "id": "HAV-2026-114",
+      "title": "Highways maintenance term contract",
+      "description": "Planned and reactive highways maintenance works",
+      "status": "active",
+      "procurementMethod": "restricted",
+      "mainProcurementCategory": "works",
+      "value": { "amount": 8400000, "currency": "GBP" },
+      "tenderPeriod": { "endDate": "2026-09-01T17:00:00+01:00" },
+      "items": [
+        {
+          "id": "1",
+          "classification": { "scheme": "CPV", "id": "45233139" }
+        }
+      ]
+    }
+  },
+  {
+    "id": "063320-2026",
+    "ocid": "ocds-h6vhtk-060720",
+    "date": "2026-07-04T14:00:00+01:00",
+    "tag": ["tender"],
+    "initiationType": "tender",
+    "language": "en",
+    "buyer": { "id": "GB-GOR-D2", "name": "Cabinet Office" },
+    "parties": [],
+    "tender": {
+      "id": "CO-2026-771",
+      "title": "Cloud hosting services",
+      "description": "Provision of cloud hosting and managed services",
+      "status": "active",
+      "procurementMethod": "open",
+      "mainProcurementCategory": "services",
+      "value": null,
+      "tenderPeriod": null,
+      "items": []
+    }
+  }
+]

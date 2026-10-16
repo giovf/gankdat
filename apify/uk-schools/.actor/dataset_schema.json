@@ -1,0 +1,105 @@
+{
+  "actorSpecification": 1,
+  "fields": {
+    "type": "object",
+    "properties": {
+      "urn": {
+        "type": ["string", "null"]
+      },
+      "name": {
+        "type": ["string", "null"]
+      },
+      "establishment_type": {
+        "type": ["string", "null"]
+      },
+      "phase": {
+        "type": ["string", "null"]
+      },
+      "status": {
+        "type": ["string", "null"]
+      },
+      "local_authority": {
+        "type": ["string", "null"]
+      },
+      "region": {
+        "type": ["string", "null"]
+      },
+      "address": {
+        "type": ["string", "null"]
+      },
+      "town": {
+        "type": ["string", "null"]
+      },
+      "postcode": {
+        "type": ["string", "null"]
+      },
+      "outward_code": {
+        "type": ["string", "null"]
+      },
+      "website": {
+        "type": ["string", "null"]
+      },
+      "school_capacity": {
+        "type": ["number", "null"]
+      },
+      "pupils": {
+        "type": ["number", "null"]
+      },
+      "statutory_low_age": {
+        "type": ["number", "null"]
+      },
+      "statutory_high_age": {
+        "type": ["number", "null"]
+      },
+      "trust_name": {
+        "type": ["string", "null"]
+      },
+      "trust_id": {
+        "type": ["string", "null"]
+      },
+      "open_date": {
+        "type": ["string", "null"]
+      },
+      "close_date": {
+        "type": ["string", "null"]
+      },
+      "ofsted_rating": {
+        "type": ["string", "null"]
+      },
+      "ofsted_last_inspection": {
+        "type": ["string", "null"]
+      },
+      "gias_url": {
+        "type": ["string", "null"]
+      },
+      "change": {
+        "type": ["string", "null"]
+      },
+      "changed_at": {
+        "type": ["string", "null"]
+      }
+    }
+  },
+  "views": {
+    "overview": {
+      "title": "Overview",
+      "transformation": {
+        "fields": [
+          "name",
+          "phase",
+          "establishment_type",
+          "local_authority",
+          "region",
+          "postcode",
+          "pupils",
+          "ofsted_rating",
+          "ofsted_last_inspection",
+          "gias_url"
+        ]
+      },
+      "display": {
+        "component": "table"
+      }
+    }
+  }
+}

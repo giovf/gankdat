@@ -1,0 +1,51 @@
+# Copy to `.dev.vars` (gitignored) for local wrangler dev. Production values
+# are set with `wrangler secret put <KEY>` — never committed, never in .env
+# (that file is for CLI tooling only, per CLAUDE.md).
+
+# Guards the operator endpoints (e.g. DELETE /v1/keys/:id).
+# Generate one: openssl rand -hex 32
+ADMIN_TOKEN=dev-admin-token
+
+# Stripe (test mode; billing endpoints 503 until set — see docs/STRIPE-SETUP.md).
+# Keep the empty defaults if you're not working on billing.
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+
+# PayPal developer SANDBOX app (credit packs; docs/PAYPAL-SETUP.md). Sandbox only —
+# the code never talks to the live PayPal API. Dark (503 on /v1/billing/paypal/*) until set.
+PAYPAL_SANDBOX_CLIENT_ID=
+PAYPAL_SANDBOX_SECRET=
+
+# x402 agent payments — ALL routes under /x402 stay dark (404) until a wallet
+# is set. See docs/X402-SETUP.md. Keep empty defaults unless working on x402.
+X402_WALLET_ADDRESS=
+X402_PRICE_USD=
+X402_NETWORK=
+X402_FACILITATOR_URL=
+
+# Coinbase CDP facilitator creds (verify + settle x402 payments reliably, on
+# base + base-sepolia). When set, the x402 route uses the CDP facilitator
+# instead of the rate-limited public one. From portal.cdp.coinbase.com.
+CDP_API_KEY_ID=
+CDP_API_KEY_SECRET=
+
+# Offline dev: serve bundled fixtures when an origin fetch fails. Local only —
+# production (wrangler.jsonc) defaults this to "false" so outages fail loudly.
+FIXTURE_FALLBACK=true
+
+# Cloudflare Turnstile (anti-abuse on signup). Dark until set — the signup
+# endpoints skip CAPTCHA verification when this is empty. Secret key from the
+# Turnstile dashboard; the public site key goes in public/index.html.
+TURNSTILE_SECRET_KEY=
+
+# Public base URL override for magic-link + Stripe-redirect URLs. Leave empty to
+# use the default workers.dev domain; set to a custom domain (e.g.
+# https://gankdat.com) once it points at the Worker — no code change needed.
+PUBLIC_BASE_URL=
+
+# Resend transactional email (magic-link sign-in). Dark until set — /v1/auth/login
+# returns 503 and passwordless sign-in is disabled when empty. API key from
+# resend.com. EMAIL_FROM defaults to onboarding@resend.dev (no DNS needed); set a
+# verified-domain sender (e.g. "gankdat <no-reply@gankdat.com>") once available.
+RESEND_API_KEY=
+EMAIL_FROM=

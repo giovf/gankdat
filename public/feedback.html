@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <title>Feedback | gankdat</title>
+    <meta
+      name="description"
+      content="Tell us which datasets, filters, or features you need — feedback shapes what gankdat builds next."
+    />
+    <link rel="canonical" href="https://gankdat.com/feedback" />
+    <style>
+      :root {
+        --bg: #0a0a0a;
+        --panel: #111315;
+        --green: #00ff41;
+        --border: #2a2e33;
+        --fg: #e6e8ea;
+        --muted: #8b9299;
+        --mono:
+          'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      * {
+        box-sizing: border-box;
+        border-radius: 0;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font: 15px/1.6 var(--mono);
+        padding: 0 20px 60px;
+      }
+      main {
+        max-width: 640px;
+        margin: 0 auto;
+      }
+      h1 {
+        font-size: 1.5rem;
+        letter-spacing: -0.02em;
+        margin: 36px 0 6px;
+      }
+      h1 b {
+        color: var(--green);
+      }
+      a {
+        color: var(--green);
+      }
+      .muted {
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+      label {
+        display: block;
+        margin: 20px 0 6px;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--muted);
+      }
+      textarea,
+      input {
+        width: 100%;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        color: var(--fg);
+        font: inherit;
+        padding: 10px 12px;
+      }
+      textarea {
+        min-height: 140px;
+        resize: vertical;
+      }
+      textarea:focus,
+      input:focus {
+        outline: 1px solid var(--green);
+      }
+      button {
+        margin-top: 18px;
+        padding: 12px 22px;
+        font: 600 0.92rem var(--mono);
+        border: 1px solid var(--green);
+        color: var(--green);
+        background: transparent;
+        cursor: pointer;
+      }
+      button:hover {
+        background: rgba(0, 255, 65, 0.06);
+      }
+      #status {
+        margin-top: 14px;
+        font-size: 0.85rem;
+      }
+      #status.ok {
+        color: var(--green);
+      }
+      #status.err {
+        color: #ff5f56;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="muted"><a href="/">gankdat</a> / feedback</p>
+      <h1>tell us what to <b>build</b></h1>
+      <p class="muted">
+        Which datasets, filters, or features would make this useful to you? Feedback directly shapes
+        what ships next. Email is optional — only if you'd like a reply. No account needed.
+      </p>
+
+      <form id="fb">
+        <label for="message">your feedback</label>
+        <textarea
+          id="message"
+          name="message"
+          maxlength="2000"
+          required
+          placeholder="e.g. I need planning data for Manchester with decision outcomes… / a sanctions-screening endpoint… / webhooks when new tenders match a filter…"
+        ></textarea>
+        <label for="email">email (optional, for a reply)</label>
+        <input
+          id="email"
+          name="email"
+          type="email"
+          autocomplete="email"
+          placeholder="you@company.com"
+        />
+        <button type="submit">send</button>
+        <p id="status" role="status"></p>
+      </form>
+
+      <noscript
+        ><p class="muted">
+          This form needs JavaScript. Without it, email us at
+          <a href="mailto:info@gankdat.com">info@gankdat.com</a>.
+        </p></noscript
+      >
+
+      <script src="/js/feedback.js" defer></script>
+    </main>
+  </body>
+</html>

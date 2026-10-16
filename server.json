@@ -1,0 +1,28 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "com.gankdat/gankdat",
+  "title": "gankdat",
+  "description": "UK company lookup & monitor, UK/EU tenders, awards, planning, charities, schools, NHS, trade marks.",
+  "version": "0.25.1",
+  "websiteUrl": "https://gankdat.com",
+  "icons": [
+    {
+      "src": "https://gankdat.com/icon-raccoon.svg",
+      "mimeType": "image/svg+xml"
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://gankdat.com/mcp",
+      "headers": [
+        {
+          "name": "Authorization",
+          "description": "Bearer <api key> or OAuth access token — full pages and your plan's credits. Without it every data tool still answers a preview (5 rows, 20 calls/day); clients that follow a 401 challenge (Claude, Cursor) sign the user in with OAuth (connect_account), others use request_api_key / claim_api_key (one emailed approval) or a key from https://gankdat.com/account",
+          "isRequired": false,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}

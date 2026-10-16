@@ -1,0 +1,1015 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <title>
+      gankdat — UK &amp; EU tenders, planning, company &amp; compliance data as clean JSON (REST +
+      MCP)
+    </title>
+    <meta
+      name="description"
+      content="Official open data as one clean JSON schema: UK planning, UK + EU procurement and contract awards (Find a Tender, TED), UK sanctions, US federal exclusions, UK insolvency, company incorporations, charities, licensed visa sponsors, CQC care locations and food hygiene ratings. For bid intelligence, supplier due diligence, and AI agents — free tier, MCP server, x402 pay-per-request."
+    />
+    <link rel="canonical" href="https://gankdat.com/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="gankdat" />
+    <meta
+      property="og:title"
+      content="gankdat — UK &amp; EU tenders, planning, company &amp; compliance data as clean JSON (REST + MCP)"
+    />
+    <meta
+      property="og:description"
+      content="Official open data as one clean JSON schema: UK + EU procurement, UK planning, UK/US sanctions &amp; debarment, UK insolvency and company data. Free tier, MCP server, x402 pay-per-request."
+    />
+    <meta property="og:url" content="https://gankdat.com/" />
+    <meta name="twitter:card" content="summary" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebAPI",
+        "@id": "https://gankdat.com/#api",
+        "name": "gankdat",
+        "url": "https://gankdat.com",
+        "description": "Official open data as clean JSON in two bundles — bid intelligence (UK planning, UK + EU procurement) and counterparty risk (UK sanctions, US federal exclusions, UK insolvency, company incorporations, charities, licensed visa sponsors, CQC care locations and food hygiene ratings) — from official government feeds. Native MCP server and x402 pay-per-request for AI agents.",
+        "documentation": "https://gankdat.com/docs",
+        "termsOfService": "https://gankdat.com/terms",
+        "provider": { "@type": "Organization", "name": "gankdat", "url": "https://gankdat.com" },
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "GBP",
+          "description": "Free tier: 250 requests/month; paid plans from £5/month"
+        }
+      }
+    </script>
+    <style>
+      :root {
+        --bg: #0a0a0a;
+        --panel: #111315;
+        --panel2: #16191c;
+        --green: #00ff41;
+        --magenta: #ff007f;
+        --border: #2a2e33;
+        --fg: #e6e8ea;
+        --muted: #8b9299;
+        --amber: #ffbd2e;
+        --sans: Inter, Geist, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        --mono:
+          'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      * {
+        box-sizing: border-box;
+        border-radius: 0;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font: 15px/1.65 var(--sans);
+      }
+      main {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 0 20px 72px;
+      }
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 18px 20px;
+        border-bottom: 1px solid var(--border);
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font: 700 1rem var(--mono);
+        color: var(--fg);
+        text-decoration: none;
+      }
+      .brand img {
+        width: 22px;
+        height: 20px;
+        image-rendering: pixelated;
+      }
+      .brand b {
+        color: var(--green);
+        font-weight: 700;
+      }
+      header nav a {
+        color: var(--muted);
+        text-decoration: none;
+        margin-left: 20px;
+        font: 0.85rem var(--mono);
+      }
+      header nav a:hover {
+        color: var(--green);
+      }
+      .tag {
+        display: inline-block;
+        font: 0.7rem var(--mono);
+        color: var(--green);
+        border: 1px solid var(--green);
+        padding: 3px 10px;
+        margin: 44px 0 20px;
+        letter-spacing: 0.08em;
+      }
+      h1 {
+        font: 800 2.7rem/1.1 var(--sans);
+        letter-spacing: -0.035em;
+        margin: 0 0 14px;
+      }
+      h1 em {
+        font-style: normal;
+        color: var(--green);
+      }
+      .cursor {
+        display: inline-block;
+        width: 0.5em;
+        height: 0.9em;
+        background: var(--green);
+        vertical-align: baseline;
+        margin-left: 4px;
+        animation: blink 1.1s steps(1) infinite;
+      }
+      @keyframes blink {
+        50% {
+          opacity: 0;
+        }
+      }
+      .sub {
+        color: var(--muted);
+        font-size: 1.05rem;
+        max-width: 620px;
+        margin: 0 0 26px;
+      }
+      .cta {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 36px;
+        flex-wrap: wrap;
+      }
+      .btn {
+        display: inline-block;
+        padding: 12px 22px;
+        font: 600 0.92rem var(--mono);
+        text-decoration: none;
+        letter-spacing: 0.02em;
+        border: 1px solid var(--green);
+        color: var(--green);
+        background: transparent;
+        cursor: pointer;
+      }
+      .btn.solid {
+        background: var(--green);
+        color: #0a0a0a;
+      }
+      .btn.solid:hover {
+        box-shadow: 0 0 24px rgba(0, 255, 65, 0.35);
+      }
+      .btn:hover {
+        background: rgba(0, 255, 65, 0.06);
+      }
+      .btn.solid:hover {
+        background: var(--green);
+      }
+      .term {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        margin: 0 0 8px;
+      }
+      .term-bar {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--border);
+      }
+      .term-bar i {
+        width: 10px;
+        height: 10px;
+        display: inline-block;
+      }
+      .term-bar i:nth-child(1) {
+        background: #ff5f56;
+      }
+      .term-bar i:nth-child(2) {
+        background: var(--amber);
+      }
+      .term-bar i:nth-child(3) {
+        background: #27c93f;
+      }
+      .term-bar span {
+        font: 0.72rem var(--mono);
+        color: var(--muted);
+        margin-left: 8px;
+      }
+      pre {
+        margin: 0;
+        padding: 16px 18px;
+        font: 12.8px/1.65 var(--mono);
+        overflow-x: auto;
+        color: var(--fg);
+      }
+      .tk-p {
+        color: var(--green);
+      }
+      .tk-s {
+        color: var(--magenta);
+      }
+      .tk-n {
+        color: var(--amber);
+      }
+      .tk-m {
+        color: var(--muted);
+      }
+      code {
+        font-family: var(--mono);
+      }
+      p code,
+      li code {
+        background: var(--panel2);
+        border: 1px solid var(--border);
+        padding: 1px 6px;
+        font-size: 0.84em;
+      }
+      h2 {
+        font: 700 0.8rem var(--mono);
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        color: var(--muted);
+        margin: 52px 0 12px;
+      }
+      h2::before {
+        content: '// ';
+        color: var(--green);
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1px;
+        background: var(--border);
+        border: 1px solid var(--border);
+        margin: 18px 0;
+      }
+      .card {
+        background: var(--panel);
+        padding: 18px;
+      }
+      .card h3 {
+        margin: 0 0 6px;
+        font: 700 0.95rem var(--mono);
+        color: var(--green);
+      }
+      .card h3 span {
+        color: var(--muted);
+        font-weight: 400;
+      }
+      .card p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+      .chips {
+        margin-top: 10px;
+      }
+      .chips code {
+        display: inline-block;
+        background: var(--panel2);
+        border: 1px solid var(--border);
+        padding: 2px 8px;
+        font-size: 0.74rem;
+        margin: 0 6px 4px 0;
+        color: var(--fg);
+      }
+      .note {
+        color: var(--muted);
+        font: 0.78rem var(--mono);
+      }
+      .note a {
+        color: inherit;
+      }
+      /* pricing */
+      .plans {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1px;
+        background: var(--border);
+        border: 1px solid var(--border);
+        margin: 18px 0 6px;
+      }
+      .plan {
+        background: var(--panel);
+        padding: 20px 16px;
+        position: relative;
+      }
+      .plan.hot {
+        outline: 1px solid var(--green);
+        outline-offset: -1px;
+        box-shadow: inset 0 0 34px rgba(0, 255, 65, 0.05);
+      }
+      .plan .ptag {
+        position: absolute;
+        top: -9px;
+        right: 12px;
+        background: var(--green);
+        color: #0a0a0a;
+        font: 700 0.6rem var(--mono);
+        padding: 2px 8px;
+        letter-spacing: 0.1em;
+      }
+      .plan .name {
+        font: 0.75rem var(--mono);
+        color: var(--muted);
+        text-transform: lowercase;
+      }
+      .plan .name::before {
+        content: '> ';
+        color: var(--green);
+      }
+      .plan .price {
+        font: 800 1.7rem var(--sans);
+        letter-spacing: -0.03em;
+        margin: 10px 0 2px;
+      }
+      .plan .price small {
+        font: 0.75rem var(--mono);
+        color: var(--muted);
+        font-weight: 400;
+      }
+      .plan .cr {
+        font: 0.72rem var(--mono);
+        color: var(--muted);
+        margin-bottom: 14px;
+      }
+      .plan a {
+        display: block;
+        text-align: center;
+        padding: 9px 0;
+        border: 1px solid var(--green);
+        color: var(--green);
+        text-decoration: none;
+        font: 600 0.8rem var(--mono);
+      }
+      .plan a.solid {
+        background: var(--green);
+        color: #0a0a0a;
+      }
+      .plan a.solid:hover {
+        box-shadow: 0 0 18px rgba(0, 255, 65, 0.3);
+      }
+      .plan a:hover {
+        background: rgba(0, 255, 65, 0.06);
+      }
+      .plan a.solid:hover {
+        background: var(--green);
+      }
+      .trust {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 22px;
+        margin: 16px 0 0;
+        color: var(--muted);
+        font: 0.78rem var(--mono);
+      }
+      .trust span::before {
+        content: '[✓] ';
+        color: var(--green);
+      }
+      .trust a {
+        color: inherit;
+        text-decoration: underline;
+        text-decoration-color: var(--border);
+      }
+      .trust a:hover {
+        color: var(--green);
+      }
+      footer {
+        border-top: 1px solid var(--border);
+        margin-top: 64px;
+        padding-top: 20px;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+      footer p {
+        max-width: 740px;
+      }
+      footer a {
+        color: var(--fg);
+      }
+      .banner {
+        margin: 20px 0 0;
+        padding: 12px 16px;
+        border: 1px solid var(--border);
+        background: var(--panel);
+        color: var(--fg);
+        font: 0.85rem var(--mono);
+      }
+      .banner.ok {
+        border-color: var(--green);
+        background: rgba(0, 255, 65, 0.05);
+      }
+      /* --- interactive fx --- */
+      #fxroll {
+        margin-left: 20px;
+        padding: 5px 10px;
+        font: 600 0.75rem var(--mono);
+        border: 1px solid var(--magenta);
+        color: var(--magenta);
+        background: transparent;
+        cursor: pointer;
+        letter-spacing: 0.04em;
+      }
+      #fxroll:hover {
+        background: rgba(255, 0, 127, 0.08);
+        box-shadow: 0 0 14px rgba(255, 0, 127, 0.25);
+      }
+      @media (hover: none) {
+        #fxroll {
+          display: none;
+        }
+      }
+      .burst {
+        position: fixed;
+        font: 700 0.72rem var(--mono);
+        color: var(--green);
+        pointer-events: none;
+        z-index: 9999;
+        animation: rise 0.75s ease-out forwards;
+      }
+      @keyframes rise {
+        to {
+          transform: translateY(-30px);
+          opacity: 0;
+        }
+      }
+      .tp {
+        position: fixed;
+        width: 6px;
+        height: 6px;
+        background: var(--green);
+        pointer-events: none;
+        z-index: 9998;
+        animation: tfade 0.5s linear forwards;
+      }
+      @keyframes tfade {
+        to {
+          opacity: 0;
+          transform: scale(0.3);
+        }
+      }
+      #blockcur {
+        position: fixed;
+        width: 10px;
+        height: 18px;
+        background: var(--green);
+        pointer-events: none;
+        display: none;
+        z-index: 9999;
+        mix-blend-mode: screen;
+      }
+      html.fx-nocursor,
+      html.fx-nocursor * {
+        cursor: none !important;
+      }
+      #spotcv {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        display: none;
+        z-index: 9997;
+      }
+      .xh {
+        position: fixed;
+        background: rgba(0, 255, 65, 0.25);
+        pointer-events: none;
+        display: none;
+        z-index: 9997;
+      }
+      #xhv {
+        width: 1px;
+        top: 0;
+        bottom: 0;
+      }
+      #xhh {
+        height: 1px;
+        left: 0;
+        right: 0;
+      }
+      #xhc {
+        position: fixed;
+        font: 0.66rem var(--mono);
+        color: var(--green);
+        pointer-events: none;
+        display: none;
+        z-index: 9999;
+        background: rgba(10, 10, 10, 0.85);
+        padding: 1px 6px;
+        border: 1px solid var(--border);
+      }
+      .dripc {
+        position: fixed;
+        font: 700 0.72rem var(--mono);
+        color: var(--green);
+        pointer-events: none;
+        z-index: 9998;
+        animation: dripfall 0.7s linear forwards;
+      }
+      @keyframes dripfall {
+        to {
+          transform: translateY(26px);
+          opacity: 0;
+        }
+      }
+      #lockbox {
+        position: fixed;
+        width: 34px;
+        height: 34px;
+        pointer-events: none;
+        display: none;
+        z-index: 9998;
+      }
+      #lockbox i {
+        position: absolute;
+        width: 9px;
+        height: 9px;
+        border: 0 solid var(--green);
+      }
+      #lockbox i:nth-child(1) {
+        top: 0;
+        left: 0;
+        border-top-width: 2px;
+        border-left-width: 2px;
+      }
+      #lockbox i:nth-child(2) {
+        top: 0;
+        right: 0;
+        border-top-width: 2px;
+        border-right-width: 2px;
+      }
+      #lockbox i:nth-child(3) {
+        bottom: 0;
+        left: 0;
+        border-bottom-width: 2px;
+        border-left-width: 2px;
+      }
+      #lockbox i:nth-child(4) {
+        bottom: 0;
+        right: 0;
+        border-bottom-width: 2px;
+        border-right-width: 2px;
+      }
+      #glitchA {
+        position: fixed;
+        width: 10px;
+        height: 18px;
+        background: var(--green);
+        pointer-events: none;
+        display: none;
+        z-index: 9999;
+      }
+      #glitchB {
+        position: fixed;
+        width: 10px;
+        height: 18px;
+        background: var(--magenta);
+        pointer-events: none;
+        display: none;
+        z-index: 9998;
+        opacity: 0.7;
+      }
+      #racc {
+        position: fixed;
+        width: 26px;
+        height: 24px;
+        pointer-events: none;
+        display: none;
+        z-index: 9999;
+        image-rendering: pixelated;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .cursor {
+          animation: none;
+        }
+        #fxroll {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <a class="brand" href="/"
+        ><img src="/icon-raccoon.svg" alt="" /><span><b>&gt;_</b> gankdat</span></a
+      >
+      <nav>
+        <a href="/docs">/docs</a>
+        <a href="/stats">/stats</a>
+        <a href="/openapi.json">/openapi</a>
+        <a href="/llms.txt">/llms.txt</a>
+        <a href="#pricing">/pricing</a>
+        <a href="/account">/account</a>
+        <button id="fxroll" type="button" title="???">[ do not press ]</button>
+      </nav>
+    </header>
+    <main>
+      <div
+        id="checkout-banner"
+        class="banner"
+        style="display: none"
+        role="status"
+        aria-live="polite"
+      ></div>
+      <span class="tag">[ UK PROCUREMENT · PLANNING · MORE INCOMING ]</span>
+      <h1>
+        Public data is a mess.<br />We <em id="verb">gank</em><span class="cursor"></span> it for
+        you.
+      </h1>
+      <p class="sub">
+        Archaic government feeds, extracted and served as fast, clean JSON — one schema, refreshed
+        daily, one key for the whole catalog. Built for developers and AI agents.
+      </p>
+      <div class="cta">
+        <a class="btn solid" href="/account">$ get api-key</a
+        ><a class="btn" href="/docs">$ man gankdat</a>
+      </div>
+
+      <div class="term">
+        <div class="term-bar"><i></i><i></i><i></i><span>heist.sh — gankdat.com</span></div>
+        <pre><span class="tk-p">~$</span> curl -H <span class="tk-s">"Authorization: Bearer $API_KEY"</span> \
+     <span class="tk-s">"https://gankdat.com/v1/data/uk-tenders?value_amount_min=1000000&amp;status=active"</span>
+
+{ "ok": <span class="tk-p">true</span>,
+  "data": [ { "buyer": <span class="tk-s">"London Borough of Havering"</span>,
+              "title": <span class="tk-s">"Highways maintenance term contract"</span>,
+              "value_amount": <span class="tk-n">8400000</span>, "cpv_codes": [<span class="tk-s">"45233139"</span>], <span class="tk-m">…</span> } ],
+  "meta": { "total": <span class="tk-n">116</span>, "last_refreshed_at": <span class="tk-s">"2026-07-09T05:00:11Z"</span> } }</pre>
+      </div>
+
+      <h2 id="key">get your api key</h2>
+      <p>
+        Sign in with your email — magic link, no password. Create keys from your dashboard; the free
+        tier is 250 requests/month with no card, and every key works across the whole catalog.
+      </p>
+      <p><a class="btn solid" href="/account">$ sign in &amp; create a key</a></p>
+      <p class="note">
+        Got a key? Use it anywhere:
+        <code>curl -H "Authorization: Bearer fapi_..." https://gankdat.com/v1/data/uk-tenders</code>
+      </p>
+
+      <h2>the catalog — one schema across every dataset</h2>
+      <p class="note">
+        Rendered from the live registry at <a href="/v1/data"><code>/v1/data</code></a> — when a
+        dataset ships, it appears here.
+      </p>
+      <div class="grid" id="datasets-grid">
+        <div class="card">
+          <h3>uk-tenders <span>// procurement</span></h3>
+          <p>
+            Public-sector tenders from Find a Tender's official OCDS feed, flattened from nested
+            releases to one clean row per notice. For bid intelligence, lead-gen, and market
+            research.
+          </p>
+          <p class="chips">
+            <code>buyer</code><code>status</code><code>cpv_codes</code><code>value_amount_min</code
+            ><code>published_at_after</code><code>q</code>
+          </p>
+        </div>
+        <div class="card">
+          <h3>uk-contract-awards <span>// bid intelligence</span></h3>
+          <p>
+            Who won what: UK public-sector contract awards from the official Contracts Finder feed —
+            buyer, winning supplier and its company number, value, contract period, CPV codes. The
+            last two weeks of awards, refreshed daily.
+          </p>
+          <p class="chips">
+            <code>supplier</code><code>buyer</code><code>cpv_codes</code
+            ><code>award_value_amount_min</code><code>award_date_after</code><code>category</code
+            ><code>q</code>
+          </p>
+        </div>
+        <div class="card">
+          <h3>uk-planning <span>// planning</span></h3>
+          <p>
+            Planning applications from planning.data.gov.uk, normalized to the same schema. Blind
+            Mode: applicant personal data is dropped at ingest, never stored.
+          </p>
+          <p class="chips">
+            <code>authority</code><code>reference</code><code>decision_date_after</code
+            ><code>decision_date_before</code><code>q</code>
+          </p>
+        </div>
+        <div class="card">
+          <h3>eu-ted <span>// procurement</span></h3>
+          <p>
+            EU contract notices and awards from TED (Tenders Electronic Daily), the official EU
+            procurement journal — buyer, country, CPV, values, deadlines across every member state.
+            Pairs with uk-tenders for bid intelligence.
+          </p>
+          <p class="chips">
+            <code>buyer</code><code>buyer_country</code><code>cpv_codes</code
+            ><code>value_amount_min</code><code>published_at_after</code><code>q</code>
+          </p>
+        </div>
+        <div class="card">
+          <h3>uk-sanctions <span>// compliance</span></h3>
+          <p>
+            Every designation on the UK Sanctions List (FCDO) — individuals, entities, ships, with
+            regime, aliases, and dates. Served for compliance screening; DOBs, IDs, and contact
+            details dropped at ingest.
+          </p>
+          <p class="chips">
+            <code>name</code><code>regime</code><code>designation_type</code><code>countries</code
+            ><code>date_designated_after</code><code>q</code>
+          </p>
+        </div>
+        <div class="card">
+          <h3>sam-exclusions <span>// compliance</span></h3>
+          <p>
+            Every active US federal exclusion (debarment) from SAM.gov — parties barred from federal
+            awards, with agency, program, and dates. Pairs with uk-sanctions for supplier due
+            diligence. Addresses and identifiers dropped at ingest.
+          </p>
+          <p class="chips">
+            <code>name</code><code>classification</code><code>excluding_agency</code
+            ><code>exclusion_program</code><code>activation_date_after</code><code>q</code>
+          </p>
+        </div>
+        <div class="card">
+          <h3>uk-insolvency <span>// risk</span></h3>
+          <p>
+            The latest UK corporate insolvency notices from The Gazette — winding-up petitions and
+            orders, administrator/receiver/liquidator appointments, moratoria. Company-level facts
+            only (Blind Mode).
+          </p>
+          <p class="chips">
+            <code>company</code><code>notice_type</code><code>notice_code</code
+            ><code>published_at_after</code><code>published_at_before</code><code>q</code>
+          </p>
+        </div>
+        <div class="card">
+          <h3>uk-companies <span>// company data</span></h3>
+          <p>
+            The newest companies on the UK register, from the official Companies House API — name,
+            number, type, SIC codes, incorporation date, and registered-office area. Officer/PSC
+            data never ingested.
+          </p>
+          <p class="chips">
+            <code>company</code><code>company_type</code><code>sic_codes</code><code>locality</code
+            ><code>incorporated_on_after</code><code>q</code>
+          </p>
+        </div>
+        <div class="card">
+          <h3>uk-company-profiles <span>// company lookup</span></h3>
+          <p>
+            One UK company by number or name, live from the official Companies House API — status,
+            SIC codes, accounts and confirmation-statement due dates, charges, latest filings,
+            corporate PSCs. Officers and individual PSCs never ingested. Cached 24 h; one credit a
+            lookup.
+          </p>
+          <p class="chips"><code>company_number</code><code>company</code></p>
+        </div>
+        <div class="card">
+          <h3>uk-food-hygiene <span>// risk &amp; leads</span></h3>
+          <p>
+            Every rated food business in the UK from the official FSA Food Hygiene Rating Scheme
+            file — name, type, trading address and area, local authority, rating value and date,
+            sub-scores, new-rating-pending flag. Stable FHRSID; refreshed daily.
+          </p>
+          <p class="chips">
+            <code>rating_value</code><code>business_type</code><code>outward_code</code
+            ><code>local_authority</code><code>rating_date_after</code><code>hygiene_score_min</code
+            ><code>q</code>
+          </p>
+        </div>
+        <div class="card">
+          <h3>uk-sponsors <span>// company data</span></h3>
+          <p>
+            Every organisation licensed by the Home Office to sponsor Worker and Temporary Worker
+            visas — name, town, county, sponsor type, licence rating and immigration route, from the
+            official GOV.UK register. Republished most working days.
+          </p>
+          <p class="chips">
+            <code>organisation</code><code>route</code><code>rating</code><code>town</code
+            ><code>county</code><code>q</code>
+          </p>
+        </div>
+        <div class="card">
+          <h3>uk-charities <span>// company data</span></h3>
+          <p>
+            Every registered and removed charity in England &amp; Wales from the Charity
+            Commission's daily extract — numbers, type, status and dates, reporting status, latest
+            income and expenditure, postcode area, flags. Contact details and trustees never
+            ingested.
+          </p>
+          <p class="chips">
+            <code>name</code><code>registration_status</code><code>charity_type</code
+            ><code>latest_income_min</code><code>date_of_registration_after</code
+            ><code>outward_code</code><code>website_present</code><code>q</code>
+          </p>
+        </div>
+        <div class="card">
+          <h3>uk-care-locations <span>// risk &amp; leads</span></h3>
+          <p>
+            Every CQC-regulated care location in England — hospitals, care homes, GPs, dentists,
+            homecare — with service types, specialisms, provider, area and the date of the latest
+            CQC check, from the official weekly directory. Phone numbers and manager names never
+            ingested.
+          </p>
+          <p class="chips">
+            <code>service_types</code><code>specialisms</code><code>provider_name</code
+            ><code>region</code><code>local_authority</code><code>latest_check_date_after</code
+            ><code>website_present</code><code>q</code>
+          </p>
+        </div>
+        <div class="card">
+          <h3>uk-trademark-journal <span>// trade mark watch</span></h3>
+          <p>
+            Every UK trade mark application (and international registration designating the UK)
+            published for opposition in the IPO's weekly Trade Marks Journal — application number,
+            mark text and type, Nice classes and goods/services, applicant organisation and country,
+            representative, filing date, journal issue and the two-month opposition deadline.
+            Rolling 52 issues; the change feed is each week's new publications, filterable by class,
+            applicant or keyword — a trade-mark watch in one call. Weekly statistics per
+            <a href="/stats/uk-trademark-journal">Nice class</a>. Applicant names kept for
+            organisations only; mark images never stored.
+          </p>
+          <p class="chips">
+            <code>classes</code><code>mark_text</code><code>applicant</code
+            ><code>applicant_country</code><code>journal_number</code
+            ><code>opposition_deadline_after</code><code>q</code>
+          </p>
+        </div>
+        <div class="card">
+          <h3>uk-gambling-operators <span>// KYB &amp; affiliate compliance</span></h3>
+          <p>
+            Every operating licence on the Gambling Commission register for Great Britain — remote
+            and non-remote betting, casino, bingo, gaming machines, lotteries, gambling software —
+            with status, activities, dates and trading names; the website domains registered against
+            each operator; and every licensed premises (betting shops, casinos, bingo halls,
+            arcades) by licensing authority and address. Daily diff: new licences, surrenders and
+            revocations, new domains. Personal licences never ingested.
+          </p>
+          <p class="chips">
+            <code>record_type</code><code>licence_type</code><code>activities</code
+            ><code>is_active</code><code>domain_name</code><code>local_authority</code
+            ><code>end_date_after</code><code>q</code>
+          </p>
+        </div>
+        <div class="card">
+          <h3>nhs-ods <span>// healthcare leads &amp; KYB</span></h3>
+          <p>
+            Every GP practice, NHS trust and trust site, pharmacy, dental practice and independent
+            healthcare provider on the NHS Organisation Data Service register for England — ODS
+            code, type, active/closed status, region and integrated care board codes, address, open
+            and close dates, parent commissioner or trust, prescribing setting. Telephone numbers
+            dropped; the practitioner files are never ingested.
+          </p>
+          <p class="chips">
+            <code>org_type</code><code>status</code><code>health_geography</code
+            ><code>parent_code</code><code>outward_code</code><code>open_date_after</code
+            ><code>q</code>
+          </p>
+        </div>
+        <div class="card">
+          <h3>uk-schools <span>// leads &amp; research</span></h3>
+          <p>
+            Every school, academy, college and nursery on the DfE register in England — type and
+            phase, status, local authority and region, address, website, capacity and pupils on
+            roll, academy trust — joined by URN to the latest Ofsted rating and inspection date.
+            Head teacher names and phone numbers never ingested.
+          </p>
+          <p class="chips">
+            <code>phase</code><code>establishment_type</code><code>local_authority</code
+            ><code>trust_name</code><code>ofsted_rating</code><code>pupils_min</code
+            ><code>website_present</code><code>q</code>
+          </p>
+        </div>
+        <div class="card">
+          <h3>no-website leads <span>// preset</span></h3>
+          <p>
+            Organisations on official registers that list no website — the prospect list for web
+            agencies. Add <code>website_present=false</code> to uk-care-locations, uk-charities or
+            uk-schools and filter by area; every field on any dataset supports
+            <code>&lt;field&gt;_present=true|false</code>. Also on the Apify Store as one merged
+            feed (<em>UK Businesses Without a Website</em>).
+          </p>
+          <p class="chips">
+            <code>website_present=false</code><code>outward_code</code><code>local_authority</code
+            ><code>latest_income_min</code>
+          </p>
+        </div>
+      </div>
+
+      <h2>built for ai agents, not just humans</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>mcp server</h3>
+          <p>
+            Point any MCP client at <code>/mcp</code>: tools for every dataset, deterministic JSON
+            results, usage built in. No key yet? Every tool answers a 5-row preview without one, and
+            the agent can sign you up itself — <code>request_api_key</code> emails you one approval
+            link. Also in Claude's connectors directory (<a href="/docs#claude">how</a>).
+          </p>
+        </div>
+        <div class="card">
+          <h3>x402 micropayments</h3>
+          <p>
+            No account? Agents pay per request in USDC at <code>/x402/data/…</code> — x402 v2, with
+            each dataset's query schema and an output example in the 402 terms, so an agent can
+            build the call before it pays. Zero commission.
+          </p>
+        </div>
+        <div class="card">
+          <h3>change feeds</h3>
+          <p>
+            Every register diffs itself each morning:
+            <code>/v1/changes/…?since=YYYY-MM-DD</code> returns what was added, removed or changed —
+            food hygiene, charities, care locations, schools, NHS organisations, sponsors,
+            exclusions, gambling licences and the weekly trade-mark journal — with the dataset's own
+            filters, so <code>?classes=09&amp;q=acme</code> is a watch. 90-day history, MCP tool
+            <code>get_changes</code>; the activity per day is on each
+            <a href="/stats">stats page</a>. Poll the delta, not the register — no other source
+            publishes official-register deltas.
+          </p>
+        </div>
+        <div class="card">
+          <h3>openapi 3.1</h3>
+          <p>
+            The whole surface is described at <code>/openapi.json</code> — generated from the same
+            schemas that validate every request.
+          </p>
+        </div>
+      </div>
+
+      <h2 id="pricing">pricing</h2>
+      <div class="plans">
+        <div class="plan">
+          <div class="name">free</div>
+          <div class="price">£0</div>
+          <div class="cr">250 credits/mo</div>
+          <a href="/account">sign in</a>
+        </div>
+        <div class="plan">
+          <div class="name">grep</div>
+          <div class="price">£5<small>/mo</small></div>
+          <div class="cr">1,000 credits/mo</div>
+          <a href="/account">subscribe</a>
+        </div>
+        <div class="plan hot">
+          <span class="ptag">POPULAR</span>
+          <div class="name">cron</div>
+          <div class="price">£23<small>/mo</small></div>
+          <div class="cr">5,000 credits/mo</div>
+          <a class="solid" href="/account">subscribe</a>
+        </div>
+        <div class="plan">
+          <div class="name">daemon</div>
+          <div class="price">£79<small>/mo</small></div>
+          <div class="cr">20,000 credits/mo</div>
+          <a href="/account">subscribe</a>
+        </div>
+        <div class="plan">
+          <div class="name">kernel</div>
+          <div class="price">£239<small>/mo</small></div>
+          <div class="cr">100,000 credits/mo</div>
+          <a href="/account">subscribe</a>
+        </div>
+      </div>
+      <p class="note">
+        1 credit = 1 request · a change-feed page costs 1 credit, so a daily diff of every register
+        fits the free tier · rate limit 60 req/min · checking <code>/v1/usage</code> is always free
+        · outside the UK? checkout bills USD/EUR automatically · launch pricing, subject to change ·
+        14-day make-it-right guarantee (<a href="/terms">terms</a>)
+      </p>
+
+      <div class="trust">
+        <span>cancel anytime — monthly billing, no lock-in</span>
+        <span><a href="/privacy">zero trackers</a> — one essential cookie</span>
+        <span>official government sources — no scraping, <a href="/privacy">Blind Mode</a></span>
+      </div>
+
+      <footer>
+        <p>
+          <strong>Data &amp; privacy.</strong> Sources are official government feeds; each dataset's
+          licence and personal-data posture is stated in the <a href="/terms">terms</a>.
+          Public-record datasets (planning.data.gov.uk, Find a Tender — both OGL) run Blind Mode:
+          personal data in source records is dropped at ingest and never stored. The UK sanctions
+          list is served as published, minimized, for compliance use. The only personal data we hold
+          about <em>you</em> is the email you sign up with — no analytics cookies, no purchased
+          lists, no cold email. Contact: <a href="mailto:info@gankdat.com">info@gankdat.com</a>.
+        </p>
+        <p>
+          © 2026 gankdat · <a href="/docs">Documentation</a> · <a href="/stats">Statistics</a> ·
+          <a href="/feedback">Feedback</a> · <a href="/privacy">Privacy</a> ·
+          <a href="/terms">Terms</a> · <a href="/llms.txt">For LLMs</a>
+        </p>
+      </footer>
+    </main>
+    <script src="/js/index.js" defer></script>
+  </body>
+</html>

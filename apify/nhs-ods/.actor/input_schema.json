@@ -1,0 +1,108 @@
+{
+  "title": "NHS Organisations Directory (ODS: GPs, Trusts, Pharmacies) — filters",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "mode": {
+      "title": "Mode",
+      "type": "string",
+      "description": "Current records (default), or only the records added, removed or changed since a date — schedule a daily run in changes mode to monitor the register and pay only for what changed.",
+      "editor": "select",
+      "enum": ["data", "changes"],
+      "enumTitles": ["Current records", "Changes since a date (monitor)"],
+      "default": "data"
+    },
+    "since": {
+      "title": "Changes since",
+      "type": "string",
+      "description": "Changes mode only: YYYY-MM-DD. Default: the last 7 days. The feed keeps 90 days.",
+      "editor": "textfield",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "change": {
+      "title": "Change type",
+      "type": "string",
+      "description": "Changes mode only: one kind of change. Default: all three.",
+      "editor": "select",
+      "enum": ["added", "removed", "changed"],
+      "enumTitles": ["Added to the register", "Removed from the register", "Changed"]
+    },
+    "org_type": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Organisation type contains",
+      "description": "GP practice, NHS trust, NHS trust site, Pharmacy, Dental practice, Independent healthcare provider. Leave blank for all."
+    },
+    "status": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Status contains",
+      "description": "Active, Closed, Dormant, Proposed. Leave blank for all."
+    },
+    "national_grouping": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "NHS England region code",
+      "description": "ODS national grouping code, e.g. Y56 (London), Y63 (North East and Yorkshire)."
+    },
+    "health_geography": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Integrated care board code",
+      "description": "ODS high-level health geography code, e.g. QKK, QHM."
+    },
+    "town": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Town contains",
+      "description": "Filter: Town contains (case-insensitive substring match)."
+    },
+    "outward_code": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Postcode area (outward code)",
+      "description": "Filter: Postcode area (outward code) (case-insensitive substring match)."
+    },
+    "parent_code": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Parent organisation code",
+      "description": "The commissioning sub-ICB location code for practices and pharmacies, or the trust code for a trust site."
+    },
+    "prescribing_setting": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Prescribing setting contains (GP practices)",
+      "description": "GP practice, Out-of-hours practice, Prison, Hospice, Care home or nursing home, …"
+    },
+    "open_date_after": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Opened on or after",
+      "description": "YYYY-MM-DD",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "close_date_after": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Closed on or after",
+      "description": "YYYY-MM-DD — recent closures and mergers",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "q": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Free-text search",
+      "description": "Filter: Free-text search (case-insensitive substring match)."
+    },
+    "max_results": {
+      "title": "Maximum results",
+      "type": "integer",
+      "description": "Stop after this many records (you are charged per result).",
+      "default": 1000,
+      "minimum": 1,
+      "maximum": 100000
+    }
+  },
+  "required": []
+}

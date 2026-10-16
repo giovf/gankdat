@@ -1,0 +1,20 @@
+{
+  "actorSpecification": 1,
+  "name": "uk-companies-house-lookup-monitor",
+  "title": "UK Companies House Lookup & Monitor",
+  "description": "Look up UK companies by number or name from the official Companies House API — status, SIC codes, accounts and confirmation-statement due dates, charges, latest filings, corporate PSCs. Schedule it in changes mode to monitor your own list and get only what changed. Pay per result.",
+  "version": "0.1",
+  "buildTag": "latest",
+  "dockerfile": "../Dockerfile",
+  "readme": "./README.md",
+  "input": "./input_schema.json",
+  "environmentVariables": {
+    "GANKDAT_API_KEY": "@gankdatApiKey"
+  },
+  "minMemoryMbytes": 256,
+  "maxMemoryMbytes": 512,
+  "output": "./output_schema.json",
+  "storages": {
+    "dataset": "./dataset_schema.json"
+  }
+}

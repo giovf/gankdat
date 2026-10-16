@@ -1,0 +1,5 @@
+{
+  "pack_1k": { "credits": 1000, "usd": "8.00" },
+  "pack_5k": { "credits": 5000, "usd": "35.00" },
+  "pack_20k": { "credits": 20000, "usd": "120.00" }
+}

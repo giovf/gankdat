@@ -1,0 +1,13 @@
+{
+  "name": "gankdat-apify-uk-no-website-leads",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Apify actor: UK organisations without a website (care providers, charities, schools) via gankdat.com",
+  "scripts": {
+    "start": "node src/main.mjs"
+  },
+  "dependencies": {
+    "apify": "^3.4.0"
+  }
+}

@@ -1,0 +1,104 @@
+{
+  "actorSpecification": 1,
+  "fields": {
+    "type": "object",
+    "properties": {
+      "organisation_number": {
+        "type": ["number", "null"]
+      },
+      "registered_charity_number": {
+        "type": ["number", "null"]
+      },
+      "linked_charity_number": {
+        "type": ["number", "null"]
+      },
+      "name": {
+        "type": ["string", "null"]
+      },
+      "charity_type": {
+        "type": ["string", "null"]
+      },
+      "registration_status": {
+        "type": ["string", "null"]
+      },
+      "date_of_registration": {
+        "type": ["string", "null"]
+      },
+      "date_of_removal": {
+        "type": ["string", "null"]
+      },
+      "reporting_status": {
+        "type": ["string", "null"]
+      },
+      "latest_financial_period_end": {
+        "type": ["string", "null"]
+      },
+      "latest_income": {
+        "type": ["number", "null"]
+      },
+      "latest_expenditure": {
+        "type": ["number", "null"]
+      },
+      "postcode": {
+        "type": ["string", "null"]
+      },
+      "outward_code": {
+        "type": ["string", "null"]
+      },
+      "company_number": {
+        "type": ["string", "null"]
+      },
+      "website": {
+        "type": ["string", "null"]
+      },
+      "insolvent": {
+        "type": ["boolean", "null"]
+      },
+      "in_administration": {
+        "type": ["boolean", "null"]
+      },
+      "is_cio": {
+        "type": ["boolean", "null"]
+      },
+      "cio_dissolved": {
+        "type": ["boolean", "null"]
+      },
+      "gift_aid": {
+        "type": ["boolean", "null"]
+      },
+      "has_land": {
+        "type": ["boolean", "null"]
+      },
+      "activities": {
+        "type": ["string", "null"]
+      },
+      "change": {
+        "type": ["string", "null"]
+      },
+      "changed_at": {
+        "type": ["string", "null"]
+      }
+    }
+  },
+  "views": {
+    "overview": {
+      "title": "Overview",
+      "transformation": {
+        "fields": [
+          "name",
+          "registered_charity_number",
+          "charity_type",
+          "latest_income",
+          "latest_expenditure",
+          "reporting_status",
+          "postcode",
+          "date_of_registration",
+          "website"
+        ]
+      },
+      "display": {
+        "component": "table"
+      }
+    }
+  }
+}

@@ -1,0 +1,332 @@
+[
+  {
+    "company_name": "URBANWRAP LIVERPOOL LIMITED",
+    "company_number": "17329381",
+    "company_status": "active",
+    "company_type": "ltd",
+    "date_of_creation": "2026-07-09",
+    "registered_office_address": {
+      "locality": "Liverpool",
+      "postal_code": "L25 5NF",
+      "country": "England"
+    },
+    "sic_codes": ["71111", "74100"]
+  },
+  {
+    "company_name": "HOMEFLOW SERVICES LTD",
+    "company_number": "17329382",
+    "company_status": "active",
+    "company_type": "ltd",
+    "date_of_creation": "2026-07-09",
+    "registered_office_address": {
+      "locality": "Wembley",
+      "postal_code": "HA9 8LY",
+      "country": "United Kingdom"
+    },
+    "sic_codes": ["43290"]
+  },
+  {
+    "company_name": "GIBSON-LAVELLE GROUP LTD",
+    "company_number": "17329379",
+    "company_status": "active",
+    "company_type": "ltd",
+    "date_of_creation": "2026-07-09",
+    "registered_office_address": {
+      "locality": "Bilston",
+      "postal_code": "WV14 9RL",
+      "country": "England"
+    },
+    "sic_codes": ["64209"]
+  },
+  {
+    "company_name": "RAYA GARDEN CHINESE LTD",
+    "company_number": "17329473",
+    "company_status": "active",
+    "company_type": "ltd",
+    "date_of_creation": "2026-07-09",
+    "registered_office_address": {
+      "locality": "Newsham",
+      "postal_code": "NE24 4NR",
+      "region": "Blyth",
+      "country": "United Kingdom"
+    },
+    "sic_codes": ["56103"]
+  },
+  {
+    "company_name": "YOUSIF BARBER LTD",
+    "company_number": "17329476",
+    "company_status": "active",
+    "company_type": "ltd",
+    "date_of_creation": "2026-07-09",
+    "registered_office_address": {
+      "locality": "Ramsey",
+      "postal_code": "PE26 1HG",
+      "country": "United Kingdom"
+    },
+    "sic_codes": ["96020"]
+  },
+  {
+    "company_name": "CLARIHEALTH HOLDINGS LTD",
+    "company_number": "17329483",
+    "company_status": "active",
+    "company_type": "ltd",
+    "date_of_creation": "2026-07-09",
+    "registered_office_address": {
+      "locality": "Beaconsfield",
+      "postal_code": "HP9 2QH",
+      "country": "United Kingdom"
+    },
+    "sic_codes": ["47730"]
+  },
+  {
+    "company_name": "ROWANA TRADING LTD",
+    "company_number": "17329478",
+    "company_status": "active",
+    "company_type": "ltd",
+    "date_of_creation": "2026-07-09",
+    "registered_office_address": {
+      "locality": "London",
+      "postal_code": "N1 7GU",
+      "country": "England"
+    },
+    "sic_codes": ["14110", "29100", "45310", "46160"]
+  },
+  {
+    "company_name": "KJ HEALTH SOLUTIONS LTD",
+    "company_number": "17329499",
+    "company_status": "active",
+    "company_type": "ltd",
+    "date_of_creation": "2026-07-09",
+    "registered_office_address": {
+      "locality": "Huddersfield",
+      "postal_code": "HD4 7JN",
+      "country": "England"
+    },
+    "sic_codes": ["86900"]
+  },
+  {
+    "company_name": "MPL UK TRANSPORT LTD",
+    "company_number": "17329497",
+    "company_status": "active",
+    "company_type": "ltd",
+    "date_of_creation": "2026-07-09",
+    "registered_office_address": {
+      "locality": "London",
+      "postal_code": "W1T 5DB",
+      "country": "England"
+    },
+    "sic_codes": ["96090"]
+  },
+  {
+    "company_name": "JACK TYNAN LTD",
+    "company_number": "17329471",
+    "company_status": "active",
+    "company_type": "ltd",
+    "date_of_creation": "2026-07-09",
+    "registered_office_address": {
+      "locality": "Bracknell",
+      "postal_code": "RG12 1DB",
+      "country": "United Kingdom"
+    },
+    "sic_codes": ["85510", "93199"]
+  },
+  {
+    "company_name": "CR FACADE LTD",
+    "company_number": "17329475",
+    "company_status": "active",
+    "company_type": "ltd",
+    "date_of_creation": "2026-07-09",
+    "registered_office_address": {
+      "locality": "Ilford",
+      "postal_code": "IG3 8NQ",
+      "country": "England"
+    },
+    "sic_codes": ["43999"]
+  },
+  {
+    "company_name": "ANSHIN ASSOCIATES LIMITED",
+    "company_number": "17329480",
+    "company_status": "active",
+    "company_type": "ltd",
+    "date_of_creation": "2026-07-09",
+    "registered_office_address": {
+      "locality": "Northumberland",
+      "postal_code": "NE65 7AE",
+      "country": "England"
+    },
+    "sic_codes": ["70229"]
+  },
+  {
+    "company_name": "AMH HEATING LTD",
+    "company_number": "17329493",
+    "company_status": "active",
+    "company_type": "ltd",
+    "date_of_creation": "2026-07-09",
+    "registered_office_address": {
+      "locality": "Amersham",
+      "postal_code": "HP7 0BQ",
+      "region": "Buckinghamshire",
+      "country": "United Kingdom"
+    },
+    "sic_codes": ["43220"]
+  },
+  {
+    "company_name": "CORTEXCO LTD",
+    "company_number": "NI742108",
+    "company_status": "active",
+    "company_type": "ltd",
+    "date_of_creation": "2026-07-09",
+    "registered_office_address": {
+      "locality": "Belfast",
+      "postal_code": "BT5 5AD",
+      "country": "Northern Ireland"
+    },
+    "sic_codes": ["62012"]
+  },
+  {
+    "company_name": "FROST CARE SOLUTIONS LIMITED",
+    "company_number": "17329573",
+    "company_status": "active",
+    "company_type": "ltd",
+    "date_of_creation": "2026-07-09",
+    "registered_office_address": {
+      "locality": "King's Lynn",
+      "postal_code": "PE30 1ES",
+      "region": "Norfolk",
+      "country": "United Kingdom"
+    },
+    "sic_codes": ["86900"]
+  },
+  {
+    "company_name": "SPARKFISH LTD",
+    "company_number": "17329583",
+    "company_status": "active",
+    "company_type": "ltd",
+    "date_of_creation": "2026-07-09",
+    "registered_office_address": {
+      "locality": "Derby",
+      "postal_code": "DE22 2UR",
+      "country": "England"
+    },
+    "sic_codes": ["85100", "85200", "85590"]
+  },
+  {
+    "company_name": "ANAESTHETIC INTELLIGENCE LIMITED",
+    "company_number": "17329582",
+    "company_status": "active",
+    "company_type": "ltd",
+    "date_of_creation": "2026-07-09",
+    "registered_office_address": {
+      "locality": "London",
+      "postal_code": "WC1H 9BQ",
+      "country": "United Kingdom"
+    },
+    "sic_codes": ["86220"]
+  },
+  {
+    "company_name": "GIKENA LTD",
+    "company_number": "17329575",
+    "company_status": "active",
+    "company_type": "ltd",
+    "date_of_creation": "2026-07-09",
+    "registered_office_address": {
+      "locality": "London",
+      "postal_code": "EC2A 4NA",
+      "region": "England",
+      "country": "United Kingdom"
+    },
+    "sic_codes": ["62020"]
+  },
+  {
+    "company_name": "QUALITY  BUSINESS LONDON LTD",
+    "company_number": "17329589",
+    "company_status": "active",
+    "company_type": "ltd",
+    "date_of_creation": "2026-07-09",
+    "registered_office_address": {
+      "locality": "Edmonton",
+      "postal_code": "N9 9EL",
+      "country": "England"
+    },
+    "sic_codes": ["47910"]
+  },
+  {
+    "company_name": "SWINGATE PHASE 1A COMMERCIAL LTD",
+    "company_number": "17329580",
+    "company_status": "active",
+    "company_type": "ltd",
+    "date_of_creation": "2026-07-09",
+    "registered_office_address": {
+      "locality": "London",
+      "postal_code": "EC2M 6XB"
+    },
+    "sic_codes": ["68100"]
+  },
+  {
+    "company_name": "EVENTURE ACCESS LTD",
+    "company_number": "17329590",
+    "company_status": "active",
+    "company_type": "ltd",
+    "date_of_creation": "2026-07-09",
+    "registered_office_address": {
+      "locality": "Southall",
+      "postal_code": "UB1 2JJ",
+      "country": "England"
+    },
+    "sic_codes": ["56210", "58290", "62011", "62012"]
+  },
+  {
+    "company_name": "YOU OR ME INNOVATIONS ENTERPRISES LTD",
+    "company_number": "17329672",
+    "company_status": "active",
+    "company_type": "ltd",
+    "date_of_creation": "2026-07-09",
+    "registered_office_address": {
+      "locality": "Slough",
+      "postal_code": "SL3 8WG",
+      "country": "United Kingdom"
+    },
+    "sic_codes": ["62090", "70210", "73110", "73120"]
+  },
+  {
+    "company_name": "SY ACCOMMODATIONS LTD",
+    "company_number": "17329686",
+    "company_status": "active",
+    "company_type": "ltd",
+    "date_of_creation": "2026-07-09",
+    "registered_office_address": {
+      "locality": "Salford",
+      "postal_code": "M6 6DE",
+      "region": "Greater Manchester",
+      "country": "England"
+    },
+    "sic_codes": ["68100", "68209"]
+  },
+  {
+    "company_name": "GRH GROUP SERVICES UK LTD",
+    "company_number": "17329689",
+    "company_status": "active",
+    "company_type": "ltd",
+    "date_of_creation": "2026-07-09",
+    "registered_office_address": {
+      "locality": "Peterborough",
+      "postal_code": "PE7 1GG",
+      "country": "England"
+    },
+    "sic_codes": ["78200"]
+  },
+  {
+    "company_name": "CINEMA MOT LTD",
+    "company_number": "17329678",
+    "company_status": "active",
+    "company_type": "ltd",
+    "date_of_creation": "2026-07-09",
+    "registered_office_address": {
+      "locality": "Sheffield",
+      "postal_code": "S5 7AP",
+      "region": "South Yorkshire",
+      "country": "United Kingdom"
+    },
+    "sic_codes": ["45200", "71200"]
+  }
+]

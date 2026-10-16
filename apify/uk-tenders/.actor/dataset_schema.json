@@ -1,0 +1,71 @@
+{
+  "actorSpecification": 1,
+  "fields": {
+    "type": "object",
+    "properties": {
+      "ocid": {
+        "type": ["string", "null"]
+      },
+      "notice_id": {
+        "type": ["string", "null"]
+      },
+      "title": {
+        "type": ["string", "null"]
+      },
+      "description": {
+        "type": ["string", "null"]
+      },
+      "buyer": {
+        "type": ["string", "null"]
+      },
+      "status": {
+        "type": ["string", "null"]
+      },
+      "procurement_method": {
+        "type": ["string", "null"]
+      },
+      "category": {
+        "type": ["string", "null"]
+      },
+      "cpv_codes": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "value_amount": {
+        "type": ["number", "null"]
+      },
+      "value_currency": {
+        "type": ["string", "null"]
+      },
+      "published_at": {
+        "type": ["string", "null"]
+      },
+      "deadline_at": {
+        "type": ["string", "null"]
+      }
+    }
+  },
+  "views": {
+    "overview": {
+      "title": "Overview",
+      "transformation": {
+        "fields": [
+          "ocid",
+          "notice_id",
+          "title",
+          "description",
+          "buyer",
+          "status",
+          "procurement_method",
+          "category",
+          "cpv_codes"
+        ]
+      },
+      "display": {
+        "component": "table"
+      }
+    }
+  }
+}

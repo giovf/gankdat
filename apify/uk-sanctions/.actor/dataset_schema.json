@@ -1,0 +1,68 @@
+{
+  "actorSpecification": 1,
+  "fields": {
+    "type": "object",
+    "properties": {
+      "unique_id": {
+        "type": ["string", "null"]
+      },
+      "name": {
+        "type": ["string", "null"]
+      },
+      "aliases": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "designation_type": {
+        "type": ["string", "null"]
+      },
+      "regime": {
+        "type": ["string", "null"]
+      },
+      "designation_source": {
+        "type": ["string", "null"]
+      },
+      "sanctions_imposed": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "countries": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "date_designated": {
+        "type": ["string", "null"]
+      },
+      "last_updated": {
+        "type": ["string", "null"]
+      }
+    }
+  },
+  "views": {
+    "overview": {
+      "title": "Overview",
+      "transformation": {
+        "fields": [
+          "unique_id",
+          "name",
+          "aliases",
+          "designation_type",
+          "regime",
+          "designation_source",
+          "sanctions_imposed",
+          "countries",
+          "date_designated"
+        ]
+      },
+      "display": {
+        "component": "table"
+      }
+    }
+  }
+}

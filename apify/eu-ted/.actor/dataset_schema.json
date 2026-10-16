@@ -1,0 +1,77 @@
+{
+  "actorSpecification": 1,
+  "fields": {
+    "type": "object",
+    "properties": {
+      "publication_number": {
+        "type": ["string", "null"]
+      },
+      "title": {
+        "type": ["string", "null"]
+      },
+      "buyer": {
+        "type": ["string", "null"]
+      },
+      "buyer_country": {
+        "type": ["string", "null"]
+      },
+      "notice_type": {
+        "type": ["string", "null"]
+      },
+      "procedure_type": {
+        "type": ["string", "null"]
+      },
+      "contract_nature": {
+        "type": ["string", "null"]
+      },
+      "cpv_codes": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "places_of_performance": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "value_amount": {
+        "type": ["number", "null"]
+      },
+      "value_currency": {
+        "type": ["string", "null"]
+      },
+      "published_at": {
+        "type": ["string", "null"]
+      },
+      "deadline_at": {
+        "type": ["string", "null"]
+      },
+      "notice_url": {
+        "type": ["string", "null"]
+      }
+    }
+  },
+  "views": {
+    "overview": {
+      "title": "Overview",
+      "transformation": {
+        "fields": [
+          "publication_number",
+          "title",
+          "buyer",
+          "buyer_country",
+          "notice_type",
+          "procedure_type",
+          "contract_nature",
+          "cpv_codes",
+          "places_of_performance"
+        ]
+      },
+      "display": {
+        "component": "table"
+      }
+    }
+  }
+}

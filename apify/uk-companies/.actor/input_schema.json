@@ -1,0 +1,59 @@
+{
+  "title": "New UK Companies (Companies House) \u2014 incorporations this week \u2014 filters",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "company": {
+      "title": "Company name contains",
+      "type": "string",
+      "editor": "textfield",
+      "description": "Filter: Company name contains (case-insensitive substring match)."
+    },
+    "company_type": {
+      "title": "Company type contains",
+      "type": "string",
+      "description": "ltd, plc, llp, \u2026",
+      "editor": "textfield"
+    },
+    "sic_codes": {
+      "title": "SIC code",
+      "type": "string",
+      "description": "e.g. 62012",
+      "editor": "textfield"
+    },
+    "locality": {
+      "title": "Locality contains",
+      "type": "string",
+      "editor": "textfield",
+      "description": "Filter: Locality contains (case-insensitive substring match)."
+    },
+    "postal_code": {
+      "title": "Postcode contains",
+      "type": "string",
+      "editor": "textfield",
+      "description": "Filter: Postcode contains (case-insensitive substring match)."
+    },
+    "incorporated_on_after": {
+      "title": "Incorporated on or after",
+      "type": "string",
+      "description": "YYYY-MM-DD",
+      "editor": "textfield",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "q": {
+      "title": "Free-text search",
+      "type": "string",
+      "editor": "textfield",
+      "description": "Filter: Free-text search (case-insensitive substring match)."
+    },
+    "max_results": {
+      "title": "Maximum results",
+      "type": "integer",
+      "description": "Stop after this many records (you are charged per result).",
+      "default": 1000,
+      "minimum": 1,
+      "maximum": 100000
+    }
+  },
+  "required": []
+}

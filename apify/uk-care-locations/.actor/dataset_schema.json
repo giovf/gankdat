@@ -1,0 +1,79 @@
+{
+  "actorSpecification": 1,
+  "fields": {
+    "type": "object",
+    "properties": {
+      "location_id": {
+        "type": ["string", "null"]
+      },
+      "provider_id": {
+        "type": ["string", "null"]
+      },
+      "name": {
+        "type": ["string", "null"]
+      },
+      "also_known_as": {
+        "type": ["string", "null"]
+      },
+      "address": {
+        "type": ["string", "null"]
+      },
+      "postcode": {
+        "type": ["string", "null"]
+      },
+      "outward_code": {
+        "type": ["string", "null"]
+      },
+      "website": {
+        "type": ["string", "null"]
+      },
+      "service_types": {
+        "type": ["string", "null"]
+      },
+      "latest_check_date": {
+        "type": ["string", "null"]
+      },
+      "specialisms": {
+        "type": ["string", "null"]
+      },
+      "provider_name": {
+        "type": ["string", "null"]
+      },
+      "local_authority": {
+        "type": ["string", "null"]
+      },
+      "region": {
+        "type": ["string", "null"]
+      },
+      "cqc_url": {
+        "type": ["string", "null"]
+      },
+      "change": {
+        "type": ["string", "null"]
+      },
+      "changed_at": {
+        "type": ["string", "null"]
+      }
+    }
+  },
+  "views": {
+    "overview": {
+      "title": "Overview",
+      "transformation": {
+        "fields": [
+          "name",
+          "service_types",
+          "provider_name",
+          "local_authority",
+          "region",
+          "postcode",
+          "latest_check_date",
+          "cqc_url"
+        ]
+      },
+      "display": {
+        "component": "table"
+      }
+    }
+  }
+}

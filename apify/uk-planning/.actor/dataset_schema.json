@@ -1,0 +1,56 @@
+{
+  "actorSpecification": 1,
+  "fields": {
+    "type": "object",
+    "properties": {
+      "entity": {
+        "type": ["number", "null"]
+      },
+      "reference": {
+        "type": ["string", "null"]
+      },
+      "authority": {
+        "type": ["number", "null"]
+      },
+      "description": {
+        "type": ["string", "null"]
+      },
+      "decision_date": {
+        "type": ["string", "null"]
+      },
+      "entry_date": {
+        "type": ["string", "null"]
+      },
+      "start_date": {
+        "type": ["string", "null"]
+      },
+      "end_date": {
+        "type": ["string", "null"]
+      },
+      "point": {
+        "type": ["string", "null"]
+      }
+    }
+  },
+  "views": {
+    "overview": {
+      "title": "Overview",
+      "transformation": {
+        "fields": [
+          "entity",
+          "reference",
+          "authority",
+          "description",
+          "decision_date",
+          "entry_date",
+          "start_date",
+          "end_date",
+          "point"
+        ]
+      },
+      "display": {
+        "component": "table"
+      }
+    }
+  }
+}

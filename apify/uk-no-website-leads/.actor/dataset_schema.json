@@ -1,0 +1,40 @@
+{
+  "actorSpecification": 1,
+  "fields": {
+    "type": "object",
+    "properties": {
+      "sector": { "type": ["string", "null"] },
+      "name": { "type": ["string", "null"] },
+      "organisation_type": { "type": ["string", "null"] },
+      "address": { "type": ["string", "null"] },
+      "postcode": { "type": ["string", "null"] },
+      "outward_code": { "type": ["string", "null"] },
+      "local_authority": { "type": ["string", "null"] },
+      "region": { "type": ["string", "null"] },
+      "size_hint": { "type": ["string", "null"] },
+      "registered_since": { "type": ["string", "null"] },
+      "source_dataset": { "type": ["string", "null"] },
+      "source_id": { "type": ["string", "null"] },
+      "source_url": { "type": ["string", "null"] }
+    },
+    "required": ["sector", "name", "source_dataset", "source_id"]
+  },
+  "views": {
+    "overview": {
+      "title": "Leads",
+      "transformation": {
+        "fields": [
+          "sector",
+          "name",
+          "organisation_type",
+          "postcode",
+          "local_authority",
+          "region",
+          "size_hint",
+          "source_url"
+        ]
+      },
+      "display": { "component": "table" }
+    }
+  }
+}

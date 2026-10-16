@@ -1,0 +1,50 @@
+{
+  "name": "@foundry/gankdat",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build": "wrangler deploy --dry-run --outdir=dist",
+    "deploy": "wrangler deploy --minify",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+    "traffic": "node --env-file=.env scripts/traffic.mjs",
+    "scoreboard": "node --env-file=.env scripts/scoreboard.mjs",
+    "check": "npm run lint && npm run typecheck && npm run format:check && npm test && npm run build",
+    "metrics": "node --env-file=.env scripts/metrics.mjs",
+    "schedules": "node --env-file=.env scripts/schedules.mjs",
+    "runner-refresh": "esbuild scripts/runner-refresh.mjs --bundle --platform=node --format=esm --target=node22 --log-level=warning --outfile=dist/runner-refresh.mjs && node --env-file-if-exists=.env dist/runner-refresh.mjs"
+  },
+  "dependencies": {
+    "@coinbase/x402": "^2.1.0",
+    "@hono/mcp": "^0.3.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@x402/core": "^2.28.0",
+    "@x402/evm": "^2.28.0",
+    "@x402/extensions": "^2.28.0",
+    "@x402/hono": "^2.28.0",
+    "hono": "^4.12.27",
+    "hono-rate-limiter": "^0.5.4",
+    "stripe": "^22.3.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.18.0",
+    "@eslint/js": "^10.0.1",
+    "@x402/fetch": "^2.28.0",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.6.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.8.1",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.46.4",
+    "vitest": "^4.1.10",
+    "wrangler": "^4.4.0"
+  }
+}

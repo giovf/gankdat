@@ -1,0 +1,66 @@
+{
+  "title": "UK Businesses Without a Website — filters",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "sectors": {
+      "title": "Sectors",
+      "type": "array",
+      "description": "Which registers to draw from. care = CQC-regulated care locations (care homes, GPs, dentists, homecare); charity = Charity Commission register (England & Wales); school = DfE register of schools, academies, colleges and nurseries (England).",
+      "editor": "select",
+      "items": {
+        "type": "string",
+        "enum": ["care", "charity", "school"],
+        "enumTitles": ["Care providers (CQC)", "Charities", "Schools"]
+      },
+      "default": ["care", "charity", "school"],
+      "uniqueItems": true
+    },
+    "region": {
+      "title": "Region contains",
+      "type": "string",
+      "description": "Government Office Region, e.g. London, South East, North West (care and school sectors; charities carry no region).",
+      "editor": "textfield"
+    },
+    "local_authority": {
+      "title": "Local authority contains",
+      "type": "string",
+      "description": "e.g. Leeds, Camden, Kent (care and school sectors; charities carry no local authority).",
+      "editor": "textfield"
+    },
+    "outward_code": {
+      "title": "Postcode area (outward code)",
+      "type": "string",
+      "description": "First half of the postcode, e.g. LS1, SW1A, M — matched as a prefix-free substring, so 'LS' covers all Leeds outward codes.",
+      "editor": "textfield"
+    },
+    "charity_income_min": {
+      "title": "Minimum charity income (£)",
+      "type": "integer",
+      "description": "Charities only: skip those whose latest reported income is below this (many tiny charities have no site by choice). Default 25000.",
+      "default": 25000,
+      "minimum": 0
+    },
+    "care_service_types": {
+      "title": "Care service type contains",
+      "type": "string",
+      "description": "Care sector only: e.g. Care home, Nursing home, Homecare, Dentist, GP, Hospital.",
+      "editor": "textfield"
+    },
+    "school_phase": {
+      "title": "School phase contains",
+      "type": "string",
+      "description": "School sector only: Primary, Secondary, Nursery, 16 plus, All-through.",
+      "editor": "textfield"
+    },
+    "max_results": {
+      "title": "Maximum results",
+      "type": "integer",
+      "description": "Stop after this many records in total across the selected sectors (you are charged per result).",
+      "default": 1000,
+      "minimum": 1,
+      "maximum": 100000
+    }
+  },
+  "required": []
+}

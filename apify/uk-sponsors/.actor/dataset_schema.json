@@ -1,0 +1,43 @@
+{
+  "actorSpecification": 1,
+  "fields": {
+    "type": "object",
+    "properties": {
+      "organisation": {
+        "type": ["string", "null"]
+      },
+      "town": {
+        "type": ["string", "null"]
+      },
+      "county": {
+        "type": ["string", "null"]
+      },
+      "sponsor_type": {
+        "type": ["string", "null"]
+      },
+      "rating": {
+        "type": ["string", "null"]
+      },
+      "route": {
+        "type": ["string", "null"]
+      },
+      "change": {
+        "type": ["string", "null"]
+      },
+      "changed_at": {
+        "type": ["string", "null"]
+      }
+    }
+  },
+  "views": {
+    "overview": {
+      "title": "Overview",
+      "transformation": {
+        "fields": ["organisation", "town", "county", "sponsor_type", "rating", "route"]
+      },
+      "display": {
+        "component": "table"
+      }
+    }
+  }
+}

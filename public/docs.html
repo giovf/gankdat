@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <title>gankdat — API documentation</title>
+    <meta
+      name="description"
+      content="Quickstart and full API reference for gankdat: UK + EU procurement, UK planning, UK/US sanctions &amp; debarment, UK food hygiene ratings, UK visa sponsors, UK charities, CQC care locations, UK insolvency and company data as clean JSON."
+    />
+    <link rel="canonical" href="https://gankdat.com/docs" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="gankdat" />
+    <meta property="og:title" content="gankdat — API documentation" />
+    <meta
+      property="og:description"
+      content="Quickstart and full API reference for gankdat: UK + EU procurement, UK planning, UK/US sanctions &amp; debarment, UK food hygiene ratings, UK visa sponsors, UK charities, CQC care locations, UK insolvency and company data as clean JSON."
+    />
+    <meta property="og:url" content="https://gankdat.com/docs" />
+    <meta name="twitter:card" content="summary" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebAPI",
+        "@id": "https://gankdat.com/#api",
+        "name": "gankdat",
+        "url": "https://gankdat.com",
+        "documentation": "https://gankdat.com/docs"
+      }
+    </script>
+    <style>
+      :root {
+        --bg: #0a0a0a;
+        --panel: #111315;
+        --panel2: #16191c;
+        --green: #00ff41;
+        --magenta: #ff007f;
+        --border: #2a2e33;
+        --fg: #e6e8ea;
+        --muted: #8b9299;
+        --amber: #ffbd2e;
+        --sans: Inter, Geist, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        --mono:
+          'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      * {
+        box-sizing: border-box;
+        border-radius: 0;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font: 15px/1.65 var(--sans);
+      }
+      .quickstart {
+        max-width: 860px;
+        margin: 0 auto;
+        padding: 24px 20px 8px;
+      }
+      h1 {
+        font: 800 1.8rem var(--sans);
+        letter-spacing: -0.02em;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      h1 img {
+        width: 26px;
+        height: 24px;
+        image-rendering: pixelated;
+      }
+      h2 {
+        font: 700 0.78rem var(--mono);
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        color: var(--muted);
+        margin-top: 32px;
+      }
+      h2::before {
+        content: '// ';
+        color: var(--green);
+      }
+      .term {
+        background: var(--panel);
+        border: 1px solid var(--border);
+      }
+      .term-bar {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 9px 13px;
+        border-bottom: 1px solid var(--border);
+      }
+      .term-bar i {
+        width: 9px;
+        height: 9px;
+        display: inline-block;
+      }
+      .term-bar i:nth-child(1) {
+        background: #ff5f56;
+      }
+      .term-bar i:nth-child(2) {
+        background: var(--amber);
+      }
+      .term-bar i:nth-child(3) {
+        background: #27c93f;
+      }
+      pre {
+        margin: 0;
+        padding: 14px 16px;
+        overflow-x: auto;
+        font: 12.8px/1.6 var(--mono);
+        color: var(--fg);
+      }
+      a {
+        color: var(--green);
+      }
+      code {
+        font-family: var(--mono);
+      }
+      p code {
+        background: var(--panel2);
+        border: 1px solid var(--border);
+        padding: 1px 6px;
+        font-size: 0.84em;
+      }
+      .top {
+        color: var(--muted);
+        font: 0.82rem var(--mono);
+      }
+      .top a {
+        color: var(--muted);
+        text-decoration: underline;
+        text-decoration-color: var(--border);
+      }
+      .top a:hover {
+        color: var(--green);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="quickstart">
+      <h1><img src="/icon-raccoon.svg" alt="" />gankdat docs</h1>
+      <p class="top">
+        <a href="/">← home</a> · machine-readable spec: <a href="/openapi.json">/openapi.json</a> ·
+        MCP endpoint for agents: <code>/mcp</code>
+      </p>
+
+      <h2>quickstart (60 seconds, no js needed)</h2>
+      <div class="term">
+        <div class="term-bar"><i></i><i></i><i></i></div>
+        <pre><code># 1. Sign in at https://gankdat.com/account (email magic link, no password)
+#    and create a key from your dashboard (250 req/mo free, shown once)
+
+# 2. Query procurement notices by value and CPV code (filters combine with AND)
+curl -H "Authorization: Bearer fapi_..." \
+  "https://gankdat.com/v1/data/uk-tenders?value_amount_min=1000000&cpv_codes=45&status=active"
+
+# 3. Query planning applications
+curl -H "Authorization: Bearer fapi_..." \
+  "https://gankdat.com/v1/data/uk-planning?authority=109&q=extension&per_page=5"
+
+# 4. What changed since a date — registers diff themselves daily (charities, care
+#    locations, schools, NHS, sponsors, food hygiene, exclusions, trade marks, gambling licences)
+curl -H "Authorization: Bearer fapi_..." \
+  "https://gankdat.com/v1/changes/uk-charities?since=2026-09-01&change=added"
+#    …with the dataset's own filters: a trade-mark watch on one Nice class and a word
+curl -H "Authorization: Bearer fapi_..." \
+  "https://gankdat.com/v1/changes/uk-trademark-journal?classes=09&q=northwind&since=2026-09-01"
+
+# 5. Check your usage (free)
+curl -H "Authorization: Bearer fapi_..." https://gankdat.com/v1/usage</code></pre>
+      </div>
+
+      <h2>for ai agents</h2>
+      <div class="term">
+        <div class="term-bar"><i></i><i></i><i></i></div>
+        <pre><code># MCP (Streamable HTTP) — tools: list_sources, get_usage, get_changes (register deltas), and query_&lt;dataset&gt; for each dataset (query_uk_tenders, query_eu_ted, query_sam_exclusions, …)
+"mcpServers": { "gankdat": {
+  "url": "https://gankdat.com/mcp",
+  "headers": { "Authorization": "Bearer fapi_..." } } }
+
+# No key yet? An agent can sign its user up without a browser (no key needed for these two):
+#   MCP: request_api_key {email} → show the user the code → claim_api_key {request_id, claim_secret}
+#   REST:
+curl -X POST https://gankdat.com/v1/auth/agent-signup -H "content-type: application/json" \
+  -d '{"email":"you@example.com","client_name":"my-agent"}'      # user gets a one-click approval email
+curl -X POST https://gankdat.com/v1/auth/agent-signup/claim -H "content-type: application/json" \
+  -d '{"request_id":"…","claim_secret":"fsig_…"}'                # "pending" until approved, then the key (once)
+
+# x402 pay-per-request (no account): GET /x402/data/uk-tenders → HTTP 402 → pay → retry</code></pre>
+      </div>
+      <h2 id="claude">use in claude (connectors directory)</h2>
+      <div class="term">
+        <div class="term-bar"><i></i><i></i><i></i></div>
+        <pre><code># Claude (web, desktop, mobile, Code): Settings → Connectors → add "gankdat" from the directory,
+# or "Add custom connector" with the URL below. Every tool works straight away as a PREVIEW:
+# up to 5 rows per call, 20 calls per day, no account.
+https://gankdat.com/mcp
+
+# Ask Claude things like:
+#   "Which UK tenders over £1m in CPV 45 are open right now?"        → query_uk_tenders
+#   "Has any charity been removed from the register this week?"      → get_changes
+#   "Is &lt;company&gt; a licensed visa sponsor?"                          → query_uk_sponsors
+
+# Full pages and your plan's credits: say "sign in to gankdat" (the connect_account tool) or
+# keep going until the preview runs out — Claude shows a Connect button, you sign in with your
+# email (a free account with 250 credits/month is created if needed, no card) and approve once.
+# That is standard OAuth (PKCE, no client secret, dynamic client registration at /register):
+# Docker's MCP Toolkit, Cursor, ChatGPT, VS Code and any MCP client that follows the 401
+# challenge get the same flow. The connection appears as a key named
+# oauth:&lt;client&gt; at /account — revoke it there to disconnect.
+# Clients without OAuth: request_api_key / claim_api_key get a key from inside the chat, or
+# create one at /account and send it as "Authorization: Bearer fapi_..." (config above).</code></pre>
+      </div>
+
+      <p>
+        Every response uses the same envelope: <code>{"ok":true,"data":…,"meta":…}</code> or
+        <code>{"ok":false,"error":{"code","message","docs_url"}}</code>. Errors carry stable codes
+        (<code>unauthorized</code>, <code>quota_exceeded</code>, <code>rate_limited</code>, …) and
+        validation failures list per-field details. Full reference below ↓
+      </p>
+    </div>
+
+    <!-- Interactive reference rendered from the live OpenAPI document. -->
+    <div id="app"></div>
+    <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+    <script src="/js/docs.js"></script>
+    <noscript
+      ><p class="quickstart">
+        The interactive reference needs JavaScript — the raw spec is at
+        <a href="/openapi.json">/openapi.json</a>.
+      </p></noscript
+    >
+  </body>
+</html>

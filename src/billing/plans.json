@@ -1,0 +1,34 @@
+{
+  "saver": {
+    "displayName": "grep",
+    "lookupKey": "saver_monthly",
+    "credits": 1000,
+    "gbpPerMonth": 5,
+    "usdPerMonth": 6,
+    "eurPerMonth": 6
+  },
+  "starter": {
+    "displayName": "cron",
+    "lookupKey": "starter_monthly",
+    "credits": 5000,
+    "gbpPerMonth": 23,
+    "usdPerMonth": 29,
+    "eurPerMonth": 27
+  },
+  "growth": {
+    "displayName": "daemon",
+    "lookupKey": "growth_monthly",
+    "credits": 20000,
+    "gbpPerMonth": 79,
+    "usdPerMonth": 99,
+    "eurPerMonth": 92
+  },
+  "scale": {
+    "displayName": "kernel",
+    "lookupKey": "scale_monthly",
+    "credits": 100000,
+    "gbpPerMonth": 239,
+    "usdPerMonth": 299,
+    "eurPerMonth": 279
+  }
+}

@@ -1,0 +1,110 @@
+{
+  "actorSpecification": 1,
+  "fields": {
+    "type": "object",
+    "properties": {
+      "application_number": {
+        "type": ["string", "null"]
+      },
+      "journal_number": {
+        "type": ["string", "null"]
+      },
+      "publication_date": {
+        "type": ["string", "null"]
+      },
+      "opposition_deadline": {
+        "type": ["string", "null"]
+      },
+      "mark_text": {
+        "type": ["string", "null"]
+      },
+      "mark_type": {
+        "type": ["string", "null"]
+      },
+      "classes": {
+        "type": ["string", "null"]
+      },
+      "class_count": {
+        "type": ["number", "null"]
+      },
+      "goods_services": {
+        "type": ["string", "null"]
+      },
+      "applicant_type": {
+        "type": ["string", "null"]
+      },
+      "applicant": {
+        "type": ["string", "null"]
+      },
+      "applicant_country": {
+        "type": ["string", "null"]
+      },
+      "representative": {
+        "type": ["string", "null"]
+      },
+      "filing_date": {
+        "type": ["string", "null"]
+      },
+      "priority_date": {
+        "type": ["string", "null"]
+      },
+      "origin": {
+        "type": ["string", "null"]
+      },
+      "international_registration": {
+        "type": ["string", "null"]
+      },
+      "series_count": {
+        "type": ["number", "null"]
+      },
+      "section": {
+        "type": ["string", "null"]
+      },
+      "journal_url": {
+        "type": ["string", "null"]
+      },
+      "register_url": {
+        "type": ["string", "null"]
+      },
+      "change": {
+        "type": ["string", "null"]
+      },
+      "changed_at": {
+        "type": ["string", "null"]
+      }
+    }
+  },
+  "views": {
+    "overview": {
+      "title": "Overview",
+      "transformation": {
+        "fields": [
+          "application_number",
+          "journal_number",
+          "publication_date",
+          "opposition_deadline",
+          "mark_text",
+          "mark_type",
+          "classes",
+          "class_count",
+          "goods_services",
+          "applicant_type",
+          "applicant",
+          "applicant_country",
+          "representative",
+          "filing_date",
+          "priority_date",
+          "origin",
+          "international_registration",
+          "series_count",
+          "section",
+          "journal_url",
+          "register_url"
+        ]
+      },
+      "display": {
+        "component": "table"
+      }
+    }
+  }
+}

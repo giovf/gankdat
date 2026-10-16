@@ -1,0 +1,13 @@
+{
+  "name": "gankdat-apify-uk-care-locations",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Apify actor: UK Care Providers Directory (CQC) \u2014 care homes, GPs, dentists, homecare via gankdat.com",
+  "scripts": {
+    "start": "node src/main.mjs"
+  },
+  "dependencies": {
+    "apify": "^3.4.0"
+  }
+}

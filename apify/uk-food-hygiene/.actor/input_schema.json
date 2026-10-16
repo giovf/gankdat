@@ -1,0 +1,110 @@
+{
+  "title": "UK Food Hygiene Ratings — filters",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "mode": {
+      "title": "Mode",
+      "type": "string",
+      "description": "Current records (default), or only the records added, removed or changed since a date — schedule a daily run in changes mode to monitor the register and pay only for what changed.",
+      "editor": "select",
+      "enum": ["data", "changes"],
+      "enumTitles": ["Current records", "Changes since a date (monitor)"],
+      "default": "data"
+    },
+    "since": {
+      "title": "Changes since",
+      "type": "string",
+      "description": "Changes mode only: YYYY-MM-DD. Default: the last 7 days. The feed keeps 90 days.",
+      "editor": "textfield",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "change": {
+      "title": "Change type",
+      "type": "string",
+      "description": "Changes mode only: one kind of change. Default: all three.",
+      "editor": "select",
+      "enum": ["added", "removed", "changed"],
+      "enumTitles": ["Added to the register", "Removed from the register", "Changed"]
+    },
+    "rating_value": {
+      "title": "Rating",
+      "type": "string",
+      "description": "Exact rating to return: 0, 1, 2, 3, 4, 5, AwaitingInspection, Exempt, Pass (Scotland) or Improvement Required (Scotland). Leave empty for all.",
+      "editor": "select",
+      "enum": [
+        "",
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "AwaitingInspection",
+        "Exempt",
+        "Pass",
+        "Improvement Required"
+      ],
+      "enumTitles": [
+        "Any",
+        "0 — urgent improvement",
+        "1 — major improvement",
+        "2 — improvement necessary",
+        "3 — generally satisfactory",
+        "4 — good",
+        "5 — very good",
+        "Awaiting inspection",
+        "Exempt",
+        "Pass (Scotland)",
+        "Improvement required (Scotland)"
+      ],
+      "default": ""
+    },
+    "business_type": {
+      "title": "Business type contains",
+      "type": "string",
+      "description": "e.g. Restaurant, Takeaway, Pub, Retailers, Hospitals, School, Mobile caterer",
+      "editor": "textfield"
+    },
+    "local_authority": {
+      "title": "Local authority contains",
+      "type": "string",
+      "description": "e.g. Leeds, Cambridge City, Westminster",
+      "editor": "textfield"
+    },
+    "outward_code": {
+      "title": "Postcode area (outward code)",
+      "type": "string",
+      "description": "e.g. LS1, SW1A, M1. Matches the start of the postcode.",
+      "editor": "textfield"
+    },
+    "rating_date_after": {
+      "title": "Inspected on or after",
+      "type": "string",
+      "description": "YYYY-MM-DD — only businesses inspected on or after this date (new ratings, recent changes).",
+      "editor": "textfield",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "new_rating_pending": {
+      "title": "Only businesses with a new rating pending",
+      "type": "boolean",
+      "description": "A newer inspection result is awaiting publication.",
+      "default": false
+    },
+    "q": {
+      "title": "Free-text search",
+      "type": "string",
+      "description": "Matches any text field (name, address, type, authority).",
+      "editor": "textfield"
+    },
+    "max_results": {
+      "title": "Maximum results",
+      "type": "integer",
+      "description": "Stop after this many records (you are charged per result).",
+      "default": 1000,
+      "minimum": 1,
+      "maximum": 100000
+    }
+  },
+  "required": []
+}

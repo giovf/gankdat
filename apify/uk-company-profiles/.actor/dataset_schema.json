@@ -1,0 +1,170 @@
+{
+  "actorSpecification": 1,
+  "fields": {
+    "type": "object",
+    "properties": {
+      "company_number": {
+        "type": ["string", "null"]
+      },
+      "company": {
+        "type": ["string", "null"]
+      },
+      "status": {
+        "type": ["string", "null"]
+      },
+      "status_detail": {
+        "type": ["string", "null"]
+      },
+      "company_type": {
+        "type": ["string", "null"]
+      },
+      "subtype": {
+        "type": ["string", "null"]
+      },
+      "jurisdiction": {
+        "type": ["string", "null"]
+      },
+      "incorporated_on": {
+        "type": ["string", "null"]
+      },
+      "dissolved_on": {
+        "type": ["string", "null"]
+      },
+      "sic_codes": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "previous_names": {
+        "type": "array",
+        "items": {
+          "type": "object"
+        }
+      },
+      "locality": {
+        "type": ["string", "null"]
+      },
+      "region": {
+        "type": ["string", "null"]
+      },
+      "postal_code": {
+        "type": ["string", "null"]
+      },
+      "country": {
+        "type": ["string", "null"]
+      },
+      "registered_office_in_dispute": {
+        "type": "boolean"
+      },
+      "accounts_type": {
+        "type": ["string", "null"]
+      },
+      "accounts_last_period_end": {
+        "type": ["string", "null"]
+      },
+      "accounts_next_due": {
+        "type": ["string", "null"]
+      },
+      "accounts_overdue": {
+        "type": "boolean"
+      },
+      "confirmation_last_made_up_to": {
+        "type": ["string", "null"]
+      },
+      "confirmation_next_due": {
+        "type": ["string", "null"]
+      },
+      "confirmation_overdue": {
+        "type": "boolean"
+      },
+      "has_charges": {
+        "type": "boolean"
+      },
+      "has_insolvency_history": {
+        "type": "boolean"
+      },
+      "has_been_liquidated": {
+        "type": "boolean"
+      },
+      "charges_total": {
+        "type": "number"
+      },
+      "charges_outstanding": {
+        "type": "number"
+      },
+      "charges_satisfied": {
+        "type": "number"
+      },
+      "charges": {
+        "type": "array",
+        "items": {
+          "type": "object"
+        }
+      },
+      "filings_total": {
+        "type": "number"
+      },
+      "filings": {
+        "type": "array",
+        "items": {
+          "type": "object"
+        }
+      },
+      "controllers_active": {
+        "type": "number"
+      },
+      "controllers_ceased": {
+        "type": "number"
+      },
+      "individual_controllers": {
+        "type": "number"
+      },
+      "corporate_controllers": {
+        "type": "array",
+        "items": {
+          "type": "object"
+        }
+      },
+      "company_url": {
+        "type": ["string", "null"]
+      },
+      "change": {
+        "type": ["string", "null"]
+      },
+      "changed_at": {
+        "type": ["string", "null"]
+      },
+      "changed_fields": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "views": {
+    "overview": {
+      "title": "Overview",
+      "transformation": {
+        "fields": [
+          "company",
+          "company_number",
+          "status",
+          "company_type",
+          "accounts_next_due",
+          "accounts_overdue",
+          "confirmation_next_due",
+          "charges_outstanding",
+          "filings_total",
+          "change",
+          "changed_fields",
+          "company_url"
+        ]
+      },
+      "display": {
+        "component": "table"
+      }
+    }
+  }
+}

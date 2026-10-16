@@ -1,0 +1,87 @@
+{
+  "actorSpecification": 1,
+  "fields": {
+    "type": "object",
+    "properties": {
+      "fhrs_id": {
+        "type": ["number", "null"]
+      },
+      "business_name": {
+        "type": ["string", "null"]
+      },
+      "business_type": {
+        "type": ["string", "null"]
+      },
+      "address": {
+        "type": ["string", "null"]
+      },
+      "postcode": {
+        "type": ["string", "null"]
+      },
+      "outward_code": {
+        "type": ["string", "null"]
+      },
+      "local_authority": {
+        "type": ["string", "null"]
+      },
+      "local_authority_code": {
+        "type": ["string", "null"]
+      },
+      "rating_value": {
+        "type": ["string", "null"]
+      },
+      "scheme_type": {
+        "type": ["string", "null"]
+      },
+      "rating_date": {
+        "type": ["string", "null"]
+      },
+      "hygiene_score": {
+        "type": ["number", "null"]
+      },
+      "structural_score": {
+        "type": ["number", "null"]
+      },
+      "confidence_score": {
+        "type": ["number", "null"]
+      },
+      "new_rating_pending": {
+        "type": ["boolean", "null"]
+      },
+      "latitude": {
+        "type": ["number", "null"]
+      },
+      "longitude": {
+        "type": ["number", "null"]
+      },
+      "change": {
+        "type": ["string", "null"]
+      },
+      "changed_at": {
+        "type": ["string", "null"]
+      }
+    }
+  },
+  "views": {
+    "overview": {
+      "title": "Overview",
+      "transformation": {
+        "fields": [
+          "business_name",
+          "rating_value",
+          "business_type",
+          "local_authority",
+          "postcode",
+          "rating_date",
+          "hygiene_score",
+          "structural_score",
+          "confidence_score",
+          "new_rating_pending"
+        ]
+      },
+      "display": {
+        "component": "table"
+      }
+    }
+  }
+}

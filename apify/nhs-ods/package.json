@@ -1,0 +1,13 @@
+{
+  "name": "gankdat-apify-nhs-ods",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Apify actor: NHS Organisations Directory (ODS) — GP practices, trusts, pharmacies, dentists via gankdat.com",
+  "scripts": {
+    "start": "node src/main.mjs"
+  },
+  "dependencies": {
+    "apify": "^3.4.0"
+  }
+}

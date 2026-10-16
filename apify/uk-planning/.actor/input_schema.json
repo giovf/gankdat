@@ -1,0 +1,42 @@
+{
+  "title": "UK Planning Applications (planning.data.gov.uk) — filters",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "authority": {
+      "title": "Planning authority (organisation id)",
+      "type": "integer",
+      "description": "Filter: the numeric planning.data.gov.uk organisation entity id of the local planning authority — the value of the `authority` output field. Leave empty for all authorities.",
+      "editor": "number",
+      "minimum": 1
+    },
+    "reference": {
+      "title": "Application reference contains",
+      "type": "string",
+      "description": "Filter: Application reference contains (case-insensitive substring match).",
+      "editor": "textfield"
+    },
+    "decision_date_after": {
+      "title": "Decided on or after",
+      "type": "string",
+      "description": "YYYY-MM-DD",
+      "editor": "textfield",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "q": {
+      "title": "Free-text search",
+      "type": "string",
+      "description": "Matches description, reference, authority.",
+      "editor": "textfield"
+    },
+    "max_results": {
+      "title": "Maximum results",
+      "type": "integer",
+      "description": "Stop after this many records (you are charged per result).",
+      "default": 1000,
+      "minimum": 1,
+      "maximum": 100000
+    }
+  },
+  "required": []
+}

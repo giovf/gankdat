@@ -1,0 +1,34 @@
+{
+  "title": "UK Companies House Lookup & Monitor — your list of companies",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "companies": {
+      "title": "Company numbers or names",
+      "type": "array",
+      "editor": "stringList",
+      "description": "One company per line: a Companies House number (e.g. 00000006, SC123456 — short numbers are zero-padded) or a company name (the best search match is used). Each company is one result.",
+      "prefill": ["00000006"]
+    },
+    "mode": {
+      "title": "Mode",
+      "type": "string",
+      "enum": ["data", "changes"],
+      "enumTitles": [
+        "Look up — every company on the list",
+        "Monitor — only what changed since the previous run"
+      ],
+      "default": "data",
+      "description": "Monitor mode keeps the previous run's records as the baseline (in this actor's key-value store) and pushes a company only when it is new to the list, has changed (status, charges, accounts or confirmation-statement dates, filings, corporate PSCs — see changed_fields) or has disappeared from the register. Schedule it daily; unchanged companies cost nothing."
+    },
+    "max_results": {
+      "title": "Maximum results",
+      "type": "integer",
+      "description": "Stop after this many results (you are charged per result).",
+      "default": 1000,
+      "minimum": 1,
+      "maximum": 100000
+    }
+  },
+  "required": ["companies"]
+}

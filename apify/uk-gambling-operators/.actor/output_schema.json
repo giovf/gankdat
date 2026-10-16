@@ -1,0 +1,12 @@
+{
+  "actorOutputSchemaVersion": 1,
+  "title": "Output",
+  "properties": {
+    "results": {
+      "title": "Results",
+      "description": "One item per record, as JSON (also downloadable as CSV/Excel from the dataset).",
+      "template": "{{links.apiDefaultDatasetUrl}}/items",
+      "type": "string"
+    }
+  }
+}

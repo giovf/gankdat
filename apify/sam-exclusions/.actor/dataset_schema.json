@@ -1,0 +1,68 @@
+{
+  "actorSpecification": 1,
+  "fields": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": ["string", "null"]
+      },
+      "classification": {
+        "type": ["string", "null"]
+      },
+      "exclusion_type": {
+        "type": ["string", "null"]
+      },
+      "exclusion_program": {
+        "type": ["string", "null"]
+      },
+      "excluding_agency": {
+        "type": ["string", "null"]
+      },
+      "excluding_agency_name": {
+        "type": ["string", "null"]
+      },
+      "uei_sam": {
+        "type": ["string", "null"]
+      },
+      "cage_code": {
+        "type": ["string", "null"]
+      },
+      "activation_date": {
+        "type": ["string", "null"]
+      },
+      "termination_date": {
+        "type": ["string", "null"]
+      },
+      "termination_type": {
+        "type": ["string", "null"]
+      },
+      "change": {
+        "type": ["string", "null"]
+      },
+      "changed_at": {
+        "type": ["string", "null"]
+      }
+    }
+  },
+  "views": {
+    "overview": {
+      "title": "Overview",
+      "transformation": {
+        "fields": [
+          "name",
+          "classification",
+          "exclusion_type",
+          "exclusion_program",
+          "excluding_agency",
+          "excluding_agency_name",
+          "uei_sam",
+          "cage_code",
+          "activation_date"
+        ]
+      },
+      "display": {
+        "component": "table"
+      }
+    }
+  }
+}

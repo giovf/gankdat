@@ -1,0 +1,65 @@
+{
+  "title": "UK Contract Awards \u2014 filters",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "supplier": {
+      "title": "Supplier contains",
+      "type": "string",
+      "description": "Filter: Supplier contains (case-insensitive substring match).",
+      "editor": "textfield"
+    },
+    "buyer": {
+      "title": "Buyer contains",
+      "type": "string",
+      "description": "Filter: Buyer contains (case-insensitive substring match).",
+      "editor": "textfield"
+    },
+    "supplier_company_number": {
+      "title": "Supplier company number",
+      "type": "string",
+      "description": "Companies House number, e.g. 10135058",
+      "editor": "textfield"
+    },
+    "cpv_codes": {
+      "title": "CPV code",
+      "type": "string",
+      "description": "e.g. 45000000 (construction), 72000000 (IT)",
+      "editor": "textfield"
+    },
+    "category": {
+      "title": "Category",
+      "type": "string",
+      "description": "works, services, goods",
+      "editor": "textfield"
+    },
+    "award_value_amount_min": {
+      "title": "Minimum award value",
+      "type": "integer",
+      "description": "Filter: minimum award value.",
+      "minimum": 0
+    },
+    "award_date_after": {
+      "title": "Awarded on or after",
+      "type": "string",
+      "description": "YYYY-MM-DD",
+      "editor": "textfield",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "q": {
+      "title": "Free-text search",
+      "type": "string",
+      "description": "Matches title, description, buyer, supplier.",
+      "editor": "textfield"
+    },
+    "max_results": {
+      "title": "Maximum results",
+      "type": "integer",
+      "description": "Stop after this many records (you are charged per result).",
+      "default": 1000,
+      "minimum": 1,
+      "maximum": 100000
+    }
+  },
+  "required": []
+}

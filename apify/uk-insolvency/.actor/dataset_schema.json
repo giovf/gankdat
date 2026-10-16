@@ -1,0 +1,48 @@
+{
+  "actorSpecification": 1,
+  "fields": {
+    "type": "object",
+    "properties": {
+      "notice_id": {
+        "type": ["string", "null"]
+      },
+      "company": {
+        "type": ["string", "null"]
+      },
+      "notice_code": {
+        "type": ["string", "null"]
+      },
+      "notice_type": {
+        "type": ["string", "null"]
+      },
+      "published_at": {
+        "type": ["string", "null"]
+      },
+      "updated_at": {
+        "type": ["string", "null"]
+      },
+      "notice_url": {
+        "type": ["string", "null"]
+      }
+    }
+  },
+  "views": {
+    "overview": {
+      "title": "Overview",
+      "transformation": {
+        "fields": [
+          "notice_id",
+          "company",
+          "notice_code",
+          "notice_type",
+          "published_at",
+          "updated_at",
+          "notice_url"
+        ]
+      },
+      "display": {
+        "component": "table"
+      }
+    }
+  }
+}

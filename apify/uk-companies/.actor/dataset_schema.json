@@ -1,0 +1,64 @@
+{
+  "actorSpecification": 1,
+  "fields": {
+    "type": "object",
+    "properties": {
+      "company_number": {
+        "type": ["string", "null"]
+      },
+      "company": {
+        "type": ["string", "null"]
+      },
+      "status": {
+        "type": ["string", "null"]
+      },
+      "company_type": {
+        "type": ["string", "null"]
+      },
+      "incorporated_on": {
+        "type": ["string", "null"]
+      },
+      "sic_codes": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "locality": {
+        "type": ["string", "null"]
+      },
+      "region": {
+        "type": ["string", "null"]
+      },
+      "postal_code": {
+        "type": ["string", "null"]
+      },
+      "country": {
+        "type": ["string", "null"]
+      },
+      "company_url": {
+        "type": ["string", "null"]
+      }
+    }
+  },
+  "views": {
+    "overview": {
+      "title": "Overview",
+      "transformation": {
+        "fields": [
+          "company",
+          "company_number",
+          "company_type",
+          "incorporated_on",
+          "sic_codes",
+          "locality",
+          "postal_code",
+          "company_url"
+        ]
+      },
+      "display": {
+        "component": "table"
+      }
+    }
+  }
+}

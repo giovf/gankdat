@@ -1,0 +1,20 @@
+{
+  "actorSpecification": 1,
+  "name": "us-federal-exclusions-sam-gov",
+  "title": "US Federal Exclusions (SAM.gov) \u2014 debarment list",
+  "description": "Every active US federal exclusion (debarment) from the official SAM.gov list: name, classification, program, agency, dates. Refreshed daily for supplier due diligence. Pay per result.",
+  "version": "0.1",
+  "buildTag": "latest",
+  "dockerfile": "../Dockerfile",
+  "readme": "./README.md",
+  "input": "./input_schema.json",
+  "environmentVariables": {
+    "GANKDAT_API_KEY": "@gankdatApiKey"
+  },
+  "minMemoryMbytes": 256,
+  "maxMemoryMbytes": 512,
+  "output": "./output_schema.json",
+  "storages": {
+    "dataset": "./dataset_schema.json"
+  }
+}

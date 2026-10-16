@@ -1,0 +1,13 @@
+{
+  "name": "gankdat-apify-uk-charities",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Apify actor: UK Charities Register (Charity Commission) \u2014 leads & due diligence via gankdat.com",
+  "scripts": {
+    "start": "node src/main.mjs"
+  },
+  "dependencies": {
+    "apify": "^3.4.0"
+  }
+}

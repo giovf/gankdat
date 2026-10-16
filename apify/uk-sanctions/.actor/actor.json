@@ -1,0 +1,20 @@
+{
+  "actorSpecification": 1,
+  "name": "uk-sanctions-list-fcdo",
+  "title": "UK Sanctions List (FCDO) \u2014 designations",
+  "description": "Every designation on the official UK Sanctions List: names, aliases, regime, designation type, countries and dates. Refreshed daily for compliance screening. Pay per result.",
+  "version": "0.1",
+  "buildTag": "latest",
+  "dockerfile": "../Dockerfile",
+  "readme": "./README.md",
+  "input": "./input_schema.json",
+  "environmentVariables": {
+    "GANKDAT_API_KEY": "@gankdatApiKey"
+  },
+  "minMemoryMbytes": 256,
+  "maxMemoryMbytes": 512,
+  "output": "./output_schema.json",
+  "storages": {
+    "dataset": "./dataset_schema.json"
+  }
+}

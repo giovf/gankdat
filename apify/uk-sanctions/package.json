@@ -1,0 +1,13 @@
+{
+  "name": "gankdat-apify-uk-sanctions",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Apify actor: UK Sanctions List (FCDO) \u2014 designations via gankdat.com",
+  "scripts": {
+    "start": "node src/main.mjs"
+  },
+  "dependencies": {
+    "apify": "^3.4.0"
+  }
+}

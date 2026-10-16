@@ -1,0 +1,47 @@
+{
+  "title": "UK Corporate Insolvency Notices (The Gazette) \u2014 filters",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "company": {
+      "title": "Company contains",
+      "type": "string",
+      "description": "Filter: Company contains (case-insensitive substring match).",
+      "editor": "textfield"
+    },
+    "notice_type": {
+      "title": "Notice type contains",
+      "type": "string",
+      "description": "e.g. Winding-up petition, Administration, Liquidation",
+      "editor": "textfield"
+    },
+    "notice_code": {
+      "title": "Notice code",
+      "type": "string",
+      "description": "Gazette notice code, e.g. 2450",
+      "editor": "textfield"
+    },
+    "published_at_after": {
+      "title": "Published on or after",
+      "type": "string",
+      "description": "YYYY-MM-DD",
+      "editor": "textfield",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "q": {
+      "title": "Free-text search",
+      "type": "string",
+      "description": "Filter: Free-text search (case-insensitive substring match).",
+      "editor": "textfield"
+    },
+    "max_results": {
+      "title": "Maximum results",
+      "type": "integer",
+      "description": "Stop after this many records (you are charged per result).",
+      "default": 1000,
+      "minimum": 1,
+      "maximum": 100000
+    }
+  },
+  "required": []
+}

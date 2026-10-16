@@ -1,0 +1,13 @@
+{
+  "name": "gankdat-apify-uk-contract-awards",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Apify actor: UK contract awards (Contracts Finder) via gankdat.com",
+  "scripts": {
+    "start": "node src/main.mjs"
+  },
+  "dependencies": {
+    "apify": "^3.4.0"
+  }
+}

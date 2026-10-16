@@ -1,0 +1,134 @@
+{
+  "title": "UK Gambling Commission Licence Register (Operators, Premises) — filters",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "mode": {
+      "title": "Mode",
+      "type": "string",
+      "description": "Current records (default), or only the records added, removed or changed since a date — schedule a daily run in changes mode to monitor the register and pay only for what changed.",
+      "editor": "select",
+      "enum": ["data", "changes"],
+      "enumTitles": ["Current records", "Changes since a date (monitor)"],
+      "default": "data"
+    },
+    "since": {
+      "title": "Changes since",
+      "type": "string",
+      "description": "Changes mode only: YYYY-MM-DD. Default: the last 7 days. The feed keeps 90 days.",
+      "editor": "textfield",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "change": {
+      "title": "Change type",
+      "type": "string",
+      "description": "Changes mode only: one kind of change. Default: all three.",
+      "editor": "select",
+      "enum": ["added", "removed", "changed"],
+      "enumTitles": ["Added to the register", "Removed from the register", "Changed"]
+    },
+    "record_type": {
+      "type": "string",
+      "editor": "select",
+      "title": "Record type",
+      "description": "licence = one row per operating licence; domain = website domains registered against operators; premises = licensed premises (shops, casinos, bingo halls, arcades). Leave blank for all.",
+      "enum": ["licence", "domain", "premises"],
+      "enumTitles": ["Licences", "Domains", "Premises"]
+    },
+    "operator_name": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Operator name contains",
+      "description": "Licence account name, e.g. a bookmaker, casino group or lottery society (case-insensitive substring)."
+    },
+    "licence_number": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Licence number contains",
+      "description": "e.g. 000-039022-R-319313-011"
+    },
+    "is_active": {
+      "type": "boolean",
+      "editor": "checkbox",
+      "title": "Active only",
+      "description": "Tick for active licences and domains only; untick to include surrendered, revoked, lapsed and inactive rows."
+    },
+    "status": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Status contains",
+      "description": "Active, Surrendered, Revoked, Lapsed, … as published."
+    },
+    "licence_type": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Licence type contains",
+      "description": "Remote, Non-Remote, Ancillary Remote."
+    },
+    "activities": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Activity contains",
+      "description": "e.g. General Betting, Casino, Bingo, Gaming Machine, Lottery, Gambling Software; for premises: Betting, Casino, Bingo, Adult Gaming Centre, Family Entertainment Centre."
+    },
+    "trading_names": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Trading name contains",
+      "description": "Matches the operator's active trading names on licence rows."
+    },
+    "domain_name": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Domain name contains",
+      "description": "Is this website licensed? e.g. example.com (domain rows)."
+    },
+    "local_authority": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Licensing authority contains",
+      "description": "The council, e.g. Leeds City Council (premises rows)."
+    },
+    "city": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "City contains",
+      "description": "Filter: City contains (case-insensitive substring match)."
+    },
+    "outward_code": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Postcode area (outward code)",
+      "description": "e.g. LS1, M1, B2 (premises rows)."
+    },
+    "start_date_after": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Licence started on or after",
+      "description": "YYYY-MM-DD",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "end_date_after": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Licence ended on or after",
+      "description": "YYYY-MM-DD — recent surrenders, revocations and lapses",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "q": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Free-text search",
+      "description": "Filter: Free-text search (case-insensitive substring match)."
+    },
+    "max_results": {
+      "title": "Maximum results",
+      "type": "integer",
+      "description": "Stop after this many records (you are charged per result).",
+      "default": 1000,
+      "minimum": 1,
+      "maximum": 100000
+    }
+  },
+  "required": []
+}

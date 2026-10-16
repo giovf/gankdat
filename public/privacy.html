@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="canonical" href="https://gankdat.com/privacy" />
+    <title>gankdat — Privacy Policy</title>
+    <style>
+      :root {
+        --bg: #0a0a0a;
+        --panel: #111315;
+        --green: #00ff41;
+        --magenta: #ff007f;
+        --line: #2a2e33;
+        --fg: #e6e8ea;
+        --muted: #8b9299;
+        --accent: #00ff41;
+        --sans: Inter, Geist, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        --mono:
+          'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      * {
+        box-sizing: border-box;
+        border-radius: 0;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font: 15px/1.7 var(--sans);
+      }
+      main {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 24px 20px 72px;
+      }
+      h1 {
+        font: 800 1.9rem var(--sans);
+        letter-spacing: -0.02em;
+      }
+      h2 {
+        margin-top: 34px;
+        font: 700 0.82rem var(--mono);
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--fg);
+      }
+      h2::before {
+        content: '// ';
+        color: var(--green);
+      }
+      h3 {
+        font-size: 1rem;
+        margin: 20px 0 6px;
+      }
+      a {
+        color: var(--green);
+      }
+      code {
+        font-family: var(--mono);
+        background: var(--panel);
+        border: 1px solid var(--line);
+        padding: 1px 5px;
+        font-size: 0.85em;
+      }
+      .top {
+        color: var(--muted);
+        font: 0.82rem var(--mono);
+      }
+      .top a {
+        color: var(--muted);
+      }
+      .muted {
+        color: var(--muted);
+      }
+      .note {
+        border: 1px dashed var(--line);
+        padding: 12px 16px;
+        color: var(--muted);
+        font: 0.85rem var(--mono);
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 12px 0;
+        font-size: 0.92rem;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--line);
+        vertical-align: top;
+      }
+      th {
+        color: var(--muted);
+        font: 700 0.72rem var(--mono);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="top"><a href="/">← home</a></p>
+      <h1>Privacy Policy</h1>
+      <p class="muted">
+        Last updated: 20 September 2026. gankdat ("we", "us") is the trading name of Giovanni
+        Funaro, a sole trader in the United Kingdom, who is the data controller for the personal
+        data described here. Contact: <a href="mailto:info@gankdat.com">info@gankdat.com</a>.
+      </p>
+
+      <p>
+        The short version: the only personal data we hold about you is your
+        <strong>email address</strong> and the operational records needed to run your account. No
+        analytics, no trackers, no ad tech, no selling data. Each dataset we serve states its own
+        personal-data posture in our <a href="/terms">terms</a> — public-record datasets run Blind
+        Mode (personal data stripped before we store it); the UK sanctions list is served as
+        published, minimized, for compliance use (section 3).
+      </p>
+
+      <h2>1. What we collect, and why</h2>
+      <table>
+        <tr>
+          <th>Data</th>
+          <th>When</th>
+          <th>Why</th>
+        </tr>
+        <tr>
+          <td><strong>Email address</strong></td>
+          <td>You sign in or join the waitlist</td>
+          <td>
+            It is your account identity: sign-in links, API-key ownership, plan and quota all attach
+            to it. Waitlist emails are used only to tell you about launch.
+          </td>
+        </tr>
+        <tr>
+          <td><strong>API keys (hashed)</strong></td>
+          <td>You create a key</td>
+          <td>
+            We store only a SHA-256 hash — we cannot recover or display your key after creation.
+          </td>
+        </tr>
+        <tr>
+          <td><strong>OAuth tokens (hashed)</strong></td>
+          <td>You connect gankdat from an AI client such as Claude</td>
+          <td>
+            The sign-in request, authorization code, access token (1 hour) and refresh token (30
+            days) are stored only as SHA-256 hashes, together with the client's identifier (a URL,
+            or the id of a client that registered itself with its name and redirect addresses — no
+            personal data) and the key on your account they act through. Revoking that key at
+            /account ends the connection; expired tokens are deleted within a day.
+          </td>
+        </tr>
+        <tr>
+          <td><strong>Usage counters</strong></td>
+          <td>You call the API</td>
+          <td>
+            Monthly request counts per account, for quotas and the usage display on your dashboard.
+          </td>
+        </tr>
+        <tr>
+          <td><strong>Billing records</strong></td>
+          <td>You buy a plan</td>
+          <td>
+            Your Stripe customer reference, plan, and a credit ledger. Card details go directly to
+            Stripe — we never see or store them.
+          </td>
+        </tr>
+        <tr>
+          <td><strong>Request metadata</strong></td>
+          <td>Every API request</td>
+          <td>
+            Timestamp, endpoint, key identifier, response status, and IP address, in short-lived
+            operational logs — for rate limiting, abuse prevention, and debugging. We do not log
+            request bodies.
+          </td>
+        </tr>
+        <tr>
+          <td><strong>Correspondence</strong></td>
+          <td>You email us</td>
+          <td>To answer you.</td>
+        </tr>
+        <tr>
+          <td><strong>Feedback</strong></td>
+          <td>You submit the feedback form</td>
+          <td>
+            Your message (and email address, only if you choose to give one) is stored so we can act
+            on it and reply. Deleted on request.
+          </td>
+        </tr>
+      </table>
+
+      <h2>2. Cookies</h2>
+      <p>
+        We set exactly one cookie: <code>fapi_session</code>, an opaque session identifier created
+        when you sign in (HttpOnly, Secure, expires after 30 days or on sign-out). It is strictly
+        necessary to keep you signed in, which is why there is no cookie banner — we have nothing
+        else to ask consent for. No analytics or third-party cookies, ever.
+      </p>
+
+      <h2>3. Source data — per-dataset posture &amp; "Blind Mode"</h2>
+      <p>
+        The datasets we serve come from official government feeds, and each dataset's personal-data
+        posture is stated in the licence table in our <a href="/terms">terms</a>.
+        <strong
+          >Public-record datasets (Find a Tender procurement notices; planning.data.gov.uk planning
+          applications; TED procurement notices; The Gazette corporate insolvency notices; Companies
+          House new incorporations) run Blind Mode</strong
+        >: personal data present in source records — for example planning-applicant names and
+        contact details — is dropped at ingest and never stored or served. We do not build profiles
+        of individuals, and our terms forbid using the service to re-identify anyone.
+      </p>
+      <p>
+        <strong><code>uk-sanctions</code> is different by nature</strong>: the UK Sanctions List is
+        a government publication that names designated persons and entities so that others can
+        comply with sanctions law. We serve it for that purpose, minimized — we drop dates of birth,
+        identity and passport numbers, contact details, and birth places at ingest, keeping
+        designation facts (names, aliases, regime, dates, countries). Our lawful basis is legitimate
+        interests: enabling sanctions compliance and due diligence using data the government
+        publishes for exactly that use. Designated persons' rights requests should be directed to
+        the <a href="https://www.gov.uk/government/publications/the-uk-sanctions-list">FCDO</a>,
+        which controls the list; we reflect the official publication and refresh daily.
+      </p>
+      <p>
+        <strong><code>sam-exclusions</code> follows the same compliance-list posture</strong>: the
+        US SAM.gov exclusions list names parties barred from US federal awards so that others can
+        screen against it. We serve it minimized — all addresses, SSN/TIN/NPI identifiers, and
+        free-text comments are dropped at ingest, keeping exclusion facts (name, classification,
+        exclusion type and program, agency, UEI/CAGE codes, dates). Lawful basis is the same
+        legitimate interest; excluded parties' rights requests should be directed to
+        <a href="https://sam.gov">SAM.gov</a> (US GSA), which controls the list; we reflect the
+        official publication and refresh daily.
+      </p>
+
+      <h2>4. Pay-per-request crypto payments (x402)</h2>
+      <p>
+        Agents may pay per request in USDC without creating an account. Those payments settle on a
+        public blockchain (Base) via a payment facilitator; the paying wallet address is
+        pseudonymous public-ledger data by the nature of blockchains. We do not link wallet
+        addresses to email accounts, and no account is created for x402 usage.
+      </p>
+
+      <h2>5. Legal bases (UK GDPR)</h2>
+      <ul>
+        <li>
+          <strong>Contract</strong> — operating your account: sign-in emails, key authentication,
+          metering, billing.
+        </li>
+        <li>
+          <strong>Legitimate interests</strong> — securing the service, preventing abuse and fraud,
+          keeping minimal operational logs, and serving government-published sanctions designations
+          for compliance and due-diligence use (section 3).
+        </li>
+        <li>
+          <strong>Legal obligation</strong> — retaining billing and tax records for as long as UK
+          law requires.
+        </li>
+        <li>
+          <strong>Consent</strong> — the waitlist (you gave us your email for a launch notification;
+          unsubscribe by emailing us).
+        </li>
+      </ul>
+
+      <h2>6. Who processes data for us</h2>
+      <table>
+        <tr>
+          <th>Processor</th>
+          <th>Purpose</th>
+          <th>Privacy policy</th>
+        </tr>
+        <tr>
+          <td>Cloudflare</td>
+          <td>Hosting, storage, DNS, email routing, bot protection</td>
+          <td><a href="https://www.cloudflare.com/privacypolicy/">cloudflare.com</a></td>
+        </tr>
+        <tr>
+          <td>Stripe</td>
+          <td>Payment processing and billing portal</td>
+          <td><a href="https://stripe.com/privacy">stripe.com</a></td>
+        </tr>
+        <tr>
+          <td>Resend</td>
+          <td>Sending transactional email (sign-in links), EU region</td>
+          <td><a href="https://resend.com/legal/privacy-policy">resend.com</a></td>
+        </tr>
+        <tr>
+          <td>Coinbase Developer Platform</td>
+          <td>Verifying and settling x402 crypto payments</td>
+          <td><a href="https://www.coinbase.com/legal/privacy">coinbase.com</a></td>
+        </tr>
+      </table>
+      <p>We do not sell personal data, buy contact lists, or send cold email to individuals.</p>
+
+      <h2>7. International transfers</h2>
+      <p>
+        Some processors are US companies operating global infrastructure. Where personal data leaves
+        the UK, transfers rely on UK adequacy decisions (including the UK–US Data Bridge) or the
+        processors' standard contractual safeguards.
+      </p>
+
+      <h2>8. Retention</h2>
+      <ul>
+        <li>
+          <strong>Account email &amp; keys</strong> — kept while your account exists; deleted on
+          request (see rights below).
+        </li>
+        <li>
+          <strong>Sign-in links</strong> — expire after 15 minutes and are single-use; sessions
+          expire after 30 days.
+        </li>
+        <li>
+          <strong>Agent key requests</strong> — when an AI agent asks for a key on your behalf we
+          store your email address, the approval code and timestamps: an unapproved request is
+          deleted after 30 minutes, an approved one 24 hours after approval if the key is not
+          collected, and the record of a collected key after 30 days.
+        </li>
+        <li>
+          <strong>Usage counters</strong> — auto-expire roughly two months after the period they
+          meter.
+        </li>
+        <li>
+          <strong>Billing and credit-ledger records</strong> — kept up to 6 years, as UK tax law
+          requires.
+        </li>
+        <li><strong>Operational logs</strong> — short-term only.</li>
+      </ul>
+
+      <h2>9. Security</h2>
+      <p>
+        All traffic is TLS-encrypted. API keys are stored only as SHA-256 hashes. Sign-in is
+        passwordless (no password database to breach). Secrets are held in our hosting platform's
+        encrypted secret store, and admin operations use constant-time credential checks.
+      </p>
+
+      <h2>10. Your rights</h2>
+      <p>
+        Under UK GDPR you may request access, correction, erasure, restriction, objection, or
+        portability of your personal data. Email
+        <a href="mailto:info@gankdat.com">info@gankdat.com</a> and we will action it — deleting your
+        account removes your email, keys, and sessions (billing records we must keep for tax law are
+        retained until that clock runs out). You may also complain to the
+        <a href="https://ico.org.uk/">Information Commissioner's Office (ICO)</a>.
+      </p>
+
+      <h2>11. Children</h2>
+      <p>
+        The service is a business tool and is not directed at children under 16. We do not knowingly
+        collect their data.
+      </p>
+
+      <h2>12. Changes</h2>
+      <p>
+        We may update this policy; material changes will be posted here with a new date, and — for
+        signed-up users — flagged by email where the change matters to you.
+      </p>
+    </main>
+  </body>
+</html>

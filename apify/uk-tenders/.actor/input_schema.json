@@ -1,0 +1,65 @@
+{
+  "title": "UK Public Tenders (Find a Tender) \u2014 live notices \u2014 filters",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "buyer": {
+      "title": "Buyer contains",
+      "type": "string",
+      "description": "Filter: Buyer contains (case-insensitive substring match).",
+      "editor": "textfield"
+    },
+    "status": {
+      "title": "Status contains",
+      "type": "string",
+      "description": "e.g. active, planned, complete",
+      "editor": "textfield"
+    },
+    "procurement_method": {
+      "title": "Procurement method contains",
+      "type": "string",
+      "description": "open, selective, limited, direct",
+      "editor": "textfield"
+    },
+    "cpv_codes": {
+      "title": "CPV code",
+      "type": "string",
+      "description": "e.g. 72000000 (IT services)",
+      "editor": "textfield"
+    },
+    "value_amount_min": {
+      "title": "Minimum value",
+      "type": "integer",
+      "description": "Filter: Minimum value.",
+      "minimum": 0
+    },
+    "value_amount_max": {
+      "title": "Maximum value",
+      "type": "integer",
+      "description": "Filter: Maximum value.",
+      "minimum": 0
+    },
+    "published_at_after": {
+      "title": "Published on or after",
+      "type": "string",
+      "description": "YYYY-MM-DD",
+      "editor": "textfield",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "q": {
+      "title": "Free-text search",
+      "type": "string",
+      "description": "Matches any text field (title, description, buyer).",
+      "editor": "textfield"
+    },
+    "max_results": {
+      "title": "Maximum results",
+      "type": "integer",
+      "description": "Stop after this many records (you are charged per result).",
+      "default": 1000,
+      "minimum": 1,
+      "maximum": 100000
+    }
+  },
+  "required": []
+}

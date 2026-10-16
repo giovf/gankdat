@@ -1,0 +1,89 @@
+{
+  "title": "UK Care Providers Directory (CQC) — care homes, GPs, dentists, homecare — filters",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "mode": {
+      "title": "Mode",
+      "type": "string",
+      "description": "Current records (default), or only the records added, removed or changed since a date — schedule a daily run in changes mode to monitor the register and pay only for what changed.",
+      "editor": "select",
+      "enum": ["data", "changes"],
+      "enumTitles": ["Current records", "Changes since a date (monitor)"],
+      "default": "data"
+    },
+    "since": {
+      "title": "Changes since",
+      "type": "string",
+      "description": "Changes mode only: YYYY-MM-DD. Default: the last 7 days. The feed keeps 90 days.",
+      "editor": "textfield",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "change": {
+      "title": "Change type",
+      "type": "string",
+      "description": "Changes mode only: one kind of change. Default: all three.",
+      "editor": "select",
+      "enum": ["added", "removed", "changed"],
+      "enumTitles": ["Added to the register", "Removed from the register", "Changed"]
+    },
+    "service_types": {
+      "title": "Service type contains",
+      "type": "string",
+      "description": "e.g. Care home, Nursing home, Homecare, Dentist, GP, Hospital, Hospice",
+      "editor": "textfield"
+    },
+    "specialisms": {
+      "title": "Specialism contains",
+      "type": "string",
+      "description": "e.g. Dementia, Learning disabilities, Mental health, Children",
+      "editor": "textfield"
+    },
+    "provider_name": {
+      "title": "Provider name contains",
+      "type": "string",
+      "editor": "textfield",
+      "description": "Filter: Provider name contains (case-insensitive substring match)."
+    },
+    "region": {
+      "title": "Region contains",
+      "type": "string",
+      "description": "London, South East, North West, Yorkshire & Humberside, …",
+      "editor": "textfield"
+    },
+    "local_authority": {
+      "title": "Local authority contains",
+      "type": "string",
+      "editor": "textfield",
+      "description": "Filter: Local authority contains (case-insensitive substring match)."
+    },
+    "outward_code": {
+      "title": "Postcode area (outward code)",
+      "type": "string",
+      "editor": "textfield",
+      "description": "Filter: Postcode area (outward code) (case-insensitive substring match)."
+    },
+    "latest_check_date_after": {
+      "title": "Latest CQC check on or after",
+      "type": "string",
+      "description": "YYYY-MM-DD",
+      "editor": "textfield",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "q": {
+      "title": "Free-text search",
+      "type": "string",
+      "editor": "textfield",
+      "description": "Filter: Free-text search (case-insensitive substring match)."
+    },
+    "max_results": {
+      "title": "Maximum results",
+      "type": "integer",
+      "description": "Stop after this many records (you are charged per result).",
+      "default": 1000,
+      "minimum": 1,
+      "maximum": 100000
+    }
+  },
+  "required": []
+}

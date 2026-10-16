@@ -1,0 +1,13 @@
+{
+  "name": "gankdat-apify-uk-gambling-operators",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Apify actor: UK Gambling Commission licence register \u2014 operators, licences, domains, premises via gankdat.com",
+  "scripts": {
+    "start": "node src/main.mjs"
+  },
+  "dependencies": {
+    "apify": "^3.4.0"
+  }
+}

@@ -1,0 +1,102 @@
+{
+  "actorSpecification": 1,
+  "fields": {
+    "type": "object",
+    "properties": {
+      "ods_code": {
+        "type": ["string", "null"]
+      },
+      "name": {
+        "type": ["string", "null"]
+      },
+      "org_type": {
+        "type": ["string", "null"]
+      },
+      "status": {
+        "type": ["string", "null"]
+      },
+      "national_grouping": {
+        "type": ["string", "null"]
+      },
+      "health_geography": {
+        "type": ["string", "null"]
+      },
+      "address": {
+        "type": ["string", "null"]
+      },
+      "town": {
+        "type": ["string", "null"]
+      },
+      "county": {
+        "type": ["string", "null"]
+      },
+      "postcode": {
+        "type": ["string", "null"]
+      },
+      "outward_code": {
+        "type": ["string", "null"]
+      },
+      "open_date": {
+        "type": ["string", "null"]
+      },
+      "close_date": {
+        "type": ["string", "null"]
+      },
+      "sub_type": {
+        "type": ["string", "null"]
+      },
+      "parent_code": {
+        "type": ["string", "null"]
+      },
+      "parent_joined": {
+        "type": ["string", "null"]
+      },
+      "parent_left": {
+        "type": ["string", "null"]
+      },
+      "prescribing_setting": {
+        "type": ["string", "null"]
+      },
+      "ord_url": {
+        "type": ["string", "null"]
+      },
+      "change": {
+        "type": ["string", "null"]
+      },
+      "changed_at": {
+        "type": ["string", "null"]
+      }
+    }
+  },
+  "views": {
+    "overview": {
+      "title": "Overview",
+      "transformation": {
+        "fields": [
+          "ods_code",
+          "name",
+          "org_type",
+          "status",
+          "national_grouping",
+          "health_geography",
+          "address",
+          "town",
+          "county",
+          "postcode",
+          "outward_code",
+          "open_date",
+          "close_date",
+          "sub_type",
+          "parent_code",
+          "parent_joined",
+          "parent_left",
+          "prescribing_setting",
+          "ord_url"
+        ]
+      },
+      "display": {
+        "component": "table"
+      }
+    }
+  }
+}

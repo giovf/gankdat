@@ -1,0 +1,71 @@
+# ── Dependencies
+node_modules/
+
+# ── Build output (extend per stack during /setup)
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# ── Environment variables (never commit real secrets)
+.env
+.env*.local
+.dev.vars
+
+# ── Wrangler (Cloudflare Workers local state)
+.wrangler/
+backup-*.sql
+
+# ── Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+dev-debug.log
+
+# ── OS / editor
+.DS_Store
+.idea/
+.obsidian/
+*.suo
+*.sw?
+
+# ── Taskmaster (generated/state files)
+.taskmaster/reports/
+.taskmaster/state.json
+
+# ── Claude Code local files
+.claude/.credentials.json
+.claude/projects/
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+.claude.json
+
+# ── Certificates & keys
+*.pem
+*.key
+*.p8
+*.p12
+*.jks
+*.mobileprovision
+
+# Logs
+logs
+# Dependency directories
+# Environment variables
+# Editor directories and files
+.idea
+.vscode
+*.ntvs*
+*.njsproj
+*.sln
+# OS specific
+
+# Task files
+# tasks.json
+# tasks/ 
+x402-test-wallet.key
+apify/**/node_modules/
+apify/**/storage/
+apify/**/package-lock.json

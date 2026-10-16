@@ -1,0 +1,265 @@
+{
+  "companies": [
+    {
+      "profile": {
+        "company_name": "EXAMPLE WIDGETS LIMITED",
+        "company_number": "12345678",
+        "company_status": "active",
+        "type": "ltd",
+        "jurisdiction": "england-wales",
+        "date_of_creation": "2015-03-02",
+        "sic_codes": ["62012", "62020"],
+        "has_charges": true,
+        "has_insolvency_history": false,
+        "has_been_liquidated": false,
+        "registered_office_is_in_dispute": false,
+        "undeliverable_registered_office_address": false,
+        "can_file": true,
+        "etag": "f1e2d3c4",
+        "registered_office_address": {
+          "address_line_1": "12 Edenhall Street",
+          "address_line_2": "Unit 4",
+          "locality": "Manchester",
+          "region": "Greater Manchester",
+          "postal_code": "M1 1AA",
+          "country": "England"
+        },
+        "accounts": {
+          "accounting_reference_date": { "day": 31, "month": 3 },
+          "last_accounts": {
+            "made_up_to": "2025-03-31",
+            "period_end_on": "2025-03-31",
+            "period_start_on": "2024-04-01",
+            "type": "micro-entity"
+          },
+          "next_accounts": {
+            "due_on": "2026-12-31",
+            "overdue": false,
+            "period_end_on": "2026-03-31",
+            "period_start_on": "2025-04-01"
+          },
+          "next_due": "2026-12-31",
+          "next_made_up_to": "2026-03-31",
+          "overdue": false
+        },
+        "confirmation_statement": {
+          "last_made_up_to": "2026-02-28",
+          "next_due": "2027-03-14",
+          "next_made_up_to": "2027-02-28",
+          "overdue": false
+        },
+        "previous_company_names": [
+          {
+            "name": "EXAMPLE GADGETS LIMITED",
+            "ceased_on": "2018-06-01",
+            "effective_from": "2015-03-02"
+          }
+        ],
+        "links": {
+          "self": "/company/12345678",
+          "filing_history": "/company/12345678/filing-history",
+          "officers": "/company/12345678/officers",
+          "charges": "/company/12345678/charges",
+          "persons_with_significant_control": "/company/12345678/persons-with-significant-control"
+        }
+      },
+      "charges": {
+        "etag": "c1",
+        "total_count": 2,
+        "satisfied_count": 1,
+        "part_satisfied_count": 0,
+        "unfiletered_count": 2,
+        "items": [
+          {
+            "charge_code": "123456780002",
+            "charge_number": 2,
+            "classification": {
+              "type": "charge-description",
+              "description": "A registered charge"
+            },
+            "status": "outstanding",
+            "created_on": "2023-06-01",
+            "delivered_on": "2023-06-05",
+            "persons_entitled": [{ "name": "Example Bank plc" }],
+            "particulars": {
+              "type": "charged-property-description",
+              "description": "All property",
+              "contains_floating_charge": true
+            },
+            "links": { "self": "/company/12345678/charges/abc" }
+          },
+          {
+            "charge_code": "123456780001",
+            "charge_number": 1,
+            "classification": {
+              "type": "charge-description",
+              "description": "A registered charge"
+            },
+            "status": "fully-satisfied",
+            "created_on": "2017-02-10",
+            "delivered_on": "2017-02-14",
+            "satisfied_on": "2021-09-30",
+            "persons_entitled": [{ "name": "Example Finance Limited" }],
+            "links": { "self": "/company/12345678/charges/def" }
+          }
+        ]
+      },
+      "filing_history": {
+        "etag": "h1",
+        "filing_history_status": "filing-history-available",
+        "items_per_page": 25,
+        "start_index": 0,
+        "total_count": 14,
+        "kind": "filing-history",
+        "items": [
+          {
+            "category": "confirmation-statement",
+            "date": "2026-03-04",
+            "description": "confirmation-statement-with-no-updates",
+            "description_values": { "made_up_date": "2026-02-28" },
+            "type": "CS01",
+            "transaction_id": "MzQwMDAwMDAwMQ",
+            "pages": 3,
+            "barcode": "X9ABC123",
+            "links": { "self": "/company/12345678/filing-history/MzQwMDAwMDAwMQ" }
+          },
+          {
+            "category": "accounts",
+            "subcategory": "micro-entity",
+            "date": "2025-11-20",
+            "description": "accounts-with-accounts-type-micro-entity",
+            "description_values": { "made_up_date": "2025-03-31" },
+            "type": "AA",
+            "transaction_id": "MzQwMDAwMDAwMg",
+            "pages": 4
+          },
+          {
+            "category": "officers",
+            "subcategory": "appointments",
+            "date": "2025-08-15",
+            "description": "appoint-person-director-company-with-name-date",
+            "description_values": {
+              "officer_name": "Mrs Jane Doe",
+              "appointment_date": "2025-08-12"
+            },
+            "type": "AP01",
+            "transaction_id": "MzQwMDAwMDAwMw",
+            "pages": 2
+          }
+        ]
+      },
+      "pscs": {
+        "active_count": 2,
+        "ceased_count": 0,
+        "total_results": 2,
+        "items_per_page": 100,
+        "start_index": 0,
+        "links": { "self": "/company/12345678/persons-with-significant-control" },
+        "items": [
+          {
+            "kind": "individual-person-with-significant-control",
+            "name": "Mrs Jane Doe",
+            "name_elements": { "title": "Mrs", "forename": "Jane", "surname": "Doe" },
+            "date_of_birth": { "month": 5, "year": 1975 },
+            "nationality": "British",
+            "country_of_residence": "England",
+            "address": {
+              "address_line_1": "12 Edenhall Street",
+              "locality": "Manchester",
+              "postal_code": "M1 1AA",
+              "country": "England"
+            },
+            "natures_of_control": ["ownership-of-shares-25-to-50-percent"],
+            "notified_on": "2016-04-06",
+            "etag": "p1",
+            "links": { "self": "/company/12345678/persons-with-significant-control/individual/abc" }
+          },
+          {
+            "kind": "corporate-entity-person-with-significant-control",
+            "name": "EXAMPLE HOLDINGS LTD",
+            "identification": {
+              "legal_form": "Private Limited Company",
+              "legal_authority": "Companies Act 2006",
+              "country_registered": "England",
+              "place_registered": "Companies House",
+              "registration_number": "09876543"
+            },
+            "address": {
+              "address_line_1": "1 Holding Way",
+              "locality": "London",
+              "postal_code": "EC1A 1BB",
+              "country": "England"
+            },
+            "natures_of_control": [
+              "ownership-of-shares-75-to-100-percent",
+              "voting-rights-75-to-100-percent"
+            ],
+            "notified_on": "2019-01-15",
+            "etag": "p2",
+            "links": {
+              "self": "/company/12345678/persons-with-significant-control/corporate-entity/def"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "profile": {
+        "company_name": "EXAMPLE DISSOLVED LIMITED",
+        "company_number": "SC123456",
+        "company_status": "dissolved",
+        "type": "ltd",
+        "jurisdiction": "scotland",
+        "date_of_creation": "2010-07-19",
+        "date_of_cessation": "2024-01-10",
+        "sic_codes": ["43210"],
+        "has_charges": false,
+        "has_insolvency_history": false,
+        "has_been_liquidated": false,
+        "can_file": false,
+        "etag": "f9",
+        "registered_office_address": {
+          "address_line_1": "3 Royal Mile Close",
+          "locality": "Edinburgh",
+          "postal_code": "EH1 1AA",
+          "country": "Scotland"
+        },
+        "accounts": {
+          "accounting_reference_date": { "day": 31, "month": 7 },
+          "last_accounts": {
+            "made_up_to": "2022-07-31",
+            "period_end_on": "2022-07-31",
+            "type": "dormant"
+          },
+          "overdue": false
+        },
+        "confirmation_statement": { "last_made_up_to": "2023-07-19", "overdue": false },
+        "links": {
+          "self": "/company/SC123456",
+          "filing_history": "/company/SC123456/filing-history"
+        }
+      },
+      "charges": null,
+      "filing_history": {
+        "etag": "h9",
+        "filing_history_status": "filing-history-available",
+        "items_per_page": 25,
+        "start_index": 0,
+        "total_count": 9,
+        "kind": "filing-history",
+        "items": [
+          {
+            "category": "gazette",
+            "subcategory": "dissolved",
+            "date": "2024-01-10",
+            "description": "gazette-dissolved-compulsory",
+            "type": "GAZ2",
+            "transaction_id": "MzQwMDAwMDAwOQ",
+            "pages": 1
+          }
+        ]
+      },
+      "pscs": null
+    }
+  ]
+}

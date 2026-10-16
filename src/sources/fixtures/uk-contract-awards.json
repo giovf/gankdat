@@ -1,0 +1,1357 @@
+[
+  {
+    "ocid": "ocds-b5fd17-b238c692-8401-485c-8aa5-dbe682223c84",
+    "id": "ee34c04f-be95-4fbb-9f96-2692d8c12dfc-914743",
+    "date": "2026-09-20T13:08:07+01:00",
+    "tag": ["award"],
+    "buyer": {
+      "id": "GB-SRS-sid4gov.cabinetoffice.gov.uk/Mdj94B2D",
+      "name": "AMEY DEFENCE SERVICES LIMITED"
+    },
+    "tender": {
+      "title": "FDIS - Catterick Whole House Refurbishments to 25 properties - FY2026/27 - Amey North Region - Northern England",
+      "description": "CONTRACT AWARD NOTICE:\r\n\r\nNorth Region - Northern England\r\n\r\nWhole House Refurbishments, scope of works likely to include:\r\n\r\n\u2022\tReplace Kitchen & Bathroom\r\n\r\n\u2022\tReplace Doors and Windows\r\n\r\n\u2022\tReplace Roof\r\n\r\n\u2022\tReplace Boiler/Heating/Plumbing\r\n\r\n\u2022\tElectrical rewire\r\n\r\n\u2022\tInternal reconfigurations",
+      "procurementMethod": "selective",
+      "mainProcurementCategory": "works",
+      "classification": {
+        "scheme": "CPV",
+        "id": "45262690",
+        "description": "Refurbishment of run-down buildings"
+      },
+      "items": [
+        {
+          "id": "1",
+          "deliveryAddresses": [
+            {
+              "region": "Yorkshire and the Humber",
+              "countryName": "United Kingdom"
+            }
+          ]
+        }
+      ]
+    },
+    "awards": [
+      {
+        "id": "ocds-b5fd17-b238c692-8401-485c-8aa5-dbe682223c84-1",
+        "status": "active",
+        "date": "2026-09-09T00:00:00+01:00",
+        "value": {
+          "amount": 2899918.94,
+          "currency": "GBP"
+        },
+        "suppliers": [
+          {
+            "id": "GB-COH-10135058",
+            "name": "Zenith Developments Group"
+          }
+        ],
+        "contractPeriod": {
+          "startDate": "2026-10-12T00:00:00+01:00",
+          "endDate": "2027-04-09T23:59:59+01:00"
+        }
+      }
+    ]
+  },
+  {
+    "ocid": "ocds-b5fd17-33215dbe-433b-4391-b048-72fdbd257239",
+    "id": "eedcb5d4-47d8-404f-a5c7-d7ae13e62319-914742",
+    "date": "2026-09-20T12:33:06+01:00",
+    "tag": ["award"],
+    "buyer": {
+      "id": "GB-SRS-sid4gov.cabinetoffice.gov.uk/Mdj94B2D",
+      "name": "AMEY DEFENCE SERVICES LIMITED"
+    },
+    "tender": {
+      "title": "CONTRACT AWARD NOTICE - FDIS - Fulford Whole House Refurbishments to 9 properties - FY2026/27 - Amey North Region - Northern England",
+      "description": "CONTRACT AWARD NOTICE for the following works:\r\n\r\nNorth Region - Northern England\r\n\r\nWhole House Refurbishments, scope of works likely to include:\r\n\r\n\u2022\tReplace Kitchen & Bathroom\r\n\r\n\u2022\tReplace Doors and Windows\r\n\r\n\u2022\tReplace Roof\r\n\r\n\u2022\tReplace Boiler/Heating/Plumbing\r\n\r\n\u2022\tElectrical rewire\r\n\r\n\u2022\tInterna",
+      "procurementMethod": "open",
+      "mainProcurementCategory": "works",
+      "classification": {
+        "scheme": "CPV",
+        "id": "45262690",
+        "description": "Refurbishment of run-down buildings"
+      },
+      "items": [
+        {
+          "id": "1",
+          "deliveryAddresses": [
+            {
+              "region": "Yorkshire and the Humber",
+              "countryName": "United Kingdom"
+            }
+          ]
+        }
+      ]
+    },
+    "awards": [
+      {
+        "id": "ocds-b5fd17-33215dbe-433b-4391-b048-72fdbd257239-1",
+        "status": "active",
+        "date": "2026-09-17T00:00:00+01:00",
+        "value": {
+          "amount": 882102.21,
+          "currency": "GBP"
+        },
+        "suppliers": [
+          {
+            "id": "GB-COH-10135058",
+            "name": "Zenith Developments Group"
+          }
+        ],
+        "contractPeriod": {
+          "startDate": "2026-10-19T00:00:00+01:00",
+          "endDate": "2027-03-19T23:59:59Z"
+        }
+      }
+    ]
+  },
+  {
+    "ocid": "ocds-b5fd17-144b1d24-673a-47d1-ade6-418732402a8e",
+    "id": "50e0d699-56cd-46a3-969c-7353dbe440b2-914741",
+    "date": "2026-09-20T12:14:48+01:00",
+    "tag": ["award"],
+    "buyer": {
+      "id": "GB-SRS-sid4gov.cabinetoffice.gov.uk/Mdj94B2D",
+      "name": "AMEY DEFENCE SERVICES LIMITED"
+    },
+    "tender": {
+      "title": "CONTRACT AWARD NOTICE - FDIS - Dishforth Whole House Refurbishments to 7 properties - FY2026/27 - Amey North Region - Northern England",
+      "description": "CONTRACT AWARD NOTICE for the following works:\r\n\r\nNorth Region - Northern England\r\n\r\nWhole House Refurbishments, scope of works likely to include:\r\n\r\n\u2022\tReplace Kitchen & Bathroom\r\n\r\n\u2022\tReplace Doors and Windows\r\n\r\n\u2022\tReplace Roof\r\n\r\n\u2022\tReplace Boiler/Heating/Plumbing\r\n\r\n\u2022\tElectrical rewire\r\n\r\n\u2022\tInterna",
+      "procurementMethod": "open",
+      "mainProcurementCategory": "works",
+      "classification": {
+        "scheme": "CPV",
+        "id": "45262690",
+        "description": "Refurbishment of run-down buildings"
+      },
+      "items": [
+        {
+          "id": "1",
+          "deliveryAddresses": [
+            {
+              "region": "Yorkshire and the Humber",
+              "countryName": "United Kingdom"
+            }
+          ]
+        }
+      ]
+    },
+    "awards": [
+      {
+        "id": "ocds-b5fd17-144b1d24-673a-47d1-ade6-418732402a8e-1",
+        "status": "active",
+        "date": "2026-08-21T00:00:00+01:00",
+        "value": {
+          "amount": 632169.8,
+          "currency": "GBP"
+        },
+        "suppliers": [
+          {
+            "id": "GB-COH-00703979",
+            "name": "Tom Willoughby"
+          }
+        ],
+        "contractPeriod": {
+          "startDate": "2026-09-28T00:00:00+01:00",
+          "endDate": "2027-02-05T23:59:59Z"
+        }
+      }
+    ]
+  },
+  {
+    "ocid": "ocds-b5fd17-91303e4f-bc83-4178-9444-e30ca33582fb",
+    "id": "652daa5a-af55-4d63-97a7-9a8e9fb40e8c-914740",
+    "date": "2026-09-20T11:58:22+01:00",
+    "tag": ["award"],
+    "buyer": {
+      "id": "GB-SRS-sid4gov.cabinetoffice.gov.uk/Mdj94B2D",
+      "name": "AMEY DEFENCE SERVICES LIMITED"
+    },
+    "tender": {
+      "title": "CONTRACT AWARD NOTICE - FDIS - Wyton Whole House Refurbishments to 7 properties - FY2026/27 - Amey Central Region - East",
+      "description": "CONTRACT AWARD NOTICE for the following works:\r\nCentral Region - East\r\nWhole House Refurbishments, scope of works likely to include:\r\n\r\nReplace Kitchen & Bathroom\r\n\r\nReplace Doors and Windows\r\n\r\nReplace Roof\r\n\r\nReplace Boiler/Heating/Plumbing\r\n\r\nElectrical rewire\r\n\r\nInternal reconfigurations",
+      "procurementMethod": "open",
+      "mainProcurementCategory": "works",
+      "classification": {
+        "scheme": "CPV",
+        "id": "45262690",
+        "description": "Refurbishment of run-down buildings"
+      },
+      "items": [
+        {
+          "id": "1",
+          "deliveryAddresses": [
+            {
+              "region": "East of England",
+              "countryName": "United Kingdom"
+            }
+          ]
+        }
+      ]
+    },
+    "awards": [
+      {
+        "id": "ocds-b5fd17-91303e4f-bc83-4178-9444-e30ca33582fb-1",
+        "status": "active",
+        "date": "2026-08-27T00:00:00+01:00",
+        "value": {
+          "amount": 893770.83,
+          "currency": "GBP"
+        },
+        "suppliers": [
+          {
+            "id": "GB-COH-08338857",
+            "name": "ICB GENERAL BUILDING AND CIVIL ENGINEERING LTD"
+          }
+        ],
+        "contractPeriod": {
+          "startDate": "2026-09-28T00:00:00+01:00",
+          "endDate": "2027-02-26T23:59:59Z"
+        }
+      }
+    ]
+  },
+  {
+    "ocid": "ocds-b5fd17-0acc1a37-1d4b-4ef3-9215-c703b5a3e163",
+    "id": "0c2b56f6-3e19-4e9b-a58b-1bc701db62c0-914739",
+    "date": "2026-09-20T11:40:28+01:00",
+    "tag": ["award"],
+    "buyer": {
+      "id": "GB-SRS-sid4gov.cabinetoffice.gov.uk/Mdj94B2D",
+      "name": "AMEY DEFENCE SERVICES LIMITED"
+    },
+    "tender": {
+      "title": "Digby Whole House Refurbishment of 5 properties - FY2026/27 - Amey Central Region - East Midlands & Nth",
+      "description": "CONTRACT AWARD NOTICE for the following works:\r\n\r\nCentral Region - East Midlands & Nth\r\n\r\nWhole House Refurbishments, scope of works likely to include:\r\n\r\n\u2022\tReplace Kitchen & Bathroom\r\n\r\n\u2022\tReplace Doors and Windows\r\n\r\n\u2022\tReplace Roof\r\n\r\n\u2022\tReplace Boiler/Heating/Plumbing\r\n\r\n\u2022\tElectrical rewire\r\n\r\n\u2022\tIn",
+      "procurementMethod": "open",
+      "mainProcurementCategory": "works",
+      "classification": {
+        "scheme": "CPV",
+        "id": "45262690",
+        "description": "Refurbishment of run-down buildings"
+      },
+      "items": [
+        {
+          "id": "1",
+          "deliveryAddresses": [
+            {
+              "region": "East Midlands",
+              "countryName": "United Kingdom"
+            }
+          ]
+        }
+      ]
+    },
+    "awards": [
+      {
+        "id": "ocds-b5fd17-0acc1a37-1d4b-4ef3-9215-c703b5a3e163-1",
+        "status": "active",
+        "date": "2026-09-14T00:00:00+01:00",
+        "value": {
+          "amount": 463046.6,
+          "currency": "GBP"
+        },
+        "suppliers": [
+          {
+            "id": "GB-COH-06398387",
+            "name": "Johnson & Smith (Lincoln)"
+          }
+        ],
+        "contractPeriod": {
+          "startDate": "2026-10-05T00:00:00+01:00",
+          "endDate": "2027-01-29T23:59:59Z"
+        }
+      }
+    ]
+  },
+  {
+    "ocid": "ocds-b5fd17-92a952bb-776a-49c6-b42d-7ed383209ab2",
+    "id": "37254c37-4142-4615-ac48-cf2d2f2c0868-914738",
+    "date": "2026-09-20T11:21:07+01:00",
+    "tag": ["award"],
+    "buyer": {
+      "id": "GB-SRS-sid4gov.cabinetoffice.gov.uk/Mdj94B2D",
+      "name": "AMEY DEFENCE SERVICES LIMITED"
+    },
+    "tender": {
+      "title": "CONTRACT AWARD NOTICE - FDIS - Topcliffe Whole House Refurbishments to 7 properties - FY2026/27 - Amey North Region - Northern England",
+      "description": "CONTRACT AWARD NOTICE for the following works:\r\n\r\nNorth Region - Northern England\r\n\r\nWhole House Refurbishments, scope of works likely to include:\r\n\r\n\u2022\tReplace Kitchen & Bathroom\r\n\r\n\u2022\tReplace Doors and Windows\r\n\r\n\u2022\tReplace Roof\r\n\r\n\u2022\tReplace Boiler/Heating/Plumbing\r\n\r\n\u2022\tElectrical rewire\r\n\r\n\u2022\tInterna",
+      "procurementMethod": "open",
+      "mainProcurementCategory": "works",
+      "classification": {
+        "scheme": "CPV",
+        "id": "45262690",
+        "description": "Refurbishment of run-down buildings"
+      },
+      "items": [
+        {
+          "id": "1",
+          "deliveryAddresses": [
+            {
+              "region": "Yorkshire and the Humber",
+              "countryName": "United Kingdom"
+            }
+          ]
+        }
+      ]
+    },
+    "awards": [
+      {
+        "id": "ocds-b5fd17-92a952bb-776a-49c6-b42d-7ed383209ab2-1",
+        "status": "active",
+        "date": "2026-08-21T00:00:00+01:00",
+        "value": {
+          "amount": 687705.14,
+          "currency": "GBP"
+        },
+        "suppliers": [
+          {
+            "id": "GB-COH-00703979",
+            "name": "Tom Willoughby"
+          }
+        ],
+        "contractPeriod": {
+          "startDate": "2026-09-28T00:00:00+01:00",
+          "endDate": "2027-01-29T23:59:59Z"
+        }
+      }
+    ]
+  },
+  {
+    "ocid": "ocds-b5fd17-059a26e8-2fd4-45a9-b318-37f4bf8bb687",
+    "id": "432997fb-4449-4cf9-9f02-3ddadeefa766-914737",
+    "date": "2026-09-20T11:02:36+01:00",
+    "tag": ["award"],
+    "buyer": {
+      "id": "GB-SRS-sid4gov.cabinetoffice.gov.uk/Mdj94B2D",
+      "name": "AMEY DEFENCE SERVICES LIMITED"
+    },
+    "tender": {
+      "title": "CONTRACT AWARD NOTICE - FDIS - Wyton Whole House Refurbishments to 25 properties - FY2026/27 - Amey Central Region - East",
+      "description": "CONTRACT AWARD NOTICE for the following works:\r\n\r\nWhole House Refurbishments, scope of works likely to include:\r\n\r\n\u2022\tReplace Kitchen & Bathroom\r\n\r\n\u2022\tReplace Doors and Windows\r\n\r\n\u2022\tReplace Roof\r\n\r\n\u2022\tReplace Boiler/Heating/Plumbing\r\n\r\n\u2022\tElectrical rewire\r\n\r\n\u2022\tInternal reconfigurations",
+      "procurementMethod": "open",
+      "mainProcurementCategory": "works",
+      "classification": {
+        "scheme": "CPV",
+        "id": "45262690",
+        "description": "Refurbishment of run-down buildings"
+      },
+      "items": [
+        {
+          "id": "1",
+          "deliveryAddresses": [
+            {
+              "region": "East of England",
+              "countryName": "United Kingdom"
+            }
+          ]
+        }
+      ]
+    },
+    "awards": [
+      {
+        "id": "ocds-b5fd17-059a26e8-2fd4-45a9-b318-37f4bf8bb687-1",
+        "status": "active",
+        "date": "2026-08-17T00:00:00+01:00",
+        "value": {
+          "amount": 2410834.56,
+          "currency": "GBP"
+        },
+        "suppliers": [
+          {
+            "id": "GB-COH-05756266",
+            "name": "CARDO (SOUTH) LIMITED"
+          }
+        ],
+        "contractPeriod": {
+          "startDate": "2026-10-01T00:00:00+01:00",
+          "endDate": "2027-03-31T23:59:59+01:00"
+        }
+      }
+    ]
+  },
+  {
+    "ocid": "ocds-b5fd17-f72c7e74-b0e5-4220-b0ad-5eca18c01388",
+    "id": "47b351e6-090f-49cc-920c-1aa316f12743-914736",
+    "date": "2026-09-20T10:34:53+01:00",
+    "tag": ["awardUpdate"],
+    "buyer": {
+      "id": "GB-SRS-sid4gov.cabinetoffice.gov.uk/Mdj94B2D",
+      "name": "AMEY DEFENCE SERVICES LIMITED"
+    },
+    "tender": {
+      "title": "FDIS - Catterick Whole House Refurbishments to 10 properties - FY2026/27 - Amey North Region - Northern England",
+      "description": "North Region - Northern England\r\n\r\nWhole House Refurbishments, scope of works likely to include:\r\n\r\n\u2022\tReplace Kitchen & Bathroom\r\n\u2022\tReplace Doors and Windows\r\n\u2022\tReplace Roof\r\n\u2022\tReplace Boiler/Heating/Plumbing\r\n\u2022\tElectrical rewire\r\n\u2022\tInternal reconfigurations\r\n\r\nAmey have been tasked by the DIO throu",
+      "procurementMethod": "selective",
+      "mainProcurementCategory": "works",
+      "classification": {
+        "scheme": "CPV",
+        "id": "45262690",
+        "description": "Refurbishment of run-down buildings"
+      },
+      "items": [
+        {
+          "id": "1",
+          "deliveryAddresses": [
+            {
+              "region": "Yorkshire and the Humber",
+              "countryName": "United Kingdom"
+            }
+          ]
+        }
+      ]
+    },
+    "awards": [
+      {
+        "id": "ocds-b5fd17-f72c7e74-b0e5-4220-b0ad-5eca18c01388-1",
+        "status": "active",
+        "date": "2026-08-14T00:00:00+01:00",
+        "value": {
+          "amount": 880073.8,
+          "currency": "GBP"
+        },
+        "suppliers": [
+          {
+            "id": "GB-COH-12417145",
+            "name": "Unique Joinery Solutions NE"
+          }
+        ],
+        "contractPeriod": {
+          "startDate": "2026-09-07T00:00:00+01:00",
+          "endDate": "2027-01-11T23:59:59Z"
+        }
+      }
+    ]
+  },
+  {
+    "ocid": "ocds-b5fd17-f72c7e74-b0e5-4220-b0ad-5eca18c01388",
+    "id": "47b351e6-090f-49cc-920c-1aa316f12743-914735",
+    "date": "2026-09-20T10:29:49+01:00",
+    "tag": ["award"],
+    "buyer": {
+      "id": "GB-SRS-sid4gov.cabinetoffice.gov.uk/Mdj94B2D",
+      "name": "AMEY DEFENCE SERVICES LIMITED"
+    },
+    "tender": {
+      "title": "FDIS - Catterick Whole House Refurbishments to 18 properties - FY2026/27 - Amey North Region - Northern England",
+      "description": "North Region - Northern England\r\n\r\nWhole House Refurbishments, scope of works likely to include:\r\n\r\n\u2022\tReplace Kitchen & Bathroom\r\n\u2022\tReplace Doors and Windows\r\n\u2022\tReplace Roof\r\n\u2022\tReplace Boiler/Heating/Plumbing\r\n\u2022\tElectrical rewire\r\n\u2022\tInternal reconfigurations\r\n\r\nAmey have been tasked by the DIO throu",
+      "procurementMethod": "selective",
+      "mainProcurementCategory": "works",
+      "classification": {
+        "scheme": "CPV",
+        "id": "45262690",
+        "description": "Refurbishment of run-down buildings"
+      },
+      "items": [
+        {
+          "id": "1",
+          "deliveryAddresses": [
+            {
+              "region": "Yorkshire and the Humber",
+              "countryName": "United Kingdom"
+            }
+          ]
+        }
+      ]
+    },
+    "awards": [
+      {
+        "id": "ocds-b5fd17-f72c7e74-b0e5-4220-b0ad-5eca18c01388-1",
+        "status": "active",
+        "date": "2026-08-14T00:00:00+01:00",
+        "value": {
+          "amount": 880073.8,
+          "currency": "GBP"
+        },
+        "suppliers": [
+          {
+            "id": "GB-COH-12417145",
+            "name": "Unique Joinery Solutions NE"
+          }
+        ],
+        "contractPeriod": {
+          "startDate": "2026-09-07T00:00:00+01:00",
+          "endDate": "2027-01-11T23:59:59Z"
+        }
+      }
+    ]
+  },
+  {
+    "ocid": "ocds-b5fd17-0db0dcf8-9a57-4c5f-b751-cb43f8227f95",
+    "id": "84d14c5b-c410-4aa7-9de7-d6e1d5c45fcd-914734",
+    "date": "2026-09-19T13:50:04+01:00",
+    "tag": ["award"],
+    "buyer": {
+      "id": "GB-CFS-1756",
+      "name": "The Corporation of Trinity House"
+    },
+    "tender": {
+      "title": "T0345 - Dry Dock & Repair of Lightvessel 06",
+      "description": "Trinity House is seeking competent contractors for the Dry Dock & Repair of Lightvessel 06",
+      "procurementMethod": "selective",
+      "mainProcurementCategory": "services",
+      "classification": {
+        "scheme": "CPV",
+        "id": "50246100",
+        "description": "Dry-docking services"
+      },
+      "items": [
+        {
+          "id": "1",
+          "deliveryAddresses": [
+            {
+              "region": "London",
+              "countryName": "United Kingdom"
+            }
+          ]
+        }
+      ]
+    },
+    "awards": [
+      {
+        "id": "ocds-b5fd17-0db0dcf8-9a57-4c5f-b751-cb43f8227f95-1",
+        "status": "active",
+        "date": "2026-07-13T00:00:00+01:00",
+        "value": {
+          "amount": 408069,
+          "currency": "GBP"
+        },
+        "suppliers": [
+          {
+            "id": "GB-CFS-332792",
+            "name": "Southampton Marine Services"
+          }
+        ],
+        "contractPeriod": {
+          "startDate": "2027-04-01T00:00:00+01:00",
+          "endDate": "2027-05-31T23:59:59+01:00"
+        }
+      }
+    ]
+  },
+  {
+    "ocid": "ocds-b5fd17-2738b298-1437-4787-8b9a-40674fda2f7f",
+    "id": "0b5659d0-8dbd-44e1-80bc-ccbb111b8fb0-914733",
+    "date": "2026-09-19T13:30:04+01:00",
+    "tag": ["award"],
+    "buyer": {
+      "id": "GB-CFS-1756",
+      "name": "The Corporation of Trinity House"
+    },
+    "tender": {
+      "title": "T0345 - Dry Dock & Repair of Lightfloat 03",
+      "description": "Trinity House is seeking competent contractors to carry out the dry dock and repair of Lightfloat 03",
+      "procurementMethod": "selective",
+      "mainProcurementCategory": "services",
+      "classification": {
+        "scheme": "CPV",
+        "id": "50246100",
+        "description": "Dry-docking services"
+      },
+      "items": [
+        {
+          "id": "1",
+          "deliveryAddresses": [
+            {
+              "region": "London",
+              "countryName": "United Kingdom"
+            }
+          ]
+        }
+      ]
+    },
+    "awards": [
+      {
+        "id": "ocds-b5fd17-2738b298-1437-4787-8b9a-40674fda2f7f-1",
+        "status": "active",
+        "date": "2026-07-13T00:00:00+01:00",
+        "value": {
+          "amount": 299505,
+          "currency": "GBP"
+        },
+        "suppliers": [
+          {
+            "id": "GB-CFS-332792",
+            "name": "Southampton Marine Services"
+          }
+        ],
+        "contractPeriod": {
+          "startDate": "2026-09-01T00:00:00+01:00",
+          "endDate": "2026-10-30T23:59:59Z"
+        }
+      }
+    ]
+  },
+  {
+    "ocid": "ocds-b5fd17-8fe6d863-86b4-4939-9d25-79878aa5f67f",
+    "id": "7367a5de-cd39-47fd-ab74-47f13a11ae9b-914732",
+    "date": "2026-09-19T13:00:05+01:00",
+    "tag": ["award"],
+    "buyer": {
+      "id": "GB-CFS-1756",
+      "name": "The Corporation of Trinity House"
+    },
+    "tender": {
+      "title": "T0345 - Dry Dock & Repair of Lightvessel 07",
+      "description": "Trinity House is seeking competent contractors to complete the Dry Dock and Refurbishment of Lightvessel 07 between November and December 2026",
+      "procurementMethod": "selective",
+      "mainProcurementCategory": "services",
+      "classification": {
+        "scheme": "CPV",
+        "id": "50246100",
+        "description": "Dry-docking services"
+      },
+      "items": [
+        {
+          "id": "1",
+          "deliveryAddresses": [
+            {
+              "region": "London",
+              "countryName": "United Kingdom"
+            }
+          ]
+        }
+      ]
+    },
+    "awards": [
+      {
+        "id": "ocds-b5fd17-8fe6d863-86b4-4939-9d25-79878aa5f67f-1",
+        "status": "active",
+        "date": "2026-07-10T00:00:00+01:00",
+        "value": {
+          "amount": 408069,
+          "currency": "GBP"
+        },
+        "suppliers": [
+          {
+            "id": "GB-CFS-272390",
+            "name": "Southampton Marine Services Limited"
+          }
+        ],
+        "contractPeriod": {
+          "startDate": "2026-11-01T00:00:00Z",
+          "endDate": "2026-12-31T23:59:59Z"
+        }
+      }
+    ]
+  },
+  {
+    "ocid": "ocds-b5fd17-c96bc5ff-b57e-4a28-a938-b331a8554ad3",
+    "id": "bbbc7f12-af73-414b-9ae2-793ef227aa11-914730",
+    "date": "2026-09-18T23:00:58+01:00",
+    "tag": ["award"],
+    "buyer": {
+      "id": "GB-CFS-328315",
+      "name": "Department for Work and Pensions"
+    },
+    "tender": {
+      "title": "Solution Integration Services for Enterprise Productivity Platform",
+      "description": "This is a contract for a supplier to define, design, implement and operationalise an Enterprise Productivity Governance Capability in DWP's Cloud environments.",
+      "procurementMethod": "selective",
+      "mainProcurementCategory": "services",
+      "classification": {
+        "scheme": "CPV",
+        "id": "72000000",
+        "description": "IT services: consulting, software development, Internet and support"
+      },
+      "items": [
+        {
+          "id": "1",
+          "deliveryAddresses": [
+            {
+              "countryName": "British Oversea Territories"
+            },
+            {
+              "countryName": "Channel Islands"
+            },
+            {
+              "countryName": "Europe"
+            },
+            {
+              "countryName": "Isle of Man"
+            },
+            {
+              "countryName": "Rest of the World"
+            },
+            {
+              "countryName": "United Kingdom"
+            }
+          ]
+        }
+      ]
+    },
+    "awards": [
+      {
+        "id": "ocds-b5fd17-c96bc5ff-b57e-4a28-a938-b331a8554ad3-1",
+        "status": "active",
+        "date": "2026-08-20T00:00:00+01:00",
+        "value": {
+          "amount": 2565054,
+          "currency": "GBP"
+        },
+        "suppliers": [
+          {
+            "id": "GB-CFS-338491",
+            "name": "IBM United Kingdom Limited"
+          }
+        ],
+        "contractPeriod": {
+          "startDate": "2026-08-20T00:00:00+01:00",
+          "endDate": "2028-08-19T23:59:59+01:00"
+        }
+      }
+    ]
+  },
+  {
+    "ocid": "ocds-b5fd17-310bec58-3897-4c16-a82a-7ab911d3a00b",
+    "id": "e9f61e67-4716-4ece-a06e-46670e989d99-914729",
+    "date": "2026-09-18T17:44:55+01:00",
+    "tag": ["award"],
+    "buyer": {
+      "id": "GB-CFS-168564",
+      "name": "Homes England (the name adopted by the Homes and Communities Agency)"
+    },
+    "tender": {
+      "title": "National Housing Bank Ltd - Solicitor - Development Loan - Fordingbridge",
+      "description": "Solicitor required from Homes England's Legal Services Framework 2022-2026 to act on National Housing Bank's behalf entering into an Investment Loan Agreement with a borrower building homes in Fordingbridge.\r\nhttps://procontract.due-north.com/ContractsRegister/ViewContractDetails?contractId=ba7cde3e",
+      "procurementMethod": "direct",
+      "mainProcurementCategory": "services",
+      "classification": {
+        "scheme": "CPV",
+        "id": "79100000",
+        "description": "Legal services"
+      },
+      "items": [
+        {
+          "id": "1",
+          "deliveryAddresses": [
+            {
+              "region": "England",
+              "countryName": "United Kingdom"
+            }
+          ]
+        }
+      ]
+    },
+    "awards": [
+      {
+        "id": "ocds-b5fd17-310bec58-3897-4c16-a82a-7ab911d3a00b-1",
+        "status": "active",
+        "date": "2026-08-24T00:00:00+01:00",
+        "value": {
+          "amount": 13966.8,
+          "currency": "GBP"
+        },
+        "suppliers": [
+          {
+            "id": "GB-CFS-83295",
+            "name": "Ashfords"
+          }
+        ],
+        "contractPeriod": {
+          "startDate": "2026-09-20T00:00:00+01:00",
+          "endDate": "2027-05-14T23:59:59+01:00"
+        }
+      }
+    ]
+  },
+  {
+    "ocid": "ocds-b5fd17-7c75c986-b464-4db2-bbe7-7ebe384b1c37",
+    "id": "9c8347e7-e22d-4d5e-82d0-6f65522e3299-914728",
+    "date": "2026-09-18T17:44:00+01:00",
+    "tag": ["award"],
+    "buyer": {
+      "id": "GB-CFS-288241",
+      "name": "Gloucestershire Health and Care NHS Foundation Trust"
+    },
+    "tender": {
+      "title": "Solar External Lights at Charlton Lane Hospital",
+      "description": "Solar External Lights at Charlton Lane Hospital - GHC",
+      "procurementMethod": "selective",
+      "mainProcurementCategory": "works",
+      "classification": {
+        "scheme": "CPV",
+        "id": "45300000",
+        "description": "Building installation work"
+      },
+      "items": [
+        {
+          "id": "1",
+          "deliveryAddresses": [
+            {
+              "postalCode": "GL3 4AW"
+            },
+            {
+              "countryName": "United Kingdom"
+            }
+          ]
+        }
+      ]
+    },
+    "awards": [
+      {
+        "id": "ocds-b5fd17-7c75c986-b464-4db2-bbe7-7ebe384b1c37-1",
+        "status": "active",
+        "date": "2026-09-18T00:00:00+01:00",
+        "value": {
+          "amount": 179584.08,
+          "currency": "GBP"
+        },
+        "suppliers": [
+          {
+            "id": "GB-CFS-298508",
+            "name": "Constellia Public Ltd"
+          }
+        ],
+        "contractPeriod": {
+          "startDate": "2026-09-14T00:00:00+01:00",
+          "endDate": "2026-12-31T23:59:59Z"
+        }
+      }
+    ]
+  },
+  {
+    "ocid": "ocds-b5fd17-0b2c4010-ad36-421f-94c1-c8e9db7765ee",
+    "id": "bdcc6b04-a7a3-4ce1-a765-66593bbf1bec-914727",
+    "date": "2026-09-18T16:44:19+01:00",
+    "tag": ["award"],
+    "buyer": {
+      "id": "GB-CFS-58010",
+      "name": "Leicestershire County Council"
+    },
+    "tender": {
+      "title": "SEN20467-SEN-TAXI-Hinckley Parks Primary School (Foxfields Link)",
+      "description": "SEN20467-SEN-TAXI-Hinckley Parks Primary School (Foxfields Link)",
+      "procurementMethod": "open",
+      "mainProcurementCategory": "services",
+      "classification": {
+        "scheme": "CPV",
+        "id": "60000000",
+        "description": "Transport services (excl. Waste transport)"
+      },
+      "items": [
+        {
+          "id": "1",
+          "deliveryAddresses": [
+            {
+              "region": "England",
+              "countryName": "United Kingdom"
+            }
+          ]
+        }
+      ]
+    },
+    "awards": [
+      {
+        "id": "ocds-b5fd17-0b2c4010-ad36-421f-94c1-c8e9db7765ee-1",
+        "status": "active",
+        "date": "2026-09-18T00:00:00+01:00",
+        "value": {
+          "amount": 11492,
+          "currency": "GBP"
+        },
+        "suppliers": [
+          {
+            "id": "GB-CFS-338000",
+            "name": "belgrave cars"
+          }
+        ],
+        "contractPeriod": {
+          "startDate": "2026-09-21T00:00:00+01:00",
+          "endDate": "2027-07-31T23:59:59+01:00"
+        }
+      }
+    ]
+  },
+  {
+    "ocid": "ocds-b5fd17-85eca76e-2edb-49f0-8b54-d7c074a0d141",
+    "id": "e4dc4919-9a36-4830-b28b-d9e24cdf9afa-892090",
+    "date": "2026-09-18T16:20:47+01:00",
+    "tag": ["award"],
+    "buyer": {
+      "id": "GB-SRS-sid4gov.cabinetoffice.gov.uk/8yb4NkNq",
+      "name": "ACIS GROUP LIMITED"
+    },
+    "tender": {
+      "title": "Housing Management SaaS Solution",
+      "description": "Provision and implementation of a SaaS integrated Housing Management System (HMS) which  will enable the management and tracking of tenancies and properties along with ensuring compliancy across all relevant regulations as a social landlord and registered not for profit charity.\r\n\r\nAdditional inform",
+      "procurementMethod": "selective",
+      "mainProcurementCategory": "services",
+      "classification": {
+        "scheme": "CPV",
+        "id": "48420000",
+        "description": "Facilities management software package and software package suite"
+      },
+      "items": [
+        {
+          "id": "1",
+          "deliveryAddresses": [
+            {
+              "region": "East Midlands",
+              "countryName": "United Kingdom"
+            }
+          ]
+        }
+      ]
+    },
+    "awards": [
+      {
+        "id": "ocds-b5fd17-85eca76e-2edb-49f0-8b54-d7c074a0d141-1",
+        "status": "active",
+        "date": "2026-09-07T00:00:00+01:00",
+        "value": {
+          "amount": 979378.1,
+          "currency": "GBP"
+        },
+        "suppliers": [
+          {
+            "id": "GB-COH-11567209",
+            "name": "RUBIXX SOLUTIONS LTD"
+          }
+        ],
+        "contractPeriod": {
+          "startDate": "2026-09-07T00:00:00+01:00",
+          "endDate": "2031-09-06T23:59:59+01:00"
+        }
+      }
+    ]
+  },
+  {
+    "ocid": "ocds-b5fd17-90c0c3ce-1b40-4276-9c00-cd14a70f5d38",
+    "id": "d250cbbe-f56b-44f3-a068-6a7498d7e96d-914722",
+    "date": "2026-09-18T16:10:42+01:00",
+    "tag": ["award"],
+    "buyer": {
+      "id": "GB-CFS-242784",
+      "name": "Cumberland Council"
+    },
+    "tender": {
+      "title": "Lot 1 -Safe use of portable power tools",
+      "description": "This course is to provide employees with the knowledge & skills required to work safely, particularly in situations where they are supporting vulnerable people. this is a 2 year contract with the option to extend for a further 12 months",
+      "procurementMethod": "selective",
+      "mainProcurementCategory": "services",
+      "classification": {
+        "scheme": "CPV",
+        "id": "80000000",
+        "description": "Education and training services"
+      },
+      "items": [
+        {
+          "id": "1",
+          "deliveryAddresses": [
+            {
+              "region": "England",
+              "countryName": "United Kingdom"
+            }
+          ]
+        }
+      ]
+    },
+    "awards": [
+      {
+        "id": "ocds-b5fd17-90c0c3ce-1b40-4276-9c00-cd14a70f5d38-1",
+        "status": "active",
+        "date": "2026-08-03T00:00:00+01:00",
+        "value": {
+          "amount": 30000,
+          "currency": "GBP"
+        },
+        "suppliers": [
+          {
+            "id": "GB-CFS-338490",
+            "name": "The corporation of NGC Trading and Carlisle College"
+          }
+        ],
+        "contractPeriod": {
+          "startDate": "2026-09-01T00:00:00+01:00",
+          "endDate": "2028-08-31T23:59:59+01:00"
+        }
+      }
+    ]
+  },
+  {
+    "ocid": "ocds-b5fd17-d33a00ea-301f-4f0d-9423-391eb419679a",
+    "id": "c5a157a0-0894-4e40-be94-7dd20c21ef15-914721",
+    "date": "2026-09-18T16:10:05+01:00",
+    "tag": ["award"],
+    "buyer": {
+      "id": "GB-CFS-338488",
+      "name": "THE CORPORATION OF TRINITY HOUSE OF DEPTFORD STROND"
+    },
+    "tender": {
+      "title": "G-Cloud 14 (Lot 3) Microsoft 365 Migration",
+      "description": "Trinity House procured specialist Microsoft 365consultancy, implementation, migration and change management services through the Crown Commercial Service G-Cloud 14 Framework (Lot 3:Cloud Support). The services include the design and implementation of SharePoint Online, Microsoft Teams and OneDrive ",
+      "mainProcurementCategory": "services",
+      "classification": {
+        "scheme": "CPV",
+        "id": "72000000",
+        "description": "IT services: consulting, software development, Internet and support"
+      },
+      "items": [
+        {
+          "id": "1",
+          "deliveryAddresses": [
+            {
+              "region": "London",
+              "countryName": "United Kingdom"
+            }
+          ]
+        }
+      ]
+    },
+    "awards": [
+      {
+        "id": "ocds-b5fd17-d33a00ea-301f-4f0d-9423-391eb419679a-1",
+        "status": "active",
+        "date": "2026-09-17T00:00:00+01:00",
+        "value": {
+          "amount": 423335,
+          "currency": "GBP"
+        },
+        "suppliers": [
+          {
+            "id": "GB-CFS-338489",
+            "name": "Quorum Network Resources Ltd"
+          }
+        ],
+        "contractPeriod": {
+          "startDate": "2026-09-20T00:00:00+01:00",
+          "endDate": "2027-09-17T23:59:59+01:00"
+        }
+      }
+    ]
+  },
+  {
+    "ocid": "ocds-b5fd17-5c8413f9-e0f3-42e5-8ba7-a85f36a35c4b",
+    "id": "3dc84d3e-954a-45ca-96cf-208f36ce9efc-914720",
+    "date": "2026-09-18T16:09:04+01:00",
+    "tag": ["award"],
+    "buyer": {
+      "id": "GB-SRS-supplierregistration.cabinetoffice.gov.uk/RDdH8NGt",
+      "name": "Chelmsford City Council"
+    },
+    "tender": {
+      "title": "Theatre Booking & Ticketing System",
+      "description": "Call-off from the G-Cloud 14 framework for the provision of a software system to deal with theatre bookings and ticketing. The contract also has an optional 12 month extension opportunity.",
+      "procurementMethod": "selective",
+      "mainProcurementCategory": "goods",
+      "classification": {
+        "scheme": "CPV",
+        "id": "48000000",
+        "description": "Software package and information systems"
+      },
+      "items": [
+        {
+          "id": "1",
+          "deliveryAddresses": [
+            {
+              "postalCode": "CM1 1JE"
+            }
+          ]
+        }
+      ]
+    },
+    "awards": [
+      {
+        "id": "ocds-b5fd17-5c8413f9-e0f3-42e5-8ba7-a85f36a35c4b-1",
+        "status": "active",
+        "date": "2026-08-03T00:00:00+01:00",
+        "value": {
+          "amount": 250000,
+          "currency": "GBP"
+        },
+        "suppliers": [
+          {
+            "id": "GB-COH-06220078",
+            "name": "SPEKTRIX LIMITED"
+          }
+        ],
+        "contractPeriod": {
+          "startDate": "2026-08-24T00:00:00+01:00",
+          "endDate": "2029-08-23T23:59:59+01:00"
+        }
+      }
+    ]
+  },
+  {
+    "ocid": "ocds-b5fd17-b0f980ef-fd92-4ac0-a43b-c1cc4df590b4",
+    "id": "1fdbd5cd-f983-41f1-93d5-d68ff6e0d0f6-914505",
+    "date": "2026-09-18T16:04:15+01:00",
+    "tag": ["award"],
+    "buyer": {
+      "id": "GB-SRS-sid4gov.cabinetoffice.gov.uk/8vt52CDf",
+      "name": "Espo"
+    },
+    "tender": {
+      "title": "Call-off Award - YPO 001229 Network Connectivity and Telecommunication Solutions II Framework - Cisco Network Switches (additional)",
+      "description": "Purchasing of network switches and equipment.\r\n\r\nDirect Award via YPO - 001229 Network Connectivity and Telecommunication Solutions II - Framework (PCR 2015).",
+      "procurementMethod": "selective",
+      "mainProcurementCategory": "goods",
+      "classification": {
+        "scheme": "CPV",
+        "id": "30230000",
+        "description": "Computer-related equipment"
+      },
+      "items": [
+        {
+          "id": "1",
+          "deliveryAddresses": [
+            {
+              "region": "East Midlands",
+              "countryName": "United Kingdom"
+            }
+          ]
+        }
+      ]
+    },
+    "awards": [
+      {
+        "id": "ocds-b5fd17-b0f980ef-fd92-4ac0-a43b-c1cc4df590b4-1",
+        "status": "active",
+        "date": "2026-08-19T00:00:00+01:00",
+        "value": {
+          "amount": 54259,
+          "currency": "GBP"
+        },
+        "suppliers": [
+          {
+            "id": "GB-COH-03732397",
+            "name": "LOGICALIS UK LIMITED"
+          }
+        ],
+        "contractPeriod": {
+          "startDate": "2026-08-19T00:00:00+01:00",
+          "endDate": "2026-12-31T23:59:59Z"
+        }
+      }
+    ]
+  },
+  {
+    "ocid": "ocds-b5fd17-59987e7b-41a1-41eb-a03a-05996115f960",
+    "id": "752bbf3a-3be0-4749-a019-0f1cbea2f26b-914717",
+    "date": "2026-09-18T15:58:18+01:00",
+    "tag": ["award"],
+    "buyer": {
+      "id": "GB-CFS-245947",
+      "name": "The North Yorkshire Council"
+    },
+    "tender": {
+      "title": "Strategic Flood Risk Assessment",
+      "description": "The preparation of a Level 1 and, where required, a Level 2 Strategic Flood Risk Assessment (SFRA), that is compliant with the National Planning Policy Framework (NPPF) and National Planning Practice Guidance (NPPG), to inform the preparation, review, and implementation of the Local Plans for North ",
+      "procurementMethod": "selective",
+      "mainProcurementCategory": "services",
+      "classification": {
+        "scheme": "CPV",
+        "id": "71313000",
+        "description": "Environmental engineering consultancy services"
+      },
+      "items": [
+        {
+          "id": "1",
+          "deliveryAddresses": [
+            {
+              "region": "Yorkshire and the Humber",
+              "countryName": "United Kingdom"
+            }
+          ]
+        }
+      ]
+    },
+    "awards": [
+      {
+        "id": "ocds-b5fd17-59987e7b-41a1-41eb-a03a-05996115f960-1",
+        "status": "active",
+        "date": "2026-09-18T00:00:00+01:00",
+        "value": {
+          "amount": 50000,
+          "currency": "GBP"
+        },
+        "suppliers": [
+          {
+            "id": "GB-CFS-338486",
+            "name": "Jeremy Benn Associates Limited"
+          }
+        ],
+        "contractPeriod": {
+          "startDate": "2026-09-02T00:00:00+01:00",
+          "endDate": "2029-10-31T23:59:59Z"
+        }
+      }
+    ]
+  },
+  {
+    "ocid": "ocds-b5fd17-1ac0711c-85ac-40b5-9b6a-0975d62e5689",
+    "id": "fc8eccfc-6069-4f41-911e-57d19c21303e-914715",
+    "date": "2026-09-18T15:57:00+01:00",
+    "tag": ["award"],
+    "buyer": {
+      "id": "GB-CFS-94496",
+      "name": "CPS"
+    },
+    "tender": {
+      "title": "Provision of Microsoft Copilot Enablement Programme",
+      "description": "Provision of Microsoft Copilot enablement programme. Activities will be prioritised jointly throughout the engagement and may include adoption, communications, leadership engagement, business value assessment, rollout planning, AI Activator capability building and programme governance.",
+      "procurementMethod": "selective",
+      "mainProcurementCategory": "services",
+      "classification": {
+        "scheme": "CPV",
+        "id": "72000000",
+        "description": "IT services: consulting, software development, Internet and support"
+      },
+      "items": [
+        {
+          "id": "1",
+          "deliveryAddresses": [
+            {
+              "postalCode": "SW1H 9EA"
+            },
+            {
+              "countryName": "British Oversea Territories"
+            },
+            {
+              "countryName": "Channel Islands"
+            },
+            {
+              "countryName": "Europe"
+            },
+            {
+              "countryName": "Isle of Man"
+            },
+            {
+              "countryName": "Rest of the World"
+            },
+            {
+              "countryName": "United Kingdom"
+            }
+          ]
+        }
+      ]
+    },
+    "awards": [
+      {
+        "id": "ocds-b5fd17-1ac0711c-85ac-40b5-9b6a-0975d62e5689-1",
+        "status": "active",
+        "date": "2026-07-28T00:00:00+01:00",
+        "value": {
+          "amount": 354000,
+          "currency": "GBP"
+        },
+        "suppliers": [
+          {
+            "id": "GB-COH-OC303525",
+            "name": "PRICEWATERHOUSECOOPERS LLP"
+          }
+        ],
+        "contractPeriod": {
+          "startDate": "2026-07-28T00:00:00+01:00",
+          "endDate": "2027-01-27T23:59:59Z"
+        }
+      }
+    ]
+  },
+  {
+    "ocid": "ocds-b5fd17-2dd49055-7982-4b01-96c9-1f92f700bb1b",
+    "id": "b3667463-51f5-48da-8652-1e63da5adafd-914710",
+    "date": "2026-09-18T15:47:00+01:00",
+    "tag": ["award"],
+    "buyer": {
+      "id": "GB-GOR-PB169",
+      "name": "Gambling Commission"
+    },
+    "tender": {
+      "title": "Procurement Consultant",
+      "description": "Procurement Consultancy Services",
+      "procurementMethod": "selective",
+      "mainProcurementCategory": "services",
+      "classification": {
+        "scheme": "CPV",
+        "id": "79418000",
+        "description": "Procurement consultancy services"
+      },
+      "items": [
+        {
+          "id": "1",
+          "deliveryAddresses": [
+            {
+              "region": "West Midlands",
+              "countryName": "United Kingdom"
+            }
+          ]
+        }
+      ]
+    },
+    "awards": [
+      {
+        "id": "ocds-b5fd17-2dd49055-7982-4b01-96c9-1f92f700bb1b-1",
+        "status": "active",
+        "date": "2026-06-18T00:00:00+01:00",
+        "value": {
+          "amount": 223402,
+          "currency": "GBP"
+        },
+        "suppliers": [
+          {
+            "id": "GB-COH-06903140",
+            "name": "Consultancy Plus"
+          }
+        ],
+        "contractPeriod": {
+          "startDate": "2026-06-22T00:00:00+01:00",
+          "endDate": "2027-03-21T23:59:59Z"
+        }
+      }
+    ]
+  },
+  {
+    "ocid": "ocds-b5fd17-f4c69224-f774-4247-8303-6785cac40e8a",
+    "id": "81982d7d-6f35-4403-9d22-b5f88a13d59a-914713",
+    "date": "2026-09-18T15:38:49+01:00",
+    "tag": ["award"],
+    "buyer": {
+      "id": "GB-CFS-334419",
+      "name": "East Sussex County Council"
+    },
+    "tender": {
+      "title": "Taxi and MPV (1-8 seats) Passenger Assistant - Taxi and MPV (1-8 seats) Passenger Assistant",
+      "description": "Vehicle type: Saloon\r\nPassenger Assistant Required: PA required if travelling alone.\r\n\r\nProposed Taxi Route: \r\nFrom: TN7 4JA\r\nTo:  Priory School, BN7 2XN\r\n\r\nFrequency: Monday to Friday\r\nDaily School Time: Mon-Fri 08:30-15~15:15\r\n\r\nComments for Operator: \r\nPA required if travelling alone.\r\n This oppo",
+      "procurementMethod": "selective",
+      "mainProcurementCategory": "services",
+      "classification": {
+        "scheme": "CPV",
+        "id": "60000000",
+        "description": "Transport services (excl. Waste transport)"
+      },
+      "items": [
+        {
+          "id": "1",
+          "deliveryAddresses": [
+            {
+              "countryName": "United Kingdom"
+            }
+          ]
+        }
+      ]
+    },
+    "awards": [
+      {
+        "id": "ocds-b5fd17-f4c69224-f774-4247-8303-6785cac40e8a-1",
+        "status": "active",
+        "date": "2026-09-18T00:00:00+01:00",
+        "value": {
+          "amount": 152725,
+          "currency": "GBP"
+        },
+        "suppliers": [
+          {
+            "id": "GB-COH-13868223",
+            "name": "Brighton Taxi Company"
+          }
+        ],
+        "contractPeriod": {
+          "startDate": "2026-09-21T00:00:00+01:00",
+          "endDate": "2029-07-31T23:59:59+01:00"
+        }
+      }
+    ]
+  }
+]

@@ -1,0 +1,13 @@
+{
+  "name": "gankdat-apify-eu-ted",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Apify actor: EU Public Tenders (TED) \u2014 contract notices & awards via gankdat.com",
+  "scripts": {
+    "start": "node src/main.mjs"
+  },
+  "dependencies": {
+    "apify": "^3.4.0"
+  }
+}

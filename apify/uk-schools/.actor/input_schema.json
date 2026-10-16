@@ -1,0 +1,119 @@
+{
+  "title": "UK Schools & Colleges Directory (GIAS + Ofsted) — filters",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "mode": {
+      "title": "Mode",
+      "type": "string",
+      "description": "Current records (default), or only the records added, removed or changed since a date — schedule a daily run in changes mode to monitor the register and pay only for what changed.",
+      "editor": "select",
+      "enum": ["data", "changes"],
+      "enumTitles": ["Current records", "Changes since a date (monitor)"],
+      "default": "data"
+    },
+    "since": {
+      "title": "Changes since",
+      "type": "string",
+      "description": "Changes mode only: YYYY-MM-DD. Default: the last 7 days. The feed keeps 90 days.",
+      "editor": "textfield",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "change": {
+      "title": "Change type",
+      "type": "string",
+      "description": "Changes mode only: one kind of change. Default: all three.",
+      "editor": "select",
+      "enum": ["added", "removed", "changed"],
+      "enumTitles": ["Added to the register", "Removed from the register", "Changed"]
+    },
+    "phase": {
+      "title": "Phase of education contains",
+      "type": "string",
+      "description": "e.g. Primary, Secondary, Nursery, 16 plus, All-through",
+      "editor": "textfield"
+    },
+    "establishment_type": {
+      "title": "Establishment type contains",
+      "type": "string",
+      "description": "e.g. Academy converter, Community school, Free schools, Further education, Other independent school",
+      "editor": "textfield"
+    },
+    "status": {
+      "title": "Status contains",
+      "type": "string",
+      "description": "Open, Closed, Proposed to open, Open, but proposed to close. Leave blank for all.",
+      "editor": "textfield"
+    },
+    "local_authority": {
+      "title": "Local authority contains",
+      "type": "string",
+      "editor": "textfield",
+      "description": "Filter: Local authority contains (case-insensitive substring match)."
+    },
+    "region": {
+      "title": "Region contains",
+      "type": "string",
+      "description": "London, North West, South East, West Midlands, …",
+      "editor": "textfield"
+    },
+    "town": {
+      "title": "Town contains",
+      "type": "string",
+      "editor": "textfield",
+      "description": "Filter: Town contains (case-insensitive substring match)."
+    },
+    "outward_code": {
+      "title": "Postcode area (outward code)",
+      "type": "string",
+      "editor": "textfield",
+      "description": "Filter: Postcode area (outward code) (case-insensitive substring match)."
+    },
+    "trust_name": {
+      "title": "Academy trust name contains",
+      "type": "string",
+      "editor": "textfield",
+      "description": "Filter: Academy trust name contains (case-insensitive substring match)."
+    },
+    "ofsted_rating": {
+      "title": "Ofsted rating contains",
+      "type": "string",
+      "description": "Outstanding, Good, Requires improvement, Inadequate",
+      "editor": "textfield"
+    },
+    "pupils_min": {
+      "title": "Minimum pupils on roll",
+      "type": "integer",
+      "description": "Only schools with at least this many pupils at the last census.",
+      "minimum": 0
+    },
+    "pupils_max": {
+      "title": "Maximum pupils on roll",
+      "type": "integer",
+      "description": "Only schools with at most this many pupils at the last census.",
+      "minimum": 0
+    },
+    "ofsted_last_inspection_after": {
+      "title": "Last inspected on or after",
+      "type": "string",
+      "description": "YYYY-MM-DD",
+      "editor": "textfield",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "q": {
+      "title": "Free-text search",
+      "type": "string",
+      "editor": "textfield",
+      "description": "Filter: Free-text search (case-insensitive substring match)."
+    },
+    "max_results": {
+      "title": "Maximum results",
+      "type": "integer",
+      "description": "Stop after this many records (you are charged per result).",
+      "default": 1000,
+      "minimum": 1,
+      "maximum": 100000
+    }
+  },
+  "required": []
+}

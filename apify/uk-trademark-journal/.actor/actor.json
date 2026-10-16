@@ -1,0 +1,20 @@
+{
+  "actorSpecification": 1,
+  "name": "uk-trademark-journal-watch",
+  "title": "UK Trade Mark Applications Weekly (IPO Journal Watch)",
+  "description": "Every UK trade mark application published for opposition in the IPO's weekly Trade Marks Journal: application number, mark text, Nice classes and goods/services, applicant organisation and country, representative, filing date, journal issue and the two-month opposition deadline.",
+  "version": "0.1",
+  "buildTag": "latest",
+  "dockerfile": "../Dockerfile",
+  "readme": "./README.md",
+  "input": "./input_schema.json",
+  "environmentVariables": {
+    "GANKDAT_API_KEY": "@gankdatApiKey"
+  },
+  "minMemoryMbytes": 256,
+  "maxMemoryMbytes": 512,
+  "output": "./output_schema.json",
+  "storages": {
+    "dataset": "./dataset_schema.json"
+  }
+}

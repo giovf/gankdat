@@ -1,0 +1,13 @@
+{
+  "name": "gankdat-apify-uk-tenders",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Apify actor: UK Public Tenders (Find a Tender) \u2014 live notices via gankdat.com",
+  "scripts": {
+    "start": "node src/main.mjs"
+  },
+  "dependencies": {
+    "apify": "^3.4.0"
+  }
+}

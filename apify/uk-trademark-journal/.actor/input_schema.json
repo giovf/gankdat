@@ -1,0 +1,114 @@
+{
+  "title": "UK Trade Mark Applications Weekly (IPO Journal Watch) — filters",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "mode": {
+      "title": "Mode",
+      "type": "string",
+      "description": "Current records (default), or only the records added, removed or changed since a date — schedule a daily run in changes mode to monitor the register and pay only for what changed.",
+      "editor": "select",
+      "enum": ["data", "changes"],
+      "enumTitles": ["Current records", "Changes since a date (monitor)"],
+      "default": "data"
+    },
+    "since": {
+      "title": "Changes since",
+      "type": "string",
+      "description": "Changes mode only: YYYY-MM-DD. Default: the last 7 days. The feed keeps 90 days.",
+      "editor": "textfield",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "change": {
+      "title": "Change type",
+      "type": "string",
+      "description": "Changes mode only: one kind of change. Default: all three.",
+      "editor": "select",
+      "enum": ["added", "removed", "changed"],
+      "enumTitles": ["Added to the register", "Removed from the register", "Changed"]
+    },
+    "classes": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Nice class",
+      "description": "One two-digit Nice class, e.g. 09 (software), 25 (clothing), 35 (advertising/retail), 42 (SaaS). Leave blank for all."
+    },
+    "mark_text": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Mark text contains",
+      "description": "Filter: mark text contains (case-insensitive substring match) — your own mark or a similar word."
+    },
+    "applicant": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Applicant contains",
+      "description": "Applicant organisation name contains (individual applicants carry no name)."
+    },
+    "applicant_country": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Applicant country",
+      "description": "ISO country code or name as published, e.g. GB, US, DE."
+    },
+    "applicant_type": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Applicant type",
+      "description": "organisation or individual — leave blank for all."
+    },
+    "representative": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Representative contains",
+      "description": "Trade mark attorney firm name contains."
+    },
+    "journal_number": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Journal issue",
+      "description": "Issue number as published, e.g. 2026/038. Leave blank for the whole rolling year."
+    },
+    "origin": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Origin",
+      "description": "UK application or International registration designating the UK."
+    },
+    "goods_services": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Goods/services contain",
+      "description": "Filter: goods and services specification contains (case-insensitive substring match)."
+    },
+    "publication_date_after": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Published on or after",
+      "description": "YYYY-MM-DD — e.g. last week's issue only",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "opposition_deadline_after": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Opposition deadline on or after",
+      "description": "YYYY-MM-DD — marks still open to opposition",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "q": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Free-text search",
+      "description": "Filter: Free-text search (case-insensitive substring match)."
+    },
+    "max_results": {
+      "title": "Maximum results",
+      "type": "integer",
+      "description": "Stop after this many records (you are charged per result).",
+      "default": 1000,
+      "minimum": 1,
+      "maximum": 100000
+    }
+  },
+  "required": []
+}

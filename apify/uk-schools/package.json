@@ -1,0 +1,13 @@
+{
+  "name": "gankdat-apify-uk-schools",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Apify actor: UK Schools & Colleges Directory (GIAS + Ofsted) \u2014 schools, academies, colleges, nurseries via gankdat.com",
+  "scripts": {
+    "start": "node src/main.mjs"
+  },
+  "dependencies": {
+    "apify": "^3.4.0"
+  }
+}

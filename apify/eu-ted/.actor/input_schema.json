@@ -1,0 +1,84 @@
+{
+  "title": "EU Public Tenders (TED) \u2014 contract notices & awards \u2014 filters",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "buyer": {
+      "title": "Buyer contains",
+      "type": "string",
+      "description": "Filter: Buyer contains (case-insensitive substring match).",
+      "editor": "textfield"
+    },
+    "buyer_country": {
+      "title": "Buyer country",
+      "type": "string",
+      "description": "ISO code, e.g. DEU, FRA, NLD",
+      "editor": "textfield"
+    },
+    "notice_type": {
+      "title": "Notice type contains",
+      "type": "string",
+      "description": "e.g. cn-standard (contract notice), can-standard (award)",
+      "editor": "textfield"
+    },
+    "procedure_type": {
+      "title": "Procedure type contains",
+      "type": "string",
+      "description": "open, restricted, negotiated\u2026",
+      "editor": "textfield"
+    },
+    "cpv_codes": {
+      "title": "CPV code",
+      "type": "string",
+      "description": "e.g. 45000000 (construction)",
+      "editor": "textfield"
+    },
+    "places_of_performance": {
+      "title": "Place of performance contains",
+      "type": "string",
+      "description": "Filter: Place of performance contains (case-insensitive substring match).",
+      "editor": "textfield"
+    },
+    "value_amount_min": {
+      "title": "Minimum value",
+      "type": "integer",
+      "description": "Filter: Minimum value.",
+      "minimum": 0
+    },
+    "value_amount_max": {
+      "title": "Maximum value",
+      "type": "integer",
+      "description": "Filter: Maximum value.",
+      "minimum": 0
+    },
+    "published_at_after": {
+      "title": "Published on or after",
+      "type": "string",
+      "description": "YYYY-MM-DD",
+      "editor": "textfield",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "deadline_at_after": {
+      "title": "Deadline on or after",
+      "type": "string",
+      "description": "YYYY-MM-DD",
+      "editor": "textfield",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "q": {
+      "title": "Free-text search",
+      "type": "string",
+      "description": "Matches any text field.",
+      "editor": "textfield"
+    },
+    "max_results": {
+      "title": "Maximum results",
+      "type": "integer",
+      "description": "Stop after this many records (you are charged per result).",
+      "default": 1000,
+      "minimum": 1,
+      "maximum": 100000
+    }
+  },
+  "required": []
+}
