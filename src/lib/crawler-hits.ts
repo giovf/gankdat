@@ -207,7 +207,7 @@ export function crawlerNote(parts: {
   const logs =
     'error' in parts.statsLogs
       ? `n/a (${parts.statsLogs.error})`
-      : `${parts.statsLogs.total}${parts.statsLogs.lines >= parts.statsLogs.limit ? '+' : ''} fetches/${parts.statsLogs.hours / 24}d, AI ${parts.statsLogs.ai} (${familiesText(parts.statsLogs)})`;
+      : `${parts.statsLogs.total}${parts.statsLogs.lines >= parts.statsLogs.limit ? '+' : ''} fetches/${parts.statsLogs.hours / 24}d, AI ${parts.statsLogs.ai} (${familiesText(parts.statsLogs)})${parts.statsLogs.total === 0 && parts.statsLogs.lines > 0 ? ` — ${parts.statsLogs.lines} lines matched, none a request line` : ''}`;
   const zone =
     'error' in parts.zone
       ? `n/a (${parts.zone.error})`

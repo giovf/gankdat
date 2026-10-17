@@ -163,4 +163,15 @@ describe('crawlerNote', () => {
       'stats crawlers: logs 5000+ fetches/7d, AI 40 (GPTBot 40); zone n/a (HTTP 403); /mcp 900 req/30d, AI 120 (ClaudeBot 100, GPTBot 20)',
     );
   });
+
+  it('says when the needle matched lines that were not request lines (the 2026-10-17 17:28 reading)', () => {
+    const note = crawlerNote({
+      statsLogs: { total: 0, ai: 0, byFamily: {}, lines: 18, hours: 168, limit: 1000 },
+      zone: { error: 'zone: no permission' },
+      mcp: { error: 'mcp: down' },
+    });
+    expect(note).toBe(
+      'stats crawlers: logs 0 fetches/7d, AI 0 (none) — 18 lines matched, none a request line; zone n/a (zone: no permission); /mcp n/a (mcp: down)',
+    );
+  });
 });
