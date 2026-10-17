@@ -2,7 +2,14 @@ import { env } from 'cloudflare:test';
 import { z } from 'zod';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readCached, readSnapshot, readSourceStats, snapshotWrites } from '../src/sources/cache';
-import { cronSources, isRunnerFed } from '../src/sources/store';
+import { listSources } from '../src/sources/registry';
+import {
+  CRON_BY_WAVE,
+  cronOfSource,
+  cronSources,
+  isRunnerFed,
+  waveForCron,
+} from '../src/sources/store';
 import type { DataSource } from '../src/sources/types';
 
 // A runner-fed source (`refresh.runner`): the Worker's cron waves leave it alone, a stale KV
@@ -40,6 +47,30 @@ describe('runner-fed sources', () => {
     expect(slugs(1)).not.toContain('uk-insolvency');
     expect(slugs(undefined)).not.toContain('uk-insolvency');
     expect(cronSources(undefined).some(isRunnerFed)).toBe(false);
+  });
+
+  // Cron outcome reading (2026-10-17): the runner reads each stale source's wave invocation by
+  // its Cron Trigger, so the wave → cron table must be the one wrangler.jsonc fires and the
+  // inverse of waveForCron; a runner-fed source has no wave to read.
+  it('have no Cron Trigger, while every other source’s cron is one wrangler.jsonc fires', () => {
+    // wrangler.jsonc `triggers.crons`, verbatim (the workers pool has no fs to read it).
+    const crons = [
+      '0 5 * * *',
+      '15 5 * * *',
+      '30 5 * * *',
+      '45 5 * * *',
+      '50 5 * * *',
+      '55 5 * * *',
+      '5 6 * * *',
+    ];
+    expect(Object.values(CRON_BY_WAVE).sort()).toEqual([...crons].sort());
+    for (const [wave, cron] of Object.entries(CRON_BY_WAVE)) {
+      expect(waveForCron(cron)).toBe(Number(wave));
+    }
+    const bySlug = new Map(listSources().map((s) => [s.slug, s]));
+    expect(cronOfSource(bySlug.get('uk-insolvency')!)).toBeNull();
+    expect(cronOfSource(bySlug.get('uk-trademark-journal')!)).toBe('5 6 * * *');
+    expect(cronOfSource(bySlug.get('uk-tenders')!)).toBe('0 5 * * *');
   });
 
   it('serve a stale snapshot without touching the origin, and still refresh a cold cache', async () => {

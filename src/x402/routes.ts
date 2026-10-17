@@ -33,7 +33,32 @@ const DEFAULT_NETWORK = 'base';
 
 const lanes = new Map<string, Promise<MiddlewareHandler>>();
 
+// Log noise (gankdat `wave-log-cron-outcome-reading`, 2026-10-17): paymentMiddleware validates
+// every route's Bazaar extension with Ajv, which compiles schemas with `new Function`; workerd
+// forbids code generation, so each isolate start warned once per route (17 lines) although the
+// extension is valid (CDP validate `valid: true`, 10-17) — and that warning was the newest line
+// of every stale source's wave-log reading. Only that exact failure is muted; a real schema error
+// still warns.
+const CODEGEN_WARNING =
+  /^x402: Route ".+" has an invalid bazaar extension: .*Code generation from strings disallowed/;
+/** `warn` with that one warning dropped; every other call passes through unchanged. */
+export function withoutCodegenWarning(
+  warn: (...args: unknown[]) => void,
+): (...args: unknown[]) => void {
+  return (...args: unknown[]): void => {
+    if (typeof args[0] === 'string' && CODEGEN_WARNING.test(args[0])) return;
+    warn(...args);
+  };
+}
+let codegenWarningMuted = false;
+function muteCodegenWarning(): void {
+  if (codegenWarningMuted) return;
+  codegenWarningMuted = true;
+  console.warn = withoutCodegenWarning(console.warn.bind(console));
+}
+
 async function buildLane(env: CloudflareBindings, lane: X402Lane): Promise<MiddlewareHandler> {
+  muteCodegenWarning();
   const [
     { paymentMiddleware },
     { HTTPFacilitatorClient, x402ResourceServer },

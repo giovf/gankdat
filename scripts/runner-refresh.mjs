@@ -18,11 +18,18 @@
 import { writeFile } from 'node:fs/promises';
 import { URL } from 'node:url';
 import { postIndexNow, statsUrlsFor } from '../src/lib/indexnow.ts';
-import { WAVE_LOG_QUERY_PATH, parseWaveLogEvents, waveLogQuery } from '../src/lib/wave-logs.ts';
+import {
+  WAVE_LOG_QUERY_PATH,
+  dropNoise,
+  parseWaveInvocations,
+  parseWaveLogEvents,
+  waveInvocationQuery,
+  waveLogQuery,
+} from '../src/lib/wave-logs.ts';
 import { snapshotWrites, statsKey } from '../src/sources/cache.ts';
 import { isOriginUnavailable } from '../src/sources/origin.ts';
 import { listSources } from '../src/sources/registry.ts';
-import { isRunnerFed } from '../src/sources/store.ts';
+import { cronOfSource, isRunnerFed } from '../src/sources/store.ts';
 
 const ACCOUNT_ID = '37e56f3ce4dfe49919e85d4380467f44'; // not a secret
 const DATABASE_ID = 'ac051277-5f69-46ba-965b-50da2f1ec524'; // wrangler.jsonc
@@ -164,51 +171,115 @@ await submitStatsPages().catch((e) => console.error(`indexnow: ${e.message}`));
 // mentioning the slug, prints them here and leaves them in dist/wave-logs.json for metrics.mjs
 // (`wave log: …` in the Daily numbers row). A token without the observability scope reads
 // `n/a (HTTP 403 …)` — then the scope is the one thing to add. Never fails the job.
+// Cron outcome (2026-10-17, queue `wave-log-cron-outcome-reading`): the slug search's first real
+// test (10-16) returned request lines and @x402/hono's Ajv warning only, and the journal's 06:05
+// wave left no line at all. So noise is dropped (lib `dropNoise`) and a second query, one per
+// Cron Trigger, reads the wave's own invocation — `$workers.outcome`, wall time — which the
+// platform records even when the Worker wrote nothing. The first invocation row's keys are
+// printed so the job log shows the live shape the parser was written against.
+
+/** @param {Record<string, unknown>} query */
+async function observabilityQuery(query) {
+  const res = await fetch(`${API}${WAVE_LOG_QUERY_PATH}`, {
+    method: 'POST',
+    headers: { ...auth, 'content-type': 'application/json' },
+    body: JSON.stringify(query),
+  });
+  const bodyText = await res.text();
+  if (!res.ok) {
+    const hint = res.status === 403 ? ' (token lacks Workers Observability Read)' : '';
+    return { status: res.status, body: null, reason: `HTTP ${res.status}${hint}`, bodyText };
+  }
+  try {
+    return { status: res.status, body: JSON.parse(bodyText), reason: null, bodyText };
+  } catch {
+    return { status: res.status, body: null, reason: 'unparseable body', bodyText };
+  }
+}
+
+/** @type {Map<string, Promise<import('../src/lib/wave-logs.ts').WaveInvocationResult>>} */
+const invocationByCron = new Map();
+/** @param {string} cron @param {number} now */
+function readWaveInvocation(cron, now) {
+  const cached = invocationByCron.get(cron);
+  if (cached) return cached;
+  const pending = (async () => {
+    try {
+      const q = await observabilityQuery(waveInvocationQuery(cron, now));
+      if (q.reason) {
+        console.error(`wave cron ${cron}: ${q.reason} ${q.bodyText.slice(0, 300)}`);
+        return { cron, status: q.status, invocations: [], reason: q.reason };
+      }
+      const invocations = parseWaveInvocations(q.body, cron);
+      console.log(`wave cron ${cron}: ${invocations.length} invocation(s) in 26 h`);
+      for (const i of invocations)
+        console.log(
+          `  ${i.at} outcome=${i.outcome} wall=${i.wallTimeMs ?? 'n/a'}ms cpu=${i.cpuTimeMs ?? 'n/a'}ms`,
+        );
+      if (invocations.length === 0) {
+        const result = q.body?.result ?? q.body;
+        const rows = result?.events?.events ?? result?.events ?? result;
+        const first = Array.isArray(rows) ? rows[0] : undefined;
+        console.log(
+          `wave cron ${cron}: response keys ${Object.keys(result ?? {}).join(',')}; first row ${
+            first ? JSON.stringify(first).slice(0, 600) : 'none'
+          }`,
+        );
+      }
+      return { cron, status: q.status, invocations, reason: null };
+    } catch (e) {
+      const reason = e instanceof Error ? e.message : String(e);
+      console.error(`wave cron ${cron}: ${reason}`);
+      return { cron, status: 0, invocations: [], reason };
+    }
+  })();
+  invocationByCron.set(cron, pending);
+  return pending;
+}
+
 async function readWaveLogs() {
   const rows = await sql(
     "SELECT source_slug, MAX(CASE WHEN status = 'ok' THEN created_at END) AS last_ok, SUM(status = 'error' AND created_at > datetime('now','-1 day')) AS errors_today FROM refresh_log WHERE created_at > datetime('now','-30 days') GROUP BY source_slug HAVING last_ok IS NULL OR last_ok < datetime('now','-26 hours') OR errors_today > 0",
   );
   const slugs = rows.map((r) => String(r.source_slug)).sort();
   const now = Date.now();
-  /** @type {Record<string, { status: number; events: import('../src/lib/wave-logs.ts').WaveLogEvent[]; reason: string | null }>} */
+  const sourceBySlug = new Map(listSources().map((s) => [s.slug, s]));
+  /** @type {Record<string, import('../src/lib/wave-logs.ts').WaveLogResult>} */
   const sources = {};
   for (const slug of slugs) {
+    const source = sourceBySlug.get(slug);
+    const cron = source ? cronOfSource(source) : null;
+    const wave = cron ? await readWaveInvocation(cron, now) : null;
     try {
-      const res = await fetch(`${API}${WAVE_LOG_QUERY_PATH}`, {
-        method: 'POST',
-        headers: { ...auth, 'content-type': 'application/json' },
-        body: JSON.stringify(waveLogQuery(slug, now)),
-      });
-      const bodyText = await res.text();
-      if (!res.ok) {
-        const hint = res.status === 403 ? ' (token lacks Workers Observability Read)' : '';
-        sources[slug] = { status: res.status, events: [], reason: `HTTP ${res.status}${hint}` };
-        console.error(`wave log ${slug}: HTTP ${res.status} ${bodyText.slice(0, 300)}`);
+      const q = await observabilityQuery(waveLogQuery(slug, now));
+      if (q.reason) {
+        sources[slug] = { status: q.status, events: [], reason: q.reason, wave };
+        console.error(`wave log ${slug}: ${q.reason} ${q.bodyText.slice(0, 300)}`);
         continue;
       }
-      let body;
-      try {
-        body = JSON.parse(bodyText);
-      } catch {
-        sources[slug] = { status: res.status, events: [], reason: 'unparseable body' };
-        continue;
-      }
-      const events = parseWaveLogEvents(body);
-      sources[slug] = { status: res.status, events, reason: null };
-      console.log(`wave log ${slug}: ${events.length} line(s) in 24 h`);
-      if (events.length === 0)
+      const all = parseWaveLogEvents(q.body);
+      const events = dropNoise(all);
+      sources[slug] = { status: q.status, events, reason: null, lines: all.length, wave };
+      console.log(`wave log ${slug}: ${all.length} line(s) in 24 h, ${events.length} readable`);
+      if (all.length === 0)
         console.log(
-          `wave log ${slug}: response keys ${Object.keys(body.result ?? body).join(',')}`,
+          `wave log ${slug}: response keys ${Object.keys(q.body.result ?? q.body).join(',')}`,
         );
-      for (const e of events) console.log(`  ${e.at} [${e.level}] ${e.message.slice(0, 400)}`);
+      for (const e of all)
+        console.log(
+          `  ${e.at} [${e.level}]${events.includes(e) ? '' : ' (noise)'} ${e.message.slice(0, 400)}`,
+        );
     } catch (e) {
-      sources[slug] = { status: 0, events: [], reason: e instanceof Error ? e.message : String(e) };
-      console.error(`wave log ${slug}: ${sources[slug].reason}`);
+      const reason = e instanceof Error ? e.message : String(e);
+      sources[slug] = { status: 0, events: [], reason, wave };
+      console.error(`wave log ${slug}: ${reason}`);
     }
   }
   const out = { date: new Date().toISOString().slice(0, 10), sources };
   await writeFile(new URL('./wave-logs.json', import.meta.url), JSON.stringify(out));
-  console.log(`wave log: ${slugs.length} stale or erroring source(s) queried`);
+  console.log(
+    `wave log: ${slugs.length} stale or erroring source(s) queried, ${invocationByCron.size} wave(s)`,
+  );
 }
 await readWaveLogs().catch((e) => console.error(`wave log: ${e.message}`));
 process.exit(failed ? 1 : 0);

@@ -93,19 +93,32 @@ export async function sourceStats(
  * matters — a four-source D1 wave was killed mid-load on 2026-09-20 when D1 ran slow.
  */
 export type RefreshWave = 1 | 2 | 3 | 4 | 5 | 6 | 7;
-const WAVE_BY_MINUTE: Record<string, RefreshWave> = {
-  '0': 1,
-  '15': 2,
-  '30': 3,
-  '45': 4,
-  '50': 5,
-  '55': 6,
-  '5': 7,
+/** Each wave's Cron Trigger, exactly as wrangler.jsonc `triggers.crons` spells it (one truth, 2026-10-17). */
+export const CRON_BY_WAVE: Record<RefreshWave, string> = {
+  1: '0 5 * * *',
+  2: '15 5 * * *',
+  3: '30 5 * * *',
+  4: '45 5 * * *',
+  5: '50 5 * * *',
+  6: '55 5 * * *',
+  7: '5 6 * * *',
 };
+const WAVE_BY_MINUTE: Record<string, RefreshWave> = Object.fromEntries(
+  (Object.entries(CRON_BY_WAVE) as [string, string][]).map(([wave, cron]) => [
+    cron.split(' ')[0],
+    Number(wave) as RefreshWave,
+  ]),
+);
 
 export function waveForCron(cron: string | undefined): RefreshWave | undefined {
   const minute = (cron ?? '').trim().split(/\s+/)[0] ?? '';
   return WAVE_BY_MINUTE[minute];
+}
+
+/** The Cron Trigger that refreshes this source, or null for a runner-fed or lookup source (no wave). */
+export function cronOfSource(source: DataSource): string | null {
+  if (isRunnerFed(source) || isLookup(source)) return null;
+  return CRON_BY_WAVE[waveOf(source)];
 }
 
 export function waveOf(source: DataSource): RefreshWave {

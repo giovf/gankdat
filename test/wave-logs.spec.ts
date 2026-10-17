@@ -1,9 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import {
   WAVE_LOG_SERVICE,
+  cronClock,
+  dropNoise,
+  isNoiseLine,
+  parseWaveInvocations,
   parseWaveLogEvents,
+  pickReading,
+  waveInvocationQuery,
+  waveInvocationText,
   waveLogNote,
   waveLogQuery,
+  type WaveLogEvent,
   type WaveLogFile,
 } from '../src/lib/wave-logs';
 
@@ -88,8 +96,278 @@ describe('parseWaveLogEvents', () => {
   });
 });
 
+// Cron outcome reading (2026-10-17): the 10-16 metrics job (run 38866226604) showed the slug
+// search returning only request lines and @x402/hono's Ajv warning, and the journal's wave left
+// no line at all — so the noise is dropped and the wave's own invocation is read.
+describe('noise and the line to read', () => {
+  const line = (message: string, at = '2026-10-16T06:10:00.000Z', level = 'log'): WaveLogEvent => ({
+    at,
+    level,
+    message,
+  });
+
+  it('knows the invocation request line and the x402 Bazaar warning as noise, nothing else', () => {
+    expect(isNoiseLine('GET https://gankdat.com/stats/uk-trademark-journal')).toBe(true);
+    expect(isNoiseLine('POST https://gankdat.com/x402/data/uk-planning')).toBe(true);
+    expect(
+      isNoiseLine(
+        'x402: Route "GET /x402/data/uk-trademark-journal" has an invalid bazaar extension: Schema validation failed: Code generation from strings disallowed for this context',
+      ),
+    ).toBe(true);
+    expect(isNoiseLine('GET /stats/uk-trademark-journal/class/25 503')).toBe(false);
+    expect(isNoiseLine('event=refresh_failed source=uk-trademark-journal')).toBe(false);
+    expect(isNoiseLine('Error: D1_ERROR: too many SQL variables')).toBe(false);
+  });
+
+  it('reads the newest structured refresh event ahead of a newer bare line, never noise', () => {
+    const events = [
+      line(
+        'x402: Route "GET /x402/data/uk-planning" has an invalid bazaar extension: Schema validation failed: Code generation from strings disallowed for this context',
+        '2026-10-16T09:00:00.000Z',
+      ),
+      line('GET /stats/uk-trademark-journal/class/25 503', '2026-10-16T08:00:00.000Z', 'error'),
+      line(
+        'event=refresh_failed source=uk-trademark-journal reason=D1 timeout',
+        '2026-10-16T06:12:00.000Z',
+      ),
+      line('GET https://gankdat.com/data/uk-trademark-journal', '2026-10-16T06:11:00.000Z'),
+    ];
+    expect(dropNoise(events).map((e) => e.at)).toEqual([
+      '2026-10-16T08:00:00.000Z',
+      '2026-10-16T06:12:00.000Z',
+    ]);
+    expect(pickReading(events)?.message).toBe(
+      'event=refresh_failed source=uk-trademark-journal reason=D1 timeout',
+    );
+    expect(pickReading(events.slice(0, 2))?.message).toBe(
+      'GET /stats/uk-trademark-journal/class/25 503',
+    );
+    expect(pickReading([events[0]!, events[3]!])).toBeUndefined();
+  });
+});
+
+describe('waveInvocationQuery', () => {
+  it('asks for the last 26 h of this Worker’s invocations of one Cron Trigger', () => {
+    const q = waveInvocationQuery('5 6 * * *', NOW);
+    expect(q.queryId).toBe('wave-cron-5-6-');
+    expect(q.view).toBe('events');
+    expect(q.limit).toBe(5);
+    expect(q.timeframe).toEqual({ from: NOW - 26 * 3_600_000, to: NOW });
+    const p = q.parameters as { filters: { key: string; value: string }[]; needle?: unknown };
+    expect(p.filters).toEqual([
+      { key: '$metadata.service', operation: 'eq', value: WAVE_LOG_SERVICE, type: 'string' },
+      { key: '$metadata.type', operation: 'eq', value: 'cf-worker-event', type: 'string' },
+    ]);
+    expect(p.needle).toEqual({ value: '5 6 * * *', isRegex: false, matchCase: true });
+  });
+});
+
+describe('parseWaveInvocations', () => {
+  it('reads nested $workers invocation rows, newest first, and leaves log lines out', () => {
+    const body = {
+      success: true,
+      result: {
+        events: {
+          count: 3,
+          events: [
+            {
+              $metadata: { service: 'faceless-api', timestamp: Date.parse('2026-10-15T06:05:01Z') },
+              $workers: {
+                outcome: 'ok',
+                wallTimeMs: 812345,
+                cpuTimeMs: 2450,
+                eventType: 'scheduled',
+                event: { cron: '5 6 * * *', scheduledTime: '2026-10-15T06:05:00Z' },
+              },
+            },
+            {
+              $metadata: {
+                message: 'event=refresh_wave',
+                timestamp: Date.parse('2026-10-16T06:05:02Z'),
+              },
+            },
+            {
+              $metadata: { service: 'faceless-api', timestamp: Date.parse('2026-10-16T06:05:01Z') },
+              $workers: {
+                outcome: 'exceededCpu',
+                wallTimeMs: '900120',
+                event: { cron: '5 6 * * *' },
+              },
+            },
+          ],
+        },
+      },
+    };
+    expect(parseWaveInvocations(body, '5 6 * * *')).toEqual([
+      {
+        at: '2026-10-16T06:05:01.000Z',
+        outcome: 'exceededCpu',
+        wallTimeMs: 900120,
+        cpuTimeMs: null,
+        cron: '5 6 * * *',
+      },
+      {
+        at: '2026-10-15T06:05:01.000Z',
+        outcome: 'ok',
+        wallTimeMs: 812345,
+        cpuTimeMs: 2450,
+        cron: '5 6 * * *',
+      },
+    ]);
+  });
+
+  it('tolerates flat dotted keys and drops rows of another cron when the filter was ignored', () => {
+    const rows = [
+      {
+        timestamp: 1791_000_000_000,
+        '$workers.outcome': 'canceled',
+        '$workers.event.cron': '0 5 * * *',
+      },
+      { timestamp: 1791_000_000_000, '$workers.outcome': 'exception', '$workers.wallTimeMs': 12 },
+    ];
+    expect(parseWaveInvocations({ result: rows }, '5 6 * * *')).toEqual([
+      {
+        at: '2026-10-03T04:00:00.000Z',
+        outcome: 'exception',
+        wallTimeMs: 12,
+        cpuTimeMs: null,
+        cron: null,
+      },
+    ]);
+    expect(parseWaveInvocations({ result: rows })).toHaveLength(2);
+    expect(parseWaveInvocations(null, '5 6 * * *')).toEqual([]);
+  });
+
+  it('knows a documented invocation log by its type and reads the cron from its message', () => {
+    const rows = [
+      {
+        $metadata: {
+          type: 'cf-worker-event',
+          message: '5 6 * * *',
+          service: 'faceless-api',
+          timestamp: Date.parse('2026-10-16T06:05:01Z'),
+        },
+      },
+      {
+        $metadata: {
+          type: 'cf-worker-event',
+          message: 'GET https://gankdat.com/data/uk-tenders',
+          timestamp: Date.parse('2026-10-16T06:06:01Z'),
+        },
+      },
+      {
+        $metadata: { type: 'cf-worker-event-log', message: '5 6 * * *', timestamp: 1 },
+      },
+    ];
+    expect(parseWaveInvocations({ result: { events: { events: rows } } }, '5 6 * * *')).toEqual([
+      {
+        at: '2026-10-16T06:06:01.000Z',
+        outcome: 'unknown',
+        wallTimeMs: null,
+        cpuTimeMs: null,
+        cron: null,
+      },
+      {
+        at: '2026-10-16T06:05:01.000Z',
+        outcome: 'unknown',
+        wallTimeMs: null,
+        cpuTimeMs: null,
+        cron: '5 6 * * *',
+      },
+    ]);
+  });
+});
+
+describe('waveInvocationText', () => {
+  it('renders the wave’s clock, outcome, wall time and age, or why there is none', () => {
+    expect(cronClock('5 6 * * *')).toBe('06:05');
+    expect(cronClock('0 5 * * *')).toBe('05:00');
+    expect(cronClock('*/5 * * * *')).toBe('*/5 * * * *');
+    const inv = {
+      at: '2026-10-09T06:20:01.000Z',
+      outcome: 'exceededCpu',
+      wallTimeMs: 900120,
+      cpuTimeMs: null,
+      cron: '5 6 * * *',
+    };
+    expect(
+      waveInvocationText({ cron: '5 6 * * *', status: 200, invocations: [inv], reason: null }, NOW),
+    ).toBe('wave 06:05: exceededCpu 900.1s 10 min ago');
+    expect(
+      waveInvocationText(
+        {
+          cron: '5 6 * * *',
+          status: 200,
+          invocations: [{ ...inv, wallTimeMs: null }],
+          reason: null,
+        },
+        NOW,
+      ),
+    ).toBe('wave 06:05: exceededCpu 10 min ago');
+    expect(
+      waveInvocationText({ cron: '0 5 * * *', status: 200, invocations: [], reason: null }, NOW),
+    ).toBe('wave 05:00: no invocation in 26 h');
+    expect(
+      waveInvocationText(
+        { cron: '0 5 * * *', status: 403, invocations: [], reason: 'HTTP 403' },
+        NOW,
+      ),
+    ).toBe('wave 05:00: n/a (HTTP 403)');
+  });
+});
+
 describe('waveLogNote', () => {
-  it('names each queried source’s newest line with its age, or the reason none was read', () => {
+  it('leads with the wave’s invocation, reads a refresh event past the noise and counts both', () => {
+    const file: WaveLogFile = {
+      date: '2026-10-16',
+      sources: {
+        'uk-trademark-journal': {
+          status: 200,
+          reason: null,
+          lines: 6,
+          events: [
+            {
+              at: '2026-10-09T06:25:00.000Z',
+              level: 'error',
+              message: 'GET /stats/uk-trademark-journal/class/25 503',
+            },
+            {
+              at: '2026-10-09T06:12:04.000Z',
+              level: 'log',
+              message: 'event=hash_backfill source=uk-trademark-journal',
+            },
+          ],
+          wave: {
+            cron: '5 6 * * *',
+            status: 200,
+            reason: null,
+            invocations: [
+              {
+                at: '2026-10-09T06:20:01.000Z',
+                outcome: 'exceededCpu',
+                wallTimeMs: 900120,
+                cpuTimeMs: null,
+                cron: '5 6 * * *',
+              },
+            ],
+          },
+        },
+        'uk-planning': {
+          status: 200,
+          reason: null,
+          lines: 7,
+          events: [],
+          wave: { cron: '0 5 * * *', status: 200, reason: null, invocations: [] },
+        },
+        'uk-insolvency': { status: 200, reason: null, lines: 0, events: [], wave: null },
+      },
+    };
+    expect(waveLogNote(file, NOW)).toBe(
+      'wave log: uk-insolvency no log line in 24 h; uk-planning wave 05:00: no invocation in 26 h, no log line in 24 h (7 noise lines); uk-trademark-journal wave 06:05: exceededCpu 900.1s 10 min ago, [log] event=hash_backfill source=uk-trademark-journal 18 min ago (2 of 6 lines)',
+    );
+  });
+
+  it('names each queried source’s refresh event (else newest line) with its age, or the reason none was read', () => {
     const file: WaveLogFile = {
       date: '2026-10-09',
       sources: {
@@ -110,7 +388,7 @@ describe('waveLogNote', () => {
       },
     };
     expect(waveLogNote(file, NOW)).toBe(
-      'wave log: uk-care-locations n/a (HTTP 403 (token lacks Workers Observability Read)); uk-tenders no log line in 24 h; uk-trademark-journal [error] Error: D1_ERROR / killed 11 min ago (2 lines)',
+      'wave log: uk-care-locations n/a (HTTP 403 (token lacks Workers Observability Read)); uk-tenders no log line in 24 h; uk-trademark-journal [log] event=tmj_window 18 min ago (2 lines)',
     );
   });
 

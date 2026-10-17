@@ -1,6 +1,7 @@
 import { createExecutionContext, env, SELF, waitOnExecutionContext } from 'cloudflare:test';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import worker from '../src/index';
+import { withoutCodegenWarning } from '../src/x402/routes';
 import type { ErrorEnvelope } from '../src/lib/envelope';
 
 const X402_URL = 'https://example.com/x402/data/uk-planning';
@@ -290,5 +291,26 @@ describe('/x402/data/:source', () => {
 
     const badNetwork = await litFetch(X402_URL, undefined, { X402_NETWORK: 'ethereum' });
     expect(badNetwork.status).toBe(503);
+  });
+});
+
+// Log noise (2026-10-17, `wave-log-cron-outcome-reading`): @x402/hono's Ajv validation warns on
+// every route under workerd ("Code generation from strings disallowed") although the Bazaar
+// extension is valid; only that exact warning is muted, every other warning still reaches the log.
+describe('withoutCodegenWarning', () => {
+  it('drops the workerd codegen warning and nothing else', () => {
+    const seen: unknown[][] = [];
+    const warn = withoutCodegenWarning((...args) => {
+      seen.push(args);
+    });
+    warn(
+      'x402: Route "GET /x402/data/uk-planning" has an invalid bazaar extension: Schema validation failed: Code generation from strings disallowed for this context',
+    );
+    warn('x402: Route "GET /x402/data/uk-planning" has an invalid bazaar extension: missing input');
+    warn('V2 discovery extension extraction failed: boom', { detail: 1 });
+    expect(seen).toEqual([
+      ['x402: Route "GET /x402/data/uk-planning" has an invalid bazaar extension: missing input'],
+      ['V2 discovery extension extraction failed: boom', { detail: 1 }],
+    ]);
   });
 });
