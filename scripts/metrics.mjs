@@ -11,6 +11,17 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  STATS_LOG_HOURS,
+  STATS_LOG_LIMIT,
+  crawlerNote,
+  foldFamilies,
+  foldStatsLogEvents,
+  mcpCrawlerSql,
+  statsPageLogQuery,
+  zoneStatsQuery,
+  zoneStatsRows,
+} from '../src/lib/crawler-hits.ts';
 import { afterWallNote, connectCallersNote, oauthFunnelNote } from '../src/lib/oauth-funnel.ts';
 import {
   bazaarClause,
@@ -548,6 +559,105 @@ async function cfUsage() {
 }
 const cfNote = await cfUsage().catch((e) => `cf usage: n/a (${e.message.slice(0, 100)})`);
 
+// AI-crawler hits on the stats pages (new-ventures `spike-pay-per-crawl-stats-pages`, 2026-10-17):
+// Cloudflare's Pay Per Crawl charges AI crawlers per successful fetch of a zone's pages, and the
+// spike's one unknown was how many fetches of `/stats/<slug>` those crawlers already make. Three
+// readings (src/lib/crawler-hits.ts), each degrading to `n/a (<reason>)` on its own: the Worker's
+// request lines in Workers Logs (7 days, user agent read from the line itself), the zone's HTTP
+// analytics by user agent (httpRequestsAdaptiveGroups keeps ≥ 31 days on every plan, relay
+// pay-per-crawl-2026-10-17; the zone tag comes from the zones list, so a token without Zone Read
+// says so) and the `/mcp` Analytics Engine rows as the 30-day proxy. The folded counts are also
+// printed, so a routine reading the job log sees the user agents behind the families.
+async function statsCrawlers() {
+  const nowMs = Date.now();
+  const attempt = async (label, fn) => {
+    try {
+      return await fn();
+    } catch (e) {
+      console.error(`stats crawlers ${label}: ${e.message}`);
+      return { error: `${label}: ${e.message.slice(0, 80)}` };
+    }
+  };
+  const statsLogs = await attempt('logs', async () => {
+    const res = await fetch(
+      `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/workers/observability/telemetry/query`,
+      {
+        method: 'POST',
+        headers: { ...headers, 'content-type': 'application/json' },
+        body: JSON.stringify(statsPageLogQuery(nowMs)),
+      },
+    );
+    const text = await res.text();
+    if (!res.ok) {
+      throw new Error(
+        `HTTP ${res.status}${res.status === 403 ? ' (token lacks Workers Observability Read)' : ''}`,
+      );
+    }
+    const folded = foldStatsLogEvents(JSON.parse(text));
+    console.log(`stats crawlers logs: ${JSON.stringify(folded)}`);
+    if (folded.lines === 0) console.log(`stats crawlers logs body: ${text.slice(0, 400)}`);
+    return { ...folded, hours: STATS_LOG_HOURS, limit: STATS_LOG_LIMIT };
+  });
+  const zone = await attempt('zone', async () => {
+    const zres = await fetch('https://api.cloudflare.com/client/v4/zones?name=gankdat.com', {
+      headers,
+    });
+    const zbody = await zres.json();
+    const zoneTag = zbody.result?.[0]?.id;
+    if (!zoneTag) {
+      throw new Error(
+        `zones: HTTP ${zres.status} ${JSON.stringify(zbody.errors ?? []).slice(0, 80)}`,
+      );
+    }
+    const query = async (days) => {
+      const res = await fetch('https://api.cloudflare.com/client/v4/graphql', {
+        method: 'POST',
+        headers: { ...headers, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          query: zoneStatsQuery(
+            zoneTag,
+            new Date(nowMs - days * 86_400_000).toISOString(),
+            new Date(nowMs).toISOString(),
+          ),
+        }),
+      });
+      const body = await res.json();
+      if (body.errors?.length) {
+        throw new Error(
+          body.errors
+            .map((e) => e.message)
+            .join('; ')
+            .slice(0, 100),
+        );
+      }
+      return zoneStatsRows(body);
+    };
+    let days = 30;
+    let rows;
+    try {
+      rows = await query(days);
+    } catch (e) {
+      console.error(`stats crawlers zone 30d: ${e.message}; trying 7d`);
+      days = 7;
+      rows = await query(days);
+    }
+    console.log(`stats crawlers zone ${days}d: ${JSON.stringify(rows.slice(0, 40))}`);
+    return { ...foldFamilies(rows), days };
+  });
+  const mcp = await attempt('mcp', async () => {
+    const rows = await ae(mcpCrawlerSql(30));
+    const folded = foldFamilies(
+      rows.map((r) => ({ userAgent: String(r.ua ?? ''), hits: Number(r.n ?? 0) })),
+    );
+    console.log(`stats crawlers /mcp 30d: ${JSON.stringify(folded)}`);
+    return { ...folded, days: 30 };
+  });
+  return crawlerNote({ statsLogs, zone, mcp });
+}
+const crawlersNote = await statsCrawlers().catch(
+  (e) => `stats crawlers: n/a (${e.message.slice(0, 100)})`,
+);
+
 // Per-dataset authed queries over 30 days (build 2026-10-04, queue `metrics-dataset-queries-30d`):
 // STRATEGY §7 retires a dataset nobody queried for 60 days, and until now nothing in the repo said
 // how many authed REST or MCP calls each dataset received. REST: `rest_data` points carry the slug
@@ -781,6 +891,7 @@ const notes = [
   funnelNote,
   afterWallText,
   cfNote,
+  crawlersNote,
   datasetsNote,
   datasetsExternalNote,
   errors.length
