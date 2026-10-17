@@ -28,7 +28,7 @@ import { buildQuerySchema } from '../sources/query';
 import { missingLookupKey } from '../sources/lookup';
 import { queryD1Changes } from '../sources/d1store';
 import { changeFiltersSchema, changesQuerySchema } from '../routes/changes';
-import { querySource } from '../sources/store';
+import { querySource, unavailableMessage } from '../sources/store';
 import { getSource, hasChangeFeed, listSources } from '../sources/registry';
 import type { DataSource } from '../sources/types';
 import type { KeyContext } from '../types';
@@ -186,7 +186,7 @@ function registerQueryTool(
     toolName,
     {
       title: source.title,
-      description: `${source.description} ${source.lookup ? `One record per call, named by ${source.lookup.keys.join(' or ')} (e.g. ${JSON.stringify(source.lookup.example)}).` : 'Filters combine with AND; q searches all text fields.'} Costs ${creditCost(source)} credit(s) per call with an API key; without one, a preview of up to ${PREVIEW_ROWS} rows (${PREVIEW_CALLS_PER_DAY} calls/day).`,
+      description: `${source.description} ${source.lookup ? `One record per call, named by ${source.lookup.keys.join(' or ')} (e.g. ${JSON.stringify(source.lookup.example)}).` : 'Filters combine with AND; q searches all text fields.'} Costs ${creditCost(source)} credit(s) per call with an API key; without one, a preview of up to ${PREVIEW_ROWS} rows (${PREVIEW_CALLS_PER_DAY} calls/day).${source.notice ? ` Origin notice: ${source.notice}` : ''}`,
       inputSchema: schema.shape,
       annotations: { ...READ_ONLY, title: source.title },
     },
@@ -204,7 +204,7 @@ function registerQueryTool(
           gate.kind === 'preview' ? clampPreviewArgs(args) : args,
         );
       } catch {
-        return errorResult(`Source '${source.slug}' is temporarily unavailable, retry later`);
+        return errorResult(unavailableMessage(source));
       }
 
       const result = queried.page;
@@ -269,7 +269,7 @@ function registerChangesTool(
           filters: filters.data as Record<string, unknown>,
         });
       } catch {
-        return errorResult(`Source '${source.slug}' is temporarily unavailable, retry later`);
+        return errorResult(unavailableMessage(source));
       }
       return jsonResult({
         ok: true,

@@ -4,7 +4,7 @@ import { failure, success } from '../lib/envelope';
 import { missingLookupKey } from '../sources/lookup';
 import { getSource, hasChangeFeed, listSources } from '../sources/registry';
 import { buildQuerySchema, omitEmptyParams } from '../sources/query';
-import { querySource } from '../sources/store';
+import { querySource, unavailableMessage } from '../sources/store';
 import type { AppEnv } from '../types';
 
 /**
@@ -45,10 +45,7 @@ export async function handleSourceQuery(c: Context<AppEnv>): Promise<Response> {
     queried = await querySource(c.env, source, parsed.data);
   } catch {
     // Failure detail is in refresh_log / logs; clients get a clean 503.
-    return c.json(
-      failure('unavailable', `Source '${slug}' is temporarily unavailable, retry later`),
-      503,
-    );
+    return c.json(failure('unavailable', unavailableMessage(source)), 503);
   }
 
   const result = queried.page;

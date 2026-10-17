@@ -303,6 +303,47 @@ record with its URL and the <code>last_refreshed_at</code> the response carries.
 </main></body></html>`;
 }
 
+/** The stats page of a source whose origin is paused and whose precomputed blob has expired. */
+function pausedPageHtml(source: DataSource, baseUrl: string): string {
+  const notice = source.notice ?? '';
+  const description = `${source.title}: ${notice} Free JSON API and MCP tool.`;
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" href="/favicon.png">
+<title>${esc(source.title)} — statistics | gankdat</title>
+<meta name="description" content="${esc(description)}">
+<link rel="canonical" href="${baseUrl}/stats/${source.slug}">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="gankdat">
+<meta property="og:title" content="${esc(source.title)} — statistics">
+<meta property="og:description" content="${esc(description)}">
+<meta property="og:url" content="${baseUrl}/stats/${source.slug}">
+<script type="application/ld+json">${jsonLd(source, baseUrl, null)}</script>
+<style>${STYLE}</style>
+</head>
+<body><main>
+<p class="muted"><a href="/">gankdat</a> / <a href="/stats">stats</a></p>
+<h1>${esc(source.title)} — <b>statistics</b></h1>
+<p class="muted">${esc(source.description)}</p>
+<p><b>origin notice:</b> ${esc(notice)}</p>
+<h2>headline</h2>
+<p class="muted">No statistics are published while the official source is paused; they return with
+the first refresh after it resumes. The <a href="/v1/data/${esc(source.slug)}">API</a> and the MCP tool
+<code>query_${esc(source.slug.replaceAll('-', '_'))}</code> answer with the same notice until then.</p>
+<h2>methodology</h2>
+<p class="muted">Computed from the official source the gankdat API reads — no scraping. This
+dataset's licence and personal-data posture are stated in the <a href="/terms">terms</a>.</p>
+<div class="cta">
+<b>Get this data as JSON</b><br>
+<span class="muted">free tier, 250 req/mo — or MCP for agents</span><br><br>
+<a href="/docs">docs</a> <a href="/account">get a key</a> <a href="/llms.txt">llms.txt</a>
+</div>
+</main></body></html>`;
+}
+
 function pageHtml(
   source: DataSource,
   stats: SourceStats,
@@ -401,6 +442,12 @@ export const statsRoutes = new Hono<AppEnv>()
     // must never drive an origin refresh or a full-table aggregation.
     const result = await sourceStats(c.env, source);
     if (!result) {
+      if (source.notice) {
+        // The blob is gone and the origin is paused: the page stays a page (indexed since
+        // 2026-10-05) and says why, instead of the JSON 503 Google saw on 2026-10-16.
+        c.header('Cache-Control', 'public, max-age=3600');
+        return c.html(pausedPageHtml(source, publicBaseUrl(c.env)));
+      }
       c.header('Retry-After', '3600');
       return c.json(
         failure('unavailable', 'Statistics are being prepared for this dataset; check back soon'),

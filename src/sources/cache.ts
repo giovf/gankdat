@@ -198,7 +198,51 @@ export async function refreshSource(
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     await writeRefreshLog(env, source.slug, 'error', 0, Date.now() - start, message);
+    await retainSnapshot(env, source);
     throw err;
+  }
+}
+
+/**
+ * A failed refresh keeps the last snapshot alive (2026-10-17, gankdat
+ * `uk-planning-paused-snapshot-retention`). The data and stats keys expire at
+ * snapshotTtlSeconds (7 × the cache TTL) and a refresh that throws writes nothing,
+ * so a paused origin — uk-planning, empty since 10-10 by the origin's doing — lost its
+ * last snapshot seven days later and every call 503'd, the probe read red and the
+ * indexed /stats page became a JSON 503. Re-put whatever is there, byte for byte, with
+ * a fresh TTL: no origin read, best-effort, never throws. True when a snapshot was kept.
+ */
+export async function retainSnapshot(
+  env: CloudflareBindings,
+  source: DataSource,
+): Promise<boolean> {
+  try {
+    const ttl = snapshotTtlSeconds(source);
+    const data = await env.CACHE.get(dataKey(source.slug));
+    if (data === null) return false;
+    await env.CACHE.put(dataKey(source.slug), data, { expirationTtl: ttl });
+    const stats = await env.CACHE.get(statsKey(source.slug));
+    if (stats !== null) await env.CACHE.put(statsKey(source.slug), stats, { expirationTtl: ttl });
+    console.log(
+      JSON.stringify({
+        level: 'info',
+        event: 'snapshot_retained',
+        source: source.slug,
+        stats: stats !== null,
+        ttl_seconds: ttl,
+      }),
+    );
+    return true;
+  } catch (err) {
+    console.error(
+      JSON.stringify({
+        level: 'warn',
+        event: 'snapshot_retain_failed',
+        source: source.slug,
+        message: err instanceof Error ? err.message : String(err),
+      }),
+    );
+    return false;
   }
 }
 

@@ -152,6 +152,17 @@ describe('GET /stats', () => {
     }
   });
 
+  it('renders a paused source whose blob has expired as a page carrying the notice, not a 503', async () => {
+    const planning = listSources().find((s) => s.slug === 'uk-planning')!;
+    expect(planning.notice).toBeTruthy();
+    const res = await SELF.fetch('https://example.com/stats/uk-planning');
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain('origin notice:');
+    expect(html).toContain(planning.notice!.slice(0, 40));
+    expect(html).toMatch(/<link rel="canonical" href="[^"]+\/stats\/uk-planning">/);
+  });
+
   it('returns 503 (never refreshes) for a source whose stats are not yet computed', async () => {
     // Public page must not drive a refresh; before any cron/refresh it warms.
     const res = await SELF.fetch('https://example.com/stats/uk-tenders');

@@ -17,6 +17,17 @@ export interface SourceQueryResult {
   last_refreshed_at: string | null;
 }
 
+/**
+ * The 503 / tool-error text for a source that cannot answer. A source whose origin is paused
+ * (`DataSource.notice`) says so — "retry later" was the whole answer agents, the MCP probe and
+ * REST clients got for uk-planning once its snapshot expired (2026-10-16).
+ */
+export function unavailableMessage(source: DataSource): string {
+  return source.notice
+    ? `Source '${source.slug}' is unavailable: ${source.notice}`
+    : `Source '${source.slug}' is temporarily unavailable, retry later`;
+}
+
 export async function querySource(
   env: CloudflareBindings,
   source: DataSource,

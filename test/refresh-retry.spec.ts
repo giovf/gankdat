@@ -1,7 +1,14 @@
 import { env } from 'cloudflare:test';
 import { z } from 'zod';
-import { describe, expect, it } from 'vitest';
-import { isTransientD1Error, refreshOne } from '../src/sources/store';
+import { describe, expect, it, vi } from 'vitest';
+import {
+  dataKey,
+  retainSnapshot,
+  snapshotTtlSeconds,
+  snapshotWrites,
+  statsKey,
+} from '../src/sources/cache';
+import { isTransientD1Error, refreshOne, unavailableMessage } from '../src/sources/store';
 import type { DataSource } from '../src/sources/types';
 
 // A refresh that dies on a transient D1 error ("internal error; reference = …",
@@ -72,5 +79,44 @@ describe('refreshOne', () => {
     const late = flaky('no-retry-late', [new Error('D1_ERROR: internal error; reference = x')]);
     await refreshOne(env, late.source, Date.now() - 10 * 60_000, 0);
     expect(late.calls()).toBe(1);
+  });
+});
+
+describe('retainSnapshot', () => {
+  it('keeps the last snapshot and stats blob alive, byte for byte, when the refresh fails', async () => {
+    const { source } = flaky('retain-kv', [new Error('origin dataset empty: count 0')]);
+    const writes = snapshotWrites(source, [{ id: 7 }], '2026-10-09T05:01:52.000Z');
+    for (const w of writes) await env.CACHE.put(w.key, w.value, { expirationTtl: w.ttl });
+    const put = vi.spyOn(env.CACHE, 'put');
+    expect(await refreshOne(env, source, Date.now(), 0)).toBe(false);
+    const ttl = snapshotTtlSeconds(source);
+    const touched = put.mock.calls.map((c) => [
+      c[0],
+      (c[2] as { expirationTtl?: number }).expirationTtl,
+    ]);
+    expect(touched).toEqual([
+      [dataKey('retain-kv'), ttl],
+      [statsKey('retain-kv'), ttl],
+    ]);
+    expect(await env.CACHE.get(dataKey('retain-kv'))).toBe(writes[0]!.value);
+    expect(await env.CACHE.get(statsKey('retain-kv'))).toBe(writes[1]!.value);
+    expect(await statuses('retain-kv')).toEqual(['error']);
+    put.mockRestore();
+  });
+
+  it('is a no-op without a snapshot', async () => {
+    const { source } = flaky('retain-none', []);
+    expect(await retainSnapshot(env, source)).toBe(false);
+    expect(await env.CACHE.get(dataKey('retain-none'))).toBeNull();
+  });
+});
+
+describe('unavailableMessage', () => {
+  it('names the origin notice when the source has one, else says retry later', () => {
+    const { source } = flaky('msg', []);
+    expect(unavailableMessage(source)).toBe("Source 'msg' is temporarily unavailable, retry later");
+    expect(unavailableMessage({ ...source, notice: 'Origin paused since 2026-10-10.' })).toBe(
+      "Source 'msg' is unavailable: Origin paused since 2026-10-10.",
+    );
   });
 });
