@@ -79,10 +79,14 @@ export function familiesText(hits: CrawlerHits, max = 6): string {
 
 /** Worker name in wrangler.jsonc (`$metadata.service` in Workers Logs). */
 export const STATS_LOG_SERVICE = 'faceless-api';
-/** The text every stats-page request line carries (middleware/logging.ts JSON, path first). */
-export const STATS_LOG_NEEDLE = '"path":"/stats';
+/**
+ * The text every stats-page request line carries (middleware/logging.ts JSON `"path":"/stats…"`).
+ * Plain `/stats`: the first live query (17:22) with `"path":"/stats` as the needle answered HTTP 400,
+ * so the needle is the bare path and statsLineOf drops the request lines it also matches.
+ */
+export const STATS_LOG_NEEDLE = '/stats';
 export const STATS_LOG_HOURS = 7 * 24;
-export const STATS_LOG_LIMIT = 5000;
+export const STATS_LOG_LIMIT = 1000;
 
 /**
  * Query Builder body for the Worker's own request lines about `/stats…` in the last `hours`,

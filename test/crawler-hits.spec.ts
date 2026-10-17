@@ -66,7 +66,7 @@ describe('stats-page log reading', () => {
       timeframe: { from: 1_000_000_000_000 - 86_400_000, to: 1_000_000_000_000 },
       parameters: {
         datasets: ['cloudflare-workers'],
-        needle: { value: '"path":"/stats', isRegex: false, matchCase: true },
+        needle: { value: '/stats', isRegex: false, matchCase: true },
       },
     });
   });

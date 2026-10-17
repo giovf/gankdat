@@ -590,7 +590,7 @@ async function statsCrawlers() {
     const text = await res.text();
     if (!res.ok) {
       throw new Error(
-        `HTTP ${res.status}${res.status === 403 ? ' (token lacks Workers Observability Read)' : ''}`,
+        `HTTP ${res.status}${res.status === 403 ? ' (token lacks Workers Observability Read)' : ` ${text.replace(/\s+/g, ' ').slice(0, 160)}`}`,
       );
     }
     const folded = foldStatsLogEvents(JSON.parse(text));
