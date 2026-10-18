@@ -297,11 +297,21 @@ export const mcpRoute = new Hono<AppEnv>().post(
     });
 
     const server = buildMcpServer(c.env, keyCtx, { clientId, userAgent });
-    const transport = new StreamableHTTPTransport();
+    // One JSON body per POST, not an SSE stream (gankdat `refresh-mcp-probe`, 2026-10-18).
+    // With the stream, @hono/mcp returns the Response at once and the tool call runs
+    // AFTER the fetch handler has returned, kept alive only by the open stream — the one
+    // shape of work a Worker may drop, and a dropped call leaves the stream open until the
+    // client gives up (the 10-18 keyless probe: 20 s, no body, while the keyed call a moment
+    // later answered). In JSON mode the transport awaits the result inside the handler, so
+    // the call runs where the runtime guarantees it, a death mid-call is an HTTP error the
+    // checker can read, and a stateless server never had a notification to stream anyway.
+    // The spec lets a server answer a POST with application/json; every client sends
+    // `Accept: application/json, text/event-stream` (the SDK client parses both).
+    const transport = new StreamableHTTPTransport({ enableJsonResponse: true });
     await server.connect(transport);
     const response = await transport.handleRequest(c);
     // The per-request server/transport are unreferenced after this returns and
-    // GC'd by the isolate; no standalone stream or timer is left open (POST only).
+    // GC'd by the isolate; no stream or timer is left open (POST only).
     return response ?? c.body(null, 202);
   },
 );

@@ -5,6 +5,7 @@ import { claimAgentKey, createAgentSignup, CLAIM_RETRY_SECONDS } from '../auth/s
 import { emailEnabled, sendEmail } from '../email/send';
 import { agentKeyRequestEmail } from '../email/templates';
 import { APP_VERSION, FREE_TIER_CREDITS, publicBaseUrl } from '../lib/constants';
+import { withDeadline } from '../lib/deadline';
 import { creditCost } from '../metering/costs';
 import { currentPeriod, getUsage } from '../metering/counters';
 import { chargeBudget, checkBudget, exhaustedMessage } from '../metering/budget';
@@ -55,6 +56,58 @@ function jsonResult(payload: Record<string, unknown>): ToolResult {
 
 function errorResult(message: string): ToolResult {
   return { content: [{ type: 'text', text: message }], isError: true };
+}
+
+/**
+ * How long a data tool may take before it answers a tool error instead (gankdat
+ * `refresh-mcp-probe`, 2026-10-18): the metrics probe gives a call 20 s and Glama's checker
+ * about as much, so a call that is still inside KV at 10 s answers "slow, retry" with the
+ * phase it reached — a reading the Daily numbers row carries — rather than a hang the
+ * directories score as an outage. Keyed calls that miss it are not charged.
+ */
+export const TOOL_CALL_BUDGET_MS = 10_000;
+
+type ToolPhase = 'gate' | 'query' | 'settle';
+
+/** What a data tool says when it misses the budget: the phase names where the time went. */
+export function slowMessage(source: DataSource, phase: ToolPhase, budgetMs: number): string {
+  return `Source '${source.slug}' is slow right now (no answer within ${Math.round(budgetMs / 1000)} s, stuck at ${phase}); retry in a moment.`;
+}
+
+interface CallClock {
+  phase: ToolPhase;
+  /** Set once the deadline passed: the late work must not charge or write anything. */
+  expired: boolean;
+}
+
+/**
+ * Run a data tool's body under the call budget. The body reports its phase through the clock
+ * and checks `expired` before it settles (charges credits); a late result is dropped.
+ */
+async function bounded(
+  toolName: string,
+  source: DataSource,
+  keyed: boolean,
+  budgetMs: number,
+  body: (clock: CallClock) => Promise<ToolResult>,
+): Promise<ToolResult> {
+  const clock: CallClock = { phase: 'gate', expired: false };
+  const settled = await withDeadline(body(clock), budgetMs);
+  if (settled.ok) return settled.value;
+  clock.expired = true;
+  // One line per slow call, searchable by the wave-log reader next to the source's own lines.
+  console.log(
+    JSON.stringify({
+      level: 'warn',
+      event: 'slow_tool_call',
+      source: source.slug,
+      tool: toolName,
+      phase: clock.phase,
+      budget_ms: budgetMs,
+      keyed,
+    }),
+  );
+  return errorResult(slowMessage(source, clock.phase, budgetMs));
 }
 
 /** The tools an agent may call WITHOUT a key — they are how it gets one (routes/mcp.ts). */
@@ -179,6 +232,7 @@ function registerQueryTool(
   keyCtx: KeyContext | null,
   preview: PreviewContext,
   source: DataSource,
+  budgetMs: number,
 ): void {
   const schema = buildQuerySchema(source);
   const toolName = `query_${source.slug.replaceAll('-', '_')}`;
@@ -190,35 +244,40 @@ function registerQueryTool(
       inputSchema: schema.shape,
       annotations: { ...READ_ONLY, title: source.title },
     },
-    async (args: Record<string, unknown>): Promise<ToolResult> => {
+    (args: Record<string, unknown>): Promise<ToolResult> => {
       const missing = missingLookupKey(source, args);
-      if (missing) return errorResult(missing);
-      const gate = await gateDataCall(env, keyCtx, preview, source, toolName);
-      if (gate.kind === 'denied') return errorResult(gate.message);
+      if (missing) return Promise.resolve(errorResult(missing));
+      return bounded(toolName, source, Boolean(keyCtx), budgetMs, async (clock) => {
+        const gate = await gateDataCall(env, keyCtx, preview, source, toolName);
+        if (gate.kind === 'denied') return errorResult(gate.message);
 
-      let queried;
-      try {
-        queried = await querySource(
-          env,
-          source,
-          gate.kind === 'preview' ? clampPreviewArgs(args) : args,
-        );
-      } catch {
-        return errorResult(unavailableMessage(source));
-      }
+        clock.phase = 'query';
+        let queried;
+        try {
+          queried = await querySource(
+            env,
+            source,
+            gate.kind === 'preview' ? clampPreviewArgs(args) : args,
+          );
+        } catch {
+          return errorResult(unavailableMessage(source));
+        }
 
-      const result = queried.page;
-      return jsonResult({
-        ok: true,
-        data: result.records,
-        meta: {
-          source: source.slug,
-          page: result.page,
-          per_page: result.perPage,
-          total: result.total,
-          last_refreshed_at: queried.last_refreshed_at,
-          ...(await settleDataCall(env, keyCtx, gate)),
-        },
+        clock.phase = 'settle';
+        if (clock.expired) return errorResult(slowMessage(source, 'query', budgetMs));
+        const result = queried.page;
+        return jsonResult({
+          ok: true,
+          data: result.records,
+          meta: {
+            source: source.slug,
+            page: result.page,
+            per_page: result.perPage,
+            total: result.total,
+            last_refreshed_at: queried.last_refreshed_at,
+            ...(await settleDataCall(env, keyCtx, gate)),
+          },
+        });
       });
     },
   );
@@ -230,6 +289,7 @@ function registerChangesTool(
   env: CloudflareBindings,
   keyCtx: KeyContext | null,
   preview: PreviewContext,
+  budgetMs: number,
 ): void {
   const feeds = listSources().filter(hasChangeFeed);
   if (feeds.length === 0) return;
@@ -251,38 +311,49 @@ function registerChangesTool(
           ),
       },
     },
-    async (args: Record<string, unknown>): Promise<ToolResult> => {
+    (args: Record<string, unknown>): Promise<ToolResult> => {
       const source = getSource(String(args.source));
-      if (!source?.idOf) return errorResult(`Source '${String(args.source)}' has no change feed`);
-      const parsed = changesQuerySchema.safeParse(keyCtx ? args : clampPreviewArgs(args));
-      if (!parsed.success) return errorResult('Invalid arguments: ' + parsed.error.message);
-      const filters = changeFiltersSchema(source).safeParse(args.filter ?? {});
-      if (!filters.success) return errorResult('Invalid filter: ' + filters.error.message);
-      const gate = await gateDataCall(env, keyCtx, preview, source, 'get_changes');
-      if (gate.kind === 'denied') return errorResult(gate.message);
-      const since = parsed.data.since ?? new Date(Date.now() - 7 * 86_400_000).toISOString();
-      let result;
-      try {
-        result = await queryD1Changes(env, source, {
-          ...parsed.data,
-          since,
-          filters: filters.data as Record<string, unknown>,
-        });
-      } catch {
-        return errorResult(unavailableMessage(source));
+      if (!source?.idOf) {
+        return Promise.resolve(errorResult(`Source '${String(args.source)}' has no change feed`));
       }
-      return jsonResult({
-        ok: true,
-        data: result.rows,
-        meta: {
-          source: source.slug,
-          since,
-          page: parsed.data.page,
-          per_page: parsed.data.per_page,
-          total: result.total,
-          last_refreshed_at: result.last_refreshed_at,
-          ...(await settleDataCall(env, keyCtx, gate)),
-        },
+      const parsed = changesQuerySchema.safeParse(keyCtx ? args : clampPreviewArgs(args));
+      if (!parsed.success) {
+        return Promise.resolve(errorResult('Invalid arguments: ' + parsed.error.message));
+      }
+      const filters = changeFiltersSchema(source).safeParse(args.filter ?? {});
+      if (!filters.success) {
+        return Promise.resolve(errorResult('Invalid filter: ' + filters.error.message));
+      }
+      return bounded('get_changes', source, Boolean(keyCtx), budgetMs, async (clock) => {
+        const gate = await gateDataCall(env, keyCtx, preview, source, 'get_changes');
+        if (gate.kind === 'denied') return errorResult(gate.message);
+        clock.phase = 'query';
+        const since = parsed.data.since ?? new Date(Date.now() - 7 * 86_400_000).toISOString();
+        let result;
+        try {
+          result = await queryD1Changes(env, source, {
+            ...parsed.data,
+            since,
+            filters: filters.data as Record<string, unknown>,
+          });
+        } catch {
+          return errorResult(unavailableMessage(source));
+        }
+        clock.phase = 'settle';
+        if (clock.expired) return errorResult(slowMessage(source, 'query', budgetMs));
+        return jsonResult({
+          ok: true,
+          data: result.rows,
+          meta: {
+            source: source.slug,
+            since,
+            page: parsed.data.page,
+            per_page: parsed.data.per_page,
+            total: result.total,
+            last_refreshed_at: result.last_refreshed_at,
+            ...(await settleDataCall(env, keyCtx, gate)),
+          },
+        });
       });
     },
   );
@@ -495,6 +566,7 @@ export function buildMcpServer(
   env: CloudflareBindings,
   keyCtx: KeyContext | null,
   preview: PreviewContext = { clientId: 'unknown', userAgent: '' },
+  budgetMs = TOOL_CALL_BUDGET_MS,
 ): McpServer {
   const server = new McpServer({ name: 'gankdat', version: APP_VERSION });
 
@@ -583,8 +655,8 @@ export function buildMcpServer(
   registerSignupTools(server, env);
   registerCreditTools(server, env, keyCtx);
   for (const source of listSources()) {
-    registerQueryTool(server, env, keyCtx, preview, source);
+    registerQueryTool(server, env, keyCtx, preview, source, budgetMs);
   }
-  registerChangesTool(server, env, keyCtx, preview);
+  registerChangesTool(server, env, keyCtx, preview, budgetMs);
   return server;
 }
