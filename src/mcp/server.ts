@@ -81,6 +81,13 @@ interface CallClock {
 }
 
 /**
+ * Keeps an expired call's work running after the response went out — `ctx.waitUntil` in the
+ * Worker — so a cold-cache refresh the request started still writes its snapshot and the
+ * next call answers at once. Absent (unit tests), the late work is simply left to run.
+ */
+export type KeepAlive = (work: Promise<unknown>) => void;
+
+/**
  * Run a data tool's body under the call budget. The body reports its phase through the clock
  * and checks `expired` before it settles (charges credits); a late result is dropped.
  */
@@ -89,12 +96,15 @@ async function bounded(
   source: DataSource,
   keyed: boolean,
   budgetMs: number,
+  keepAlive: KeepAlive | undefined,
   body: (clock: CallClock) => Promise<ToolResult>,
 ): Promise<ToolResult> {
   const clock: CallClock = { phase: 'gate', expired: false };
-  const settled = await withDeadline(body(clock), budgetMs);
+  const work = body(clock);
+  const settled = await withDeadline(work, budgetMs);
   if (settled.ok) return settled.value;
   clock.expired = true;
+  keepAlive?.(work.catch(() => undefined));
   // One line per slow call, searchable by the wave-log reader next to the source's own lines.
   console.log(
     JSON.stringify({
@@ -233,6 +243,7 @@ function registerQueryTool(
   preview: PreviewContext,
   source: DataSource,
   budgetMs: number,
+  keepAlive: KeepAlive | undefined,
 ): void {
   const schema = buildQuerySchema(source);
   const toolName = `query_${source.slug.replaceAll('-', '_')}`;
@@ -247,7 +258,7 @@ function registerQueryTool(
     (args: Record<string, unknown>): Promise<ToolResult> => {
       const missing = missingLookupKey(source, args);
       if (missing) return Promise.resolve(errorResult(missing));
-      return bounded(toolName, source, Boolean(keyCtx), budgetMs, async (clock) => {
+      return bounded(toolName, source, Boolean(keyCtx), budgetMs, keepAlive, async (clock) => {
         const gate = await gateDataCall(env, keyCtx, preview, source, toolName);
         if (gate.kind === 'denied') return errorResult(gate.message);
 
@@ -290,6 +301,7 @@ function registerChangesTool(
   keyCtx: KeyContext | null,
   preview: PreviewContext,
   budgetMs: number,
+  keepAlive: KeepAlive | undefined,
 ): void {
   const feeds = listSources().filter(hasChangeFeed);
   if (feeds.length === 0) return;
@@ -324,7 +336,7 @@ function registerChangesTool(
       if (!filters.success) {
         return Promise.resolve(errorResult('Invalid filter: ' + filters.error.message));
       }
-      return bounded('get_changes', source, Boolean(keyCtx), budgetMs, async (clock) => {
+      return bounded('get_changes', source, Boolean(keyCtx), budgetMs, keepAlive, async (clock) => {
         const gate = await gateDataCall(env, keyCtx, preview, source, 'get_changes');
         if (gate.kind === 'denied') return errorResult(gate.message);
         clock.phase = 'query';
@@ -567,6 +579,7 @@ export function buildMcpServer(
   keyCtx: KeyContext | null,
   preview: PreviewContext = { clientId: 'unknown', userAgent: '' },
   budgetMs = TOOL_CALL_BUDGET_MS,
+  keepAlive?: KeepAlive,
 ): McpServer {
   const server = new McpServer({ name: 'gankdat', version: APP_VERSION });
 
@@ -655,8 +668,8 @@ export function buildMcpServer(
   registerSignupTools(server, env);
   registerCreditTools(server, env, keyCtx);
   for (const source of listSources()) {
-    registerQueryTool(server, env, keyCtx, preview, source, budgetMs);
+    registerQueryTool(server, env, keyCtx, preview, source, budgetMs, keepAlive);
   }
-  registerChangesTool(server, env, keyCtx, preview, budgetMs);
+  registerChangesTool(server, env, keyCtx, preview, budgetMs, keepAlive);
   return server;
 }

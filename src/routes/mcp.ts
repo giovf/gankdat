@@ -296,7 +296,16 @@ export const mcpRoute = new Hono<AppEnv>().post(
       indexes: [kind],
     });
 
-    const server = buildMcpServer(c.env, keyCtx, { clientId, userAgent });
+    // A call that misses its budget keeps running under waitUntil, so a cold-cache refresh it
+    // started still lands in KV for the retry the "slow" tool error asks for.
+    const keepAlive = (work: Promise<unknown>): void => {
+      try {
+        c.executionCtx.waitUntil(work);
+      } catch {
+        // no execution context (unit harness): the work runs as far as the isolate lets it
+      }
+    };
+    const server = buildMcpServer(c.env, keyCtx, { clientId, userAgent }, undefined, keepAlive);
     // One JSON body per POST, not an SSE stream (gankdat `refresh-mcp-probe`, 2026-10-18).
     // With the stream, @hono/mcp returns the Response at once and the tool call runs
     // AFTER the fetch handler has returned, kept alive only by the open stream — the one

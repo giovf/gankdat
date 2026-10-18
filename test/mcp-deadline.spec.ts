@@ -1,8 +1,9 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { env, SELF } from 'cloudflare:test';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { withDeadline } from '../src/lib/deadline';
+import { dataKey } from '../src/sources/cache';
 import { buildMcpServer, slowMessage, TOOL_CALL_BUDGET_MS } from '../src/mcp/server';
 import { getSource } from '../src/sources/registry';
 import { bearer, issueKey } from './helpers/auth';
@@ -48,6 +49,24 @@ async function callTool(
     await server.close();
   }
 }
+
+/**
+ * A fresh snapshot for uk-tenders: the fast-path assertions must not depend on the origin
+ * (the CI runner has no network; its first cold call ran past the budget on 2026-10-18).
+ */
+async function seedTenders(): Promise<void> {
+  await env.CACHE.put(
+    dataKey('uk-tenders'),
+    JSON.stringify({
+      records: [{ notice_id: 'ocds-1', title: 'Test notice' }],
+      last_refreshed_at: new Date().toISOString(),
+    }),
+  );
+}
+
+beforeEach(async () => {
+  await seedTenders();
+});
 
 afterEach(() => {
   vi.restoreAllMocks();
