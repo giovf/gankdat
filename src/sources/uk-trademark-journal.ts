@@ -50,6 +50,14 @@ export const DOWNLOADS_PER_RUN = 4;
  * before the cut-off still streams into D1; the window keeps filling next run.
  */
 export const DOWNLOAD_BUDGET_MS = 6 * 60_000;
+/**
+ * Longest one issue file may take, headers to last byte (2026-10-18, `refresh-uk-trademark-journal-2026-10-17`):
+ * a request to the IPO that never answers has no timeout of its own and would hold the wave until
+ * the platform kills it with no row — the one silent cause this source can name. A real issue
+ * (~145 MB inflated) streams through in about three minutes; one past five is this night's error
+ * row, not its silent death, and tomorrow's run tries again.
+ */
+export const ISSUE_FETCH_TIMEOUT_MS = 5 * 60_000;
 /** Injectable clock for the download budget (tests drive it; production is Date.now). */
 export const journalClock = { now: (): number => Date.now() };
 /** Issue ids probed per year (the journal runs to 052 or 053). */
@@ -735,16 +743,37 @@ async function fetchIssueFile(id: string, file: string): Promise<Response> {
   if (url.protocol !== 'https:' || !ISSUE_HOST.test(url.hostname)) {
     throw new Error(`journal file on unexpected host (${url.hostname})`);
   }
-  let res = await originFetch(url.toString(), { headers: { 'user-agent': USER_AGENT } });
+  const init = (): RequestInit => ({
+    headers: { 'user-agent': USER_AGENT },
+    signal: AbortSignal.timeout(ISSUE_FETCH_TIMEOUT_MS),
+  });
+  let res = await originFetch(url.toString(), init());
   for (let attempt = 1; res.status >= 500 && attempt <= 2; attempt += 1) {
     await new Promise((r) => setTimeout(r, 15_000 * attempt));
-    res = await originFetch(url.toString(), { headers: { 'user-agent': USER_AGENT } });
+    res = await originFetch(url.toString(), init());
   }
   return res;
 }
 
+/** The abort of `AbortSignal.timeout`, whichever way the runtime names it. */
+function isTimeout(err: unknown): boolean {
+  return err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError');
+}
+
 /** Downloads and parses one issue; null when the issue does not exist (404 on every file). */
 export async function fetchIssue(id: string): Promise<CachedIssue | null> {
+  try {
+    return await fetchIssueFiles(id);
+  } catch (err) {
+    if (!isTimeout(err)) throw err;
+    throw new Error(
+      `TMJ ${id}: the IPO sent no complete file within ${ISSUE_FETCH_TIMEOUT_MS / 60_000} min`,
+      { cause: err },
+    );
+  }
+}
+
+async function fetchIssueFiles(id: string): Promise<CachedIssue | null> {
   for (const file of ISSUE_FILES) {
     const res = await fetchIssueFile(id, file);
     if (res.status === 404 || res.status === 403 || res.status === 410) {

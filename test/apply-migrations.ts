@@ -1,5 +1,10 @@
 import { applyD1Migrations, env } from 'cloudflare:test';
 import { beforeAll, beforeEach } from 'vitest';
+import { progressConfig } from '../src/sources/progress';
+
+// The refresh progress marker (progress.ts) waits out KV's one-write-a-second-per-key gap before
+// it deletes itself; a test refresh takes milliseconds, so that wait is set to nothing here.
+progressConfig.minGapMs = 0;
 
 // pool-workers 0.18 has no isolated per-test storage: one workerd runtime and one
 // set of D1/KV stores serve every test file in turn, so each test needs a clean

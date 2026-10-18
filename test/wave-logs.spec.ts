@@ -306,7 +306,7 @@ describe('waveInvocationText', () => {
     ).toBe('wave 06:05: exceededCpu 10 min ago');
     expect(
       waveInvocationText({ cron: '0 5 * * *', status: 200, invocations: [], reason: null }, NOW),
-    ).toBe('wave 05:00: no invocation in 26 h');
+    ).toBe('wave 05:00: no invocation logged in 26 h');
     expect(
       waveInvocationText(
         { cron: '0 5 * * *', status: 403, invocations: [], reason: 'HTTP 403' },
@@ -363,7 +363,7 @@ describe('waveLogNote', () => {
       },
     };
     expect(waveLogNote(file, NOW)).toBe(
-      'wave log: uk-insolvency no log line in 24 h; uk-planning wave 05:00: no invocation in 26 h, no log line in 24 h (7 noise lines); uk-trademark-journal wave 06:05: exceededCpu 900.1s 10 min ago, [log] event=hash_backfill source=uk-trademark-journal 18 min ago (2 of 6 lines)',
+      'wave log: uk-insolvency no log line in 24 h; uk-planning wave 05:00: no invocation logged in 26 h, no log line in 24 h (7 noise lines); uk-trademark-journal wave 06:05: exceededCpu 900.1s 10 min ago, [log] event=hash_backfill source=uk-trademark-journal 18 min ago (2 of 6 lines)',
     );
   });
 

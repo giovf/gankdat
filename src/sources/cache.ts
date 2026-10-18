@@ -2,6 +2,7 @@ import { computeStats } from '../lib/stats';
 import type { SourceStats } from '../lib/stats';
 import type { DataSource } from './types';
 import { traceOrigin, zeroRecordsError } from './origin';
+import { markRefreshProgress } from './progress';
 
 export interface CachedPayload {
   records: unknown[];
@@ -181,6 +182,11 @@ export async function refreshSource(
     await env.CACHE.put(dataKey(source.slug), JSON.stringify(payload), {
       expirationTtl: snapshotTtlSeconds(source),
     });
+    // The row before the best-effort stats (progress.ts: a wave killed inside the stats must not
+    // take the night's row with it).
+    await markRefreshProgress(env, source.slug, start, 'written', `${records.length} records`);
+    await writeRefreshLog(env, source.slug, 'ok', records.length, Date.now() - start, null);
+    await markRefreshProgress(env, source.slug, start, 'stats');
     // Precompute /stats over the ≤MAX_RECORDS snapshot so the public page reads
     // a cached blob rather than recomputing per request. Best-effort.
     try {
@@ -193,7 +199,6 @@ export async function refreshSource(
     } catch {
       // stale/absent stats just yields a "warming" page — never fail the refresh
     }
-    await writeRefreshLog(env, source.slug, 'ok', records.length, Date.now() - start, null);
     return payload;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

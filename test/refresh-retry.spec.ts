@@ -90,10 +90,10 @@ describe('retainSnapshot', () => {
     const put = vi.spyOn(env.CACHE, 'put');
     expect(await refreshOne(env, source, Date.now(), 0)).toBe(false);
     const ttl = snapshotTtlSeconds(source);
-    const touched = put.mock.calls.map((c) => [
-      c[0],
-      (c[2] as { expirationTtl?: number }).expirationTtl,
-    ]);
+    // The refresh progress marker (progress.ts) has its own key and spec; only the snapshot writes count here.
+    const touched = put.mock.calls
+      .filter((c) => !String(c[0]).startsWith('refresh:progress:'))
+      .map((c) => [c[0], (c[2] as { expirationTtl?: number }).expirationTtl]);
     expect(touched).toEqual([
       [dataKey('retain-kv'), ttl],
       [statsKey('retain-kv'), ttl],

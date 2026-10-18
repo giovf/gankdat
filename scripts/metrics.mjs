@@ -112,6 +112,13 @@ const stale = await sql(
 const skipped = await sql(
   "SELECT source_slug, MAX(message) AS message FROM refresh_log WHERE status = 'skipped' AND created_at > datetime('now','-1 day') GROUP BY source_slug",
 );
+// A night the platform killed writes no row of its own; the next attempt writes it from the
+// progress marker (src/sources/progress.ts, 2026-10-18) as `silent refresh started … died after
+// <phase> …`. A later `ok` row hides it from `refresh errors` — rightly, the data is fresh — so the
+// phase is read here, for the day it was written, whatever followed it.
+const silent = await sql(
+  "SELECT source_slug, MAX(message) AS message FROM refresh_log WHERE status = 'error' AND message LIKE 'silent refresh %' AND created_at > datetime('now','-1 day') GROUP BY source_slug",
+).catch(() => []);
 for (const s of stale) {
   if (errors.some((e) => e.source_slug === s.source_slug)) continue;
   const skip = skipped.find((k) => k.source_slug === s.source_slug);
@@ -894,6 +901,16 @@ const notes = [
   crawlersNote,
   datasetsNote,
   datasetsExternalNote,
+  ...(silent.length
+    ? [
+        `silent nights: ${silent
+          .map(
+            (e) =>
+              `${e.source_slug} ${errorText(String(e.message ?? '').replace(/^silent refresh /, ''))}`,
+          )
+          .join(', ')}`,
+      ]
+    : []),
   errors.length
     ? `refresh errors: ${errors
         .map((e) => {

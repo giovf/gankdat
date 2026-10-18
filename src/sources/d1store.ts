@@ -5,6 +5,7 @@ import type { ChangeDay, FacetStats, MonthlyTrend, SourceStats, StatsGroup } fro
 import { sortGroupRows } from '../lib/stats';
 import { putSourceStats, writeRefreshLog } from './cache';
 import { traceOrigin, zeroRecordsError } from './origin';
+import { markRefreshProgress } from './progress';
 
 /** Thrown when a D1 source is queried before cron has loaded it (routes → 503). */
 export class SourceNotLoadedError extends Error {
@@ -26,6 +27,8 @@ const RESERVED = new Set(['page', 'per_page', 'q']);
 
 /** Rows per INSERT chunk — sized so the JSON bind stays well under D1 limits. */
 const INSERT_CHUNK = 2000;
+/** Records streamed between two `stream` progress marks (progress.ts); ~a KV write a minute at the journal's pace. */
+const PROGRESS_EVERY = 25_000;
 // …and a byte bound: wide rows (uk-charities: 23 fields + a 400-char text, stored three
 // ways) blew D1's per-bind size cap ("string or blob too big", 2026-09-20) at 2000 rows.
 const INSERT_CHUNK_BYTES = 700_000; // 400k made ~3,600 statements for uk-charities and blew the 15-min trigger
@@ -300,6 +303,7 @@ export async function refreshD1Source(
       );
       return previous;
     }
+    await markRefreshProgress(env, source.slug, start, 'backfill', `${backfill.done} rows hashed`);
     const index = await loadStoredIndex(env, source.slug, previous.generation).catch(
       (err: unknown) => {
         console.log(
@@ -313,7 +317,10 @@ export async function refreshD1Source(
         return null;
       },
     );
-    if (index) return traceOrigin(() => refreshD1Delta(env, source, previous, index, start));
+    if (index) {
+      await markRefreshProgress(env, source.slug, start, 'index', `${index.n} rows`);
+      return traceOrigin(() => refreshD1Delta(env, source, previous, index, start));
+    }
   }
   return traceOrigin(() => refreshD1Full(env, source, previous, start));
 }
@@ -576,6 +583,9 @@ async function refreshD1Delta(
       : await source.fetchFresh(env);
     for await (const record of records) {
       streamed += 1;
+      if (streamed % PROGRESS_EVERY === 0) {
+        await markRefreshProgress(env, source.slug, start, 'stream', `${streamed} records`);
+      }
       const json = JSON.stringify(record);
       const entry = ingestRow(source, record, json);
       const pos = findStored(index, hash53(entry.i ?? ''));
@@ -649,7 +659,15 @@ async function refreshD1Delta(
       }),
     );
 
-    await precomputeStats(env, source, generation, meta);
+    // The row before the stats: precomputeStats is best-effort by contract (a failure only logs),
+    // and a wave killed inside the facet aggregation must not take the night's row with it.
+    await markRefreshProgress(
+      env,
+      source.slug,
+      start,
+      'written',
+      `delta +${added} ~${changed} -${removed}`,
+    );
     await writeRefreshLog(
       env,
       source.slug,
@@ -658,6 +676,8 @@ async function refreshD1Delta(
       Date.now() - start,
       `delta +${added} ~${changed} -${removed}`,
     );
+    await markRefreshProgress(env, source.slug, start, 'stats');
+    await precomputeStats(env, source, generation, meta);
     return meta;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -735,6 +755,9 @@ async function refreshD1Full(
       chunk.push(entry);
       chunkBytes += ingestBytes(entry, json);
       total += 1;
+      if (total % PROGRESS_EVERY === 0) {
+        await markRefreshProgress(env, source.slug, start, 'stream', `${total} records`);
+      }
       if (chunk.length >= INSERT_CHUNK || chunkBytes >= INSERT_CHUNK_BYTES) await flush();
     }
     await flush();
@@ -783,8 +806,11 @@ async function refreshD1Full(
     // Drop every older generation.
     await deleteGenerations(env, source.slug, '<', generation);
 
-    await precomputeStats(env, source, generation, meta);
+    // The row before the best-effort stats (see refreshD1Delta).
+    await markRefreshProgress(env, source.slug, start, 'written', `${total} rows`);
     await writeRefreshLog(env, source.slug, 'ok', total, Date.now() - start, null);
+    await markRefreshProgress(env, source.slug, start, 'stats');
+    await precomputeStats(env, source, generation, meta);
     return meta;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

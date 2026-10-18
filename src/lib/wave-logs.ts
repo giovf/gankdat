@@ -312,7 +312,9 @@ export function waveInvocationText(wave: WaveInvocationResult, nowMs: number): s
   const head = `wave ${cronClock(wave.cron)}:`;
   if (wave.reason) return `${head} n/a (${wave.reason})`;
   const last = wave.invocations[0];
-  if (!last) return `${head} no invocation in ${WAVE_INVOCATION_HOURS} h`;
+  // "logged", not "fired": on 2026-10-16 the query returned no line from any cron wave, for
+  // sources that verifiably refreshed, so an empty answer says nothing about the trigger.
+  if (!last) return `${head} no invocation logged in ${WAVE_INVOCATION_HOURS} h`;
   const wall = last.wallTimeMs === null ? '' : ` ${(last.wallTimeMs / 1000).toFixed(1)}s`;
   const age = last.at ? ` ${ageText(last.at, nowMs)}` : '';
   return `${head} ${last.outcome}${wall}${age}`;

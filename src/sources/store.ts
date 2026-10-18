@@ -1,8 +1,15 @@
 import { computeStats } from '../lib/stats';
 import type { SourceStats } from '../lib/stats';
-import { readCached, readSnapshot, readSourceStats, refreshSource } from './cache';
+import { readCached, readSnapshot, readSourceStats, refreshSource, writeRefreshLog } from './cache';
 import { queryD1Source, refreshD1Source } from './d1store';
 import { isLookup, lookupRecord } from './lookup';
+import {
+  clearRefreshProgress,
+  markRefreshProgress,
+  readRefreshProgress,
+  silentRefreshMessage,
+} from './progress';
+import type { RefreshProgress } from './progress';
 import { applyQuery } from './query';
 import type { QueryPage } from './query';
 import { listSources } from './registry';
@@ -142,6 +149,24 @@ export function isTransientD1Error(err: unknown): boolean {
   return TRANSIENT_D1_ERROR.test(err instanceof Error ? err.message : String(err));
 }
 
+/**
+ * A marker the previous attempt never cleared means it died silently (killed by the platform, no
+ * `catch` ran): write the row it owed, naming the phase it reached (progress.ts). Returns it.
+ */
+export async function recordSilentRefresh(
+  env: CloudflareBindings,
+  slug: string,
+): Promise<RefreshProgress | null> {
+  const previous = await readRefreshProgress(env, slug);
+  if (!previous) return null;
+  const message = silentRefreshMessage(previous);
+  console.error(
+    JSON.stringify({ level: 'error', event: 'refresh_died', source: slug, ...previous }),
+  );
+  await writeRefreshLog(env, slug, 'error', 0, previous.elapsed_ms, message);
+  return previous;
+}
+
 /** One source's refresh, retried once on a transient D1 error while the wave is young; true when it succeeded. */
 export async function refreshOne(
   env: CloudflareBindings,
@@ -149,6 +174,9 @@ export async function refreshOne(
   waveStartedAt = Date.now(),
   delayMs = RETRY_DELAY_MS,
 ): Promise<boolean> {
+  await recordSilentRefresh(env, source.slug);
+  const startedAt = Date.now();
+  await markRefreshProgress(env, source.slug, startedAt, 'start');
   for (let attempt = 1; ; attempt += 1) {
     try {
       if (source.storage === 'd1') {
@@ -156,6 +184,7 @@ export async function refreshOne(
       } else {
         await refreshSource(env, source);
       }
+      await clearRefreshProgress(env, source.slug);
       return true;
     } catch (err) {
       const retry =
@@ -170,8 +199,12 @@ export async function refreshOne(
           message: err instanceof Error ? err.message : String(err),
         }),
       );
-      if (!retry) return false;
+      if (!retry) {
+        await clearRefreshProgress(env, source.slug);
+        return false;
+      }
       await new Promise((resolve) => setTimeout(resolve, delayMs));
+      await markRefreshProgress(env, source.slug, startedAt, 'retry', `attempt ${attempt + 1}`);
     }
   }
 }
