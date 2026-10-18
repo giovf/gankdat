@@ -50,15 +50,34 @@ export function withoutCodegenWarning(
     warn(...args);
   };
 }
-let codegenWarningMuted = false;
-function muteCodegenWarning(): void {
-  if (codegenWarningMuted) return;
-  codegenWarningMuted = true;
+// The same compile also logs an ERROR line (gankdat `x402-ajv-compile-log-noise`, 2026-10-18): Ajv's
+// own `compileSchema` calls `logger.error("Error compiling schema, function code:", <source>)`
+// before rethrowing, and @x402/extensions builds its Ajv without a `logger` option, so every
+// isolate start wrote 17 error lines carrying the generated validator source — 11 of the 12
+// uk-planning lines of the 10-17 wave-log reading, the loudest line in the Worker log, hiding
+// any real error beside it. The compile cannot be skipped from here (`paymentMiddleware` runs
+// `validateBazaarRouteExtensions` on every start) and under workerd it can only fail this way,
+// so the one two-argument call Ajv makes is dropped; any other `console.error` passes through.
+const AJV_COMPILE_ERROR = 'Error compiling schema, function code:';
+/** `error` with Ajv's compile-failure line dropped; every other call passes through unchanged. */
+export function withoutCodegenError(
+  error: (...args: unknown[]) => void,
+): (...args: unknown[]) => void {
+  return (...args: unknown[]): void => {
+    if (args[0] === AJV_COMPILE_ERROR && args.length === 2 && typeof args[1] === 'string') return;
+    error(...args);
+  };
+}
+let codegenNoiseMuted = false;
+function muteCodegenNoise(): void {
+  if (codegenNoiseMuted) return;
+  codegenNoiseMuted = true;
   console.warn = withoutCodegenWarning(console.warn.bind(console));
+  console.error = withoutCodegenError(console.error.bind(console));
 }
 
 async function buildLane(env: CloudflareBindings, lane: X402Lane): Promise<MiddlewareHandler> {
-  muteCodegenWarning();
+  muteCodegenNoise();
   const [
     { paymentMiddleware },
     { HTTPFacilitatorClient, x402ResourceServer },

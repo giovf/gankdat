@@ -1,7 +1,7 @@
 import { createExecutionContext, env, SELF, waitOnExecutionContext } from 'cloudflare:test';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import worker from '../src/index';
-import { withoutCodegenWarning } from '../src/x402/routes';
+import { withoutCodegenError, withoutCodegenWarning } from '../src/x402/routes';
 import type { ErrorEnvelope } from '../src/lib/envelope';
 
 const X402_URL = 'https://example.com/x402/data/uk-planning';
@@ -311,6 +311,30 @@ describe('withoutCodegenWarning', () => {
     expect(seen).toEqual([
       ['x402: Route "GET /x402/data/uk-planning" has an invalid bazaar extension: missing input'],
       ['V2 discovery extension extraction failed: boom', { detail: 1 }],
+    ]);
+  });
+});
+
+// Same compile, Ajv's own error line (2026-10-18, `x402-ajv-compile-log-noise`): Ajv logs
+// `Error compiling schema, function code:` plus the generated validator source before it
+// rethrows, 17 lines per isolate start under workerd. Only that two-argument call is dropped.
+describe('withoutCodegenError', () => {
+  it('drops Ajv’s compile-failure line and nothing else', () => {
+    const seen: unknown[][] = [];
+    const error = withoutCodegenError((...args) => {
+      seen.push(args);
+    });
+    error(
+      'Error compiling schema, function code:',
+      'const schema1 = scope.schema[1];const func0 = Object.prototype.hasOwnProperty;return function validate0(data){…}',
+    );
+    error('Failed to load bazaar extension:', new Error('boom'));
+    error('Error compiling schema, function code:');
+    error('refresh_failed', { source: 'uk-planning' });
+    expect(seen).toEqual([
+      ['Failed to load bazaar extension:', expect.any(Error)],
+      ['Error compiling schema, function code:'],
+      ['refresh_failed', { source: 'uk-planning' }],
     ]);
   });
 });
