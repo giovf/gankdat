@@ -33,6 +33,14 @@ and every run died at import until 2026-10-11), and that every name a `main.mjs`
 A type that drifts fails every run — `uk-planning-applications` was flagged "under maintenance"
 by Apify QA on 2026-09-25 because `authority` was declared a string and served as a number.
 
+**Paused origin** (2026-10-19, `uk-planning`): when the API answers a run with its 503 `Origin paused`
+notice (the source's `DataSource.notice`), the actor's `main.mjs` catches that one failure and ends the
+run cleanly — status message = the dated notice, no items, nothing charged — because a run that fails
+on an empty origin is what QA flags (10-17, 6 failed of 22 runs) and what a buyer's schedule reports as
+broken. The README's first line says `Paused` with the date; the actor stays public. The catch is in
+that folder's `main.mjs` only (the template test checks the call, not the wrapper); remove both when
+the origin republishes (the weekly re-read item restores the source).
+
 ## Published actors (account `faceless-api`, 2026-09-20)
 
 | Folder | Actor id | Console |

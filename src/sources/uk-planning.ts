@@ -17,7 +17,11 @@ import { originFetch } from './origin';
 const ORIGIN_EMPTY_SINCE = '2026-10-10';
 /** The platform's dataset is empty — a real state, never masked by the dev fixture fallback. */
 class OriginEmptyError extends Error {}
-const NOTICE = `Origin paused: planning.data.gov.uk emptied its planning-application dataset on ${ORIGIN_EMPTY_SINCE} (entity-count 0, phase alpha). The snapshot of 2026-10-09 is served unchanged until the platform republishes.`;
+// 2026-10-19: the 10-09 snapshot expired on 10-16 (KV TTL × 7) and cannot be re-created from an
+// empty origin, so every surface answers this notice; the Apify actor ends its runs with it and no
+// results (apify/uk-planning/src/main.mjs) instead of failing — a paused surface, not a retirement
+// (STRATEGY §7 clock in RESEARCH.md). Everything resumes by itself when the platform republishes.
+const NOTICE = `Origin paused: planning.data.gov.uk emptied its planning-application dataset on ${ORIGIN_EMPTY_SINCE} (entity-count 0, phase alpha, no replacement named). Paused since then on every surface: the API, the MCP tool, x402 and the Apify actor answer this notice and no records until the platform republishes.`;
 const ORIGIN_URL = 'https://www.planning.data.gov.uk/entity.json';
 const PAGE_SIZE = 500;
 // Snapshot cap: KV values max 25 MB and Worker memory is bounded; v1 serves the

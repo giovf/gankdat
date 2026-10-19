@@ -161,6 +161,17 @@ describe('GET /stats', () => {
     expect(html).toContain('origin notice:');
     expect(html).toContain(planning.notice!.slice(0, 40));
     expect(html).toMatch(/<link rel="canonical" href="[^"]+\/stats\/uk-planning">/);
+    // 2026-10-19 (uk-planning-apify-pause): the state is one word in the headline, and the page
+    // names every paused surface, the Apify actor included, so a buyer reads it before a run.
+    expect(html).toContain('<tr><td>state</td><td><b>paused</b>');
+    expect(html).toContain('the Apify actor answer');
+  });
+
+  it('marks a paused source on the index and leaves live sources unmarked', async () => {
+    const res = await SELF.fetch('https://example.com/stats');
+    const html = await res.text();
+    expect(html).toMatch(/\/stats\/uk-planning">[^<]*<\/a>[^—]*· paused<\/span>/);
+    expect(html).toMatch(/\/stats\/uk-tenders">[^<]*<\/a>(?:(?!paused)[^—])*—/);
   });
 
   it('returns 503 (never refreshes) for a source whose stats are not yet computed', async () => {

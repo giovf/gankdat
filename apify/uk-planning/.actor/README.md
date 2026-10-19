@@ -1,3 +1,5 @@
+> **Paused (2026-10-19):** the source register is empty since 2026-10-10 — planning.data.gov.uk emptied its `planning-application` dataset (entity-count 0, no replacement named) — and this actor resumes when it republishes. Until then a run ends with **no results and no charge** and its status message says so; keep your schedule, it picks up by itself. Progress: gankdat.com/stats/uk-planning.
+
 # UK Planning Applications (planning.data.gov.uk)
 
 The most recent planning applications published on the official planning.data.gov.uk platform: entity id, **reference**, **local planning authority**, description, decision date, entry/start/end dates and a location point. Refreshed daily (Open Government Licence v3).

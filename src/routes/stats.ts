@@ -303,6 +303,17 @@ record with its URL and the <code>last_refreshed_at</code> the response carries.
 </main></body></html>`;
 }
 
+/**
+ * The `state` headline row (2026-10-19, uk-planning-apify-pause): a source with a `notice` is
+ * paused on every surface — REST, MCP, x402 and the Apify actor answer the notice and no
+ * records — and the page says so in one word before the numbers. Nothing for a live source.
+ */
+function stateRow(source: DataSource): string {
+  return source.notice
+    ? '<tr><td>state</td><td><b>paused</b> — see the origin notice</td></tr>\n'
+    : '';
+}
+
 /** The stats page of a source whose origin is paused and whose precomputed blob has expired. */
 function pausedPageHtml(source: DataSource, baseUrl: string): string {
   const notice = source.notice ?? '';
@@ -330,9 +341,13 @@ function pausedPageHtml(source: DataSource, baseUrl: string): string {
 <p class="muted">${esc(source.description)}</p>
 <p><b>origin notice:</b> ${esc(notice)}</p>
 <h2>headline</h2>
+<table><tbody>
+${stateRow(source)}<tr><td>records in dataset</td><td>none served while paused</td></tr>
+</tbody></table>
 <p class="muted">No statistics are published while the official source is paused; they return with
-the first refresh after it resumes. The <a href="/v1/data/${esc(source.slug)}">API</a> and the MCP tool
-<code>query_${esc(source.slug.replaceAll('-', '_'))}</code> answer with the same notice until then.</p>
+the first refresh after it resumes. The <a href="/v1/data/${esc(source.slug)}">API</a>, the MCP tool
+<code>query_${esc(source.slug.replaceAll('-', '_'))}</code>, the x402 route and the Apify actor answer
+with the same notice (and no records) until then; nothing is charged for a paused answer.</p>
 <h2>methodology</h2>
 <p class="muted">Computed from the official source the gankdat API reads — no scraping. This
 dataset's licence and personal-data posture are stated in the <a href="/terms">terms</a>.</p>
@@ -381,7 +396,7 @@ ${hasChangeFeed(source) ? `<link rel="alternate" type="application/atom+xml" tit
 ${source.notice ? `<p><b>origin notice:</b> ${esc(source.notice)}</p>` : ''}
 <h2>headline</h2>
 <table><tbody>
-<tr><td>records in dataset</td><td>${stats.total.toLocaleString('en-GB')}</td></tr>
+${stateRow(source)}<tr><td>records in dataset</td><td>${stats.total.toLocaleString('en-GB')}</td></tr>
 <tr><td>last refreshed</td><td>${esc(updated)}</td></tr>
 </tbody></table>
 ${sections.join('\n')}
@@ -415,7 +430,7 @@ export const statsRoutes = new Hono<AppEnv>()
     const items = listSources()
       .map(
         (s) =>
-          `<li><a href="/stats/${s.slug}">${esc(s.title)}</a>${hasChangeFeed(s) ? ' <span class="muted">· daily change feed</span>' : ''}${isLookup(s) ? ' <span class="muted">· on-demand lookup</span>' : ''} — <span class="muted">${esc(s.description)}</span></li>`,
+          `<li><a href="/stats/${s.slug}">${esc(s.title)}</a>${hasChangeFeed(s) ? ' <span class="muted">· daily change feed</span>' : ''}${isLookup(s) ? ' <span class="muted">· on-demand lookup</span>' : ''}${s.notice ? ' <span class="muted">· paused</span>' : ''} — <span class="muted">${esc(s.description)}</span></li>`,
       )
       .join('');
     c.header('Cache-Control', 'public, max-age=3600');
