@@ -172,3 +172,28 @@ export function shouldProbe(input: ProbeInput): ProbeDecision {
     };
   return { pay: false, reason: `${withClause.date} row reads "${clause}"` };
 }
+
+/**
+ * One job-log line per resource of ours the catalogue holds — `bazaar resource:
+ * https://gankdat.com/x402/data/uk-sanctions calls 3 payers 3 last 2026-10-18` — so a
+ * `bazaar:` clause can be read by resource without a token (2026-10-19,
+ * `x402-paid-by-source-reading`). Sorted by calls, most first.
+ */
+export function bazaarResourceLines(resources: BazaarResource[], base: string): string[] {
+  const prefix = base.replace(/\/+$/, '').toLowerCase() + '/';
+  return resources
+    .filter((r) => typeof r.resource === 'string' && r.resource.toLowerCase().startsWith(prefix))
+    .map((r) => ({
+      resource: String(r.resource),
+      calls: count(r.quality?.l30DaysTotalCalls),
+      payers: count(r.quality?.l30DaysUniquePayers),
+      last: (() => {
+        const at = r.quality?.lastCalledAt;
+        return typeof at === 'string' && /^\d{4}-\d{2}-\d{2}/.test(at) ? at.slice(0, 10) : 'never';
+      })(),
+    }))
+    .sort((a, b) => b.calls - a.calls || (a.resource < b.resource ? -1 : 1))
+    .map(
+      (r) => `bazaar resource: ${r.resource} calls ${r.calls} payers ${r.payers} last ${r.last}`,
+    );
+}

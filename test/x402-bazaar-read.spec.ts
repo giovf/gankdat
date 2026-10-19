@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   bazaarClause,
+  bazaarResourceLines,
   bazaarSummary,
   dailyRows,
   merchantResources,
@@ -158,5 +159,29 @@ describe('shouldProbe', () => {
     expect(
       shouldProbe({ hasKey: true, forced: false, today: '2026-11-01', research: paid }).pay,
     ).toBe(false);
+  });
+});
+
+describe('bazaarResourceLines', () => {
+  it('prints one line per resource of ours, most called first, and skips other sellers', () => {
+    const lines = bazaarResourceLines(
+      [
+        { resource: `${BASE}/x402/data/eu-ted`, quality: { l30DaysTotalCalls: 1 } },
+        {
+          resource: `${BASE}/x402/data/uk-sanctions`,
+          quality: {
+            l30DaysTotalCalls: 3,
+            l30DaysUniquePayers: 3,
+            lastCalledAt: '2026-10-18T09:01:00Z',
+          },
+        },
+        { resource: 'https://other.example/x402/data/x', quality: { l30DaysTotalCalls: 9 } },
+      ],
+      BASE,
+    );
+    expect(lines).toEqual([
+      `bazaar resource: ${BASE}/x402/data/uk-sanctions calls 3 payers 3 last 2026-10-18`,
+      `bazaar resource: ${BASE}/x402/data/eu-ted calls 1 payers 0 last never`,
+    ]);
   });
 });

@@ -23,8 +23,10 @@ import {
   zoneStatsRows,
 } from '../src/lib/crawler-hits.ts';
 import { afterWallNote, connectCallersNote, oauthFunnelNote } from '../src/lib/oauth-funnel.ts';
+import { x402CallsBySlug, x402Paid30dNote, x402PaidClause } from '../src/lib/x402-sales.ts';
 import {
   bazaarClause,
+  bazaarResourceLines,
   bazaarSummary,
   merchantResources,
   payToFromPaymentRequired,
@@ -692,8 +694,13 @@ async function sourceSlugs() {
   }
   return slugs;
 }
-/** `{ label, restWhere, mcpWhere }` → `datasets 30d<label>: <slug> N, …; 0: a, b`. */
-async function datasetQueries30d(label = '', restWhere = '', mcpWhere = '') {
+/**
+ * `{ label, restWhere, mcpWhere, extra }` → `datasets 30d<label>: <slug> N, …; 0: a, b`. `extra` is
+ * paid x402 calls per slug (2026-10-19, `x402-paid-by-source-reading`): a settled payment on a
+ * register is external demand §7's clock must see, so it counts in the total and the slug reads
+ * `uk-sanctions 3 (x402 3)`.
+ */
+async function datasetQueries30d(label = '', restWhere = '', mcpWhere = '', extra = null) {
   const slugs = await sourceSlugs();
   const counts = new Map([...slugs].map((s) => [s, 0]));
   const add = (slug, n) => {
@@ -711,16 +718,35 @@ async function datasetQueries30d(label = '', restWhere = '', mcpWhere = '') {
       if (tool.startsWith('query_')) add(tool.slice('query_'.length).replaceAll('_', '-'), r.n);
     }
   }
+  const paid = new Map();
+  for (const [slug, n] of extra ?? []) {
+    if (slugs.has(slug) && n > 0) {
+      add(slug, n);
+      paid.set(slug, n);
+    }
+  }
   const used = [...counts]
     .filter(([, n]) => n > 0)
     .sort((a, b) => b[1] - a[1])
-    .map(([s, n]) => `${s} ${Math.round(n)}`);
+    .map(([s, n]) => `${s} ${Math.round(n)}${paid.has(s) ? ` (x402 ${paid.get(s)})` : ''}`);
   const zero = [...counts]
     .filter(([, n]) => n === 0)
     .map(([s]) => s)
     .sort();
   return `datasets 30d${label}: ${used.length ? used.join(', ') : 'none'}${zero.length ? `; 0: ${zero.join(', ')}` : ''}`;
 }
+// What sold on the x402 lane (2026-10-19, `x402-paid-by-source-reading`): the `x402_paid` point
+// carries the UA (blob2), the slug (blob5) and the hashed client id (blob6), so the row names the
+// source, the distinct clients and the UA family behind its count — the lane's first three
+// external payments (10-17/18) reached the row as a bare `3 x402 paid`. Grouped reads for 24 h
+// and 30 d, the probe's user agent excluded; a failed read leaves the bare count in place.
+const x402PaidRows = (days) =>
+  ae(
+    `SELECT blob5 AS slug, blob2 AS ua, blob6 AS client, SUM(_sample_interval * double1) AS n FROM gankdat_traffic WHERE blob1 = 'x402_paid' AND blob2 NOT LIKE 'gankdat-x402-probe/%' AND timestamp > NOW() - INTERVAL '${days}' DAY GROUP BY slug, ua, client LIMIT 5000`,
+  ).catch(() => null);
+const x402Rows24 = await x402PaidRows(1);
+const x402Rows30 = await x402PaidRows(30);
+const x402Note30d = x402Paid30dNote(x402Rows30);
 const datasetsNote = await datasetQueries30d().catch(
   (e) => `datasets 30d: n/a (${e.message.slice(0, 100)})`,
 );
@@ -730,9 +756,12 @@ const internalAccountIds = await sql(`SELECT id FROM accounts WHERE ${INTERNAL_E
 const notIn = (blob) =>
   ` AND ${blob} != ''${internalAccountIds.length ? ` AND ${blob} NOT IN (${internalAccountIds.map((id) => `'${id}'`).join(', ')})` : ''}`;
 const datasetsExternalNote = internalAccountIds
-  ? await datasetQueries30d(' external', notIn('blob4'), notIn('blob6')).catch(
-      (e) => `datasets 30d external: n/a (${e.message.slice(0, 100)})`,
-    )
+  ? await datasetQueries30d(
+      ' external',
+      notIn('blob4'),
+      notIn('blob6'),
+      x402CallsBySlug(x402Rows30),
+    ).catch((e) => `datasets 30d external: n/a (${e.message.slice(0, 100)})`)
   : 'datasets 30d external: n/a (internal accounts unreadable from D1)';
 
 const date = new Date().toISOString().slice(0, 10);
@@ -744,7 +773,7 @@ const ownX402 = await ae(
 )
   .then((rows) => Math.round(Number(rows[0]?.n ?? 0)))
   .catch(() => 0);
-const sales = `${kinds.x402_paid ?? 0} x402 paid${ownX402 ? ` (+${ownX402} own probe)` : ''}`;
+const sales = `${x402PaidClause(kinds.x402_paid ?? 0, x402Rows24)}${ownX402 ? ` (+${ownX402} own probe)` : ''}`;
 
 const file = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'RESEARCH.md');
 let md = await readFile(file, 'utf8');
@@ -871,6 +900,7 @@ const bazaarNote = await (async () => {
     const total = Number(body?.pagination?.total ?? 0);
     if (items.length < 100 || resources.length >= total) break;
   }
+  for (const line of bazaarResourceLines(resources, x402Base)) console.log(line);
   return bazaarClause(bazaarSummary(resources, x402Base));
 })().catch((e) => `bazaar: n/a (${String(e instanceof Error ? e.message : e).slice(0, 100)})`);
 
@@ -883,6 +913,7 @@ const notes = [
   indexnowNote,
   x402ValidateNote,
   bazaarNote,
+  x402Note30d,
   mcpProbeNote,
   waveLogText,
   feedsNote,
