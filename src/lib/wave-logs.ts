@@ -14,6 +14,18 @@
  * `$workers.outcome` (ok / exceededCpu / exceededMemory / canceled / exception) and wall time
  * name what the platform did to the wave even when the Worker wrote nothing; noise lines are
  * dropped before the newest line is picked and a structured refresh event wins over a bare line.
+ *
+ * What the invocation query actually reads (gankdat `wave-log-cron-query-blind`, 2026-10-22, from the
+ * 10-18..10-22 metrics job logs): the query is not blind — on 10-21 it returned two `ok` rows (wall
+ * 79.8 s and 79.0 s) and on 10-22 one (104.0 s), each row's timestamp being the invocation's END
+ * (10-21: 05:02:15.7 − 79.8 s = 05:00:56, the second uk-planning's first error line was written).
+ * But it is not complete either: on 10-18, 10-19 and 10-20 the same query answered 200 with no row
+ * at all while the wave's D1 rows exist, and on 10-22 the 05:15 wave left no row where 10-21's did.
+ * So `no invocation logged` stays the wording (the progress marker is the reading of a silent wave),
+ * and because the needle is a substring — `0 5 * * *` is inside `30 5 * * *` and `50 5 * * *` —
+ * and the live rows carried no readable cron (10-21's second row ended 79 s after the 05:15 wave
+ * began), a row whose cron could not be read is reported as `(cron unread)` and ranks behind one
+ * whose cron matches; the runner prints the first raw row whenever a parsed row lacks its cron.
  */
 
 /** Workers observability Query Builder endpoint, relative to the account. */
@@ -282,15 +294,18 @@ function invocationOf(raw: unknown): WaveInvocation | null {
 
 /**
  * Invocations in the response body, newest first; rows that carry a cron other than `cron`
- * (a filter the API ignored) are left out, rows without one are kept.
+ * (a filter the API ignored) are left out, rows without one are kept but rank behind every row
+ * whose cron matches (2026-10-22: the needle is a substring and the live rows carried no readable
+ * cron, so a cron-less row may belong to another wave).
  */
 export function parseWaveInvocations(body: unknown, cron?: string): WaveInvocation[] {
   const result = isRecord(body) && 'result' in body ? body.result : body;
   const rows = firstArray(result) ?? [];
+  const known = (i: WaveInvocation): number => (cron && i.cron === cron ? 0 : 1);
   return rows
     .map(invocationOf)
     .filter((i): i is WaveInvocation => i !== null && (!cron || !i.cron || i.cron === cron))
-    .sort((a, b) => b.at.localeCompare(a.at));
+    .sort((a, b) => known(a) - known(b) || b.at.localeCompare(a.at));
 }
 
 /** `HH:MM` of a daily cron (`5 6 * * *` → `06:05`); the cron itself when it is not one. */
@@ -307,17 +322,23 @@ const ageText = (fromIso: string, nowMs: number): string => {
   return h < 1 ? `${Math.max(0, Math.round(ms / 60_000))} min ago` : `${h.toFixed(1)} h ago`;
 };
 
-/** `wave 06:05: exceededCpu 900.0s 18.3 h ago` — what the platform did to the source's wave. */
+/**
+ * `wave 06:05: exceededCpu 900.0s 18.3 h ago` — what the platform did to the source's wave; the
+ * timestamp is the invocation's end. `(cron unread)` when the row named no cron, so it may be
+ * another wave's (2026-10-22).
+ */
 export function waveInvocationText(wave: WaveInvocationResult, nowMs: number): string {
   const head = `wave ${cronClock(wave.cron)}:`;
   if (wave.reason) return `${head} n/a (${wave.reason})`;
   const last = wave.invocations[0];
   // "logged", not "fired": on 2026-10-16 the query returned no line from any cron wave, for
-  // sources that verifiably refreshed, so an empty answer says nothing about the trigger.
+  // sources that verifiably refreshed, and on 10-18..10-20 no row for a wave whose D1 rows exist,
+  // so an empty answer says nothing about the trigger.
   if (!last) return `${head} no invocation logged in ${WAVE_INVOCATION_HOURS} h`;
   const wall = last.wallTimeMs === null ? '' : ` ${(last.wallTimeMs / 1000).toFixed(1)}s`;
   const age = last.at ? ` ${ageText(last.at, nowMs)}` : '';
-  return `${head} ${last.outcome}${wall}${age}`;
+  const unread = last.cron === null ? ' (cron unread)' : '';
+  return `${head} ${last.outcome}${wall}${age}${unread}`;
 }
 
 /**

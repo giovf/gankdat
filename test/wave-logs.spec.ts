@@ -238,7 +238,7 @@ describe('parseWaveInvocations', () => {
     expect(parseWaveInvocations(null, '5 6 * * *')).toEqual([]);
   });
 
-  it('knows a documented invocation log by its type and reads the cron from its message', () => {
+  it('knows a documented invocation log by its type, reads the cron from its message and ranks a matched cron ahead of an unread one', () => {
     const rows = [
       {
         $metadata: {
@@ -259,14 +259,9 @@ describe('parseWaveInvocations', () => {
         $metadata: { type: 'cf-worker-event-log', message: '5 6 * * *', timestamp: 1 },
       },
     ];
+    // The newer row names no cron (the substring needle also matches another wave's row), so the
+    // older row whose cron is this wave's is the one to read (2026-10-22).
     expect(parseWaveInvocations({ result: { events: { events: rows } } }, '5 6 * * *')).toEqual([
-      {
-        at: '2026-10-16T06:06:01.000Z',
-        outcome: 'unknown',
-        wallTimeMs: null,
-        cpuTimeMs: null,
-        cron: null,
-      },
       {
         at: '2026-10-16T06:05:01.000Z',
         outcome: 'unknown',
@@ -274,7 +269,18 @@ describe('parseWaveInvocations', () => {
         cpuTimeMs: null,
         cron: '5 6 * * *',
       },
+      {
+        at: '2026-10-16T06:06:01.000Z',
+        outcome: 'unknown',
+        wallTimeMs: null,
+        cpuTimeMs: null,
+        cron: null,
+      },
     ]);
+    // Without a cron to match, newest first as before.
+    expect(parseWaveInvocations({ result: { events: { events: rows } } }).map((i) => i.at)).toEqual(
+      ['2026-10-16T06:06:01.000Z', '2026-10-16T06:05:01.000Z'],
+    );
   });
 });
 
@@ -304,6 +310,18 @@ describe('waveInvocationText', () => {
         NOW,
       ),
     ).toBe('wave 06:05: exceededCpu 10 min ago');
+    // A row that named no cron may be another wave's (the 10-21 reading, 2026-10-22): say so.
+    expect(
+      waveInvocationText(
+        {
+          cron: '0 5 * * *',
+          status: 200,
+          invocations: [{ ...inv, outcome: 'ok', wallTimeMs: 79024, cron: null }],
+          reason: null,
+        },
+        NOW,
+      ),
+    ).toBe('wave 05:00: ok 79.0s 10 min ago (cron unread)');
     expect(
       waveInvocationText({ cron: '0 5 * * *', status: 200, invocations: [], reason: null }, NOW),
     ).toBe('wave 05:00: no invocation logged in 26 h');

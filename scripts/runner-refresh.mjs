@@ -214,9 +214,11 @@ function readWaveInvocation(cron, now) {
       console.log(`wave cron ${cron}: ${invocations.length} invocation(s) in 26 h`);
       for (const i of invocations)
         console.log(
-          `  ${i.at} outcome=${i.outcome} wall=${i.wallTimeMs ?? 'n/a'}ms cpu=${i.cpuTimeMs ?? 'n/a'}ms`,
+          `  ${i.at} outcome=${i.outcome} wall=${i.wallTimeMs ?? 'n/a'}ms cpu=${i.cpuTimeMs ?? 'n/a'}ms cron=${i.cron ?? 'unread'}`,
         );
-      if (invocations.length === 0) {
+      // The raw row is printed when none parsed and when a parsed row names no cron (2026-10-22:
+      // the 10-21 rows carried none, so the next log shows where the live shape keeps it).
+      if (invocations.length === 0 || invocations.some((i) => i.cron === null)) {
         const result = q.body?.result ?? q.body;
         const rows = result?.events?.events ?? result?.events ?? result;
         const first = Array.isArray(rows) ? rows[0] : undefined;
