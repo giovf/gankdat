@@ -33,6 +33,8 @@ export interface BazaarSummary {
 
 interface PaymentRequired {
   accepts?: { payTo?: string }[];
+  error?: string;
+  extensions?: { bazaar?: { info?: { input?: { queryParams?: unknown } } } };
 }
 
 const decodeBase64 = (value: string): string => atob(value);
@@ -61,6 +63,50 @@ export function payToFromPaymentRequired(header: string | null, body: unknown): 
     }
   }
   return firstPayTo(body);
+}
+
+/** The 402's own reason (`error` in the PAYMENT-REQUIRED document), or null. */
+export function errorFromPaymentRequired(header: string | null): string | null {
+  if (!header) return null;
+  try {
+    const error = (JSON.parse(decodeBase64(header.trim())) as PaymentRequired | null)?.error;
+    return typeof error === 'string' && error.trim() ? error.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+export type ExampleQuery = Record<string, string | number | boolean>;
+
+/**
+ * The example query the route declares for the Bazaar (`extensions.bazaar.info.input.queryParams`
+ * in the 402's PAYMENT-REQUIRED document) — what the catalogue's indexer sends, so a probe call
+ * that uses it is the exact call the listing shows (a lookup route needs its key, 2026-10-23:
+ * `?per_page=1` on uk-company-profiles answered 400 and settled nothing).
+ */
+export function exampleQueryFromPaymentRequired(header: string | null): ExampleQuery | null {
+  if (!header) return null;
+  try {
+    const params = (JSON.parse(decodeBase64(header.trim())) as PaymentRequired | null)?.extensions
+      ?.bazaar?.info?.input?.queryParams;
+    if (!params || typeof params !== 'object' || Array.isArray(params)) return null;
+    const out: ExampleQuery = {};
+    for (const [key, value] of Object.entries(params as Record<string, unknown>)) {
+      if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean')
+        out[key] = value;
+    }
+    return Object.keys(out).length ? out : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The route URL with the query — the declared example, else one record. */
+export function routeUrl(base: string, slug: string, query: ExampleQuery | null): string {
+  const url = new URL(`${base.replace(/\/+$/, '')}/x402/data/${slug}`);
+  for (const [key, value] of Object.entries(query ?? { per_page: 1 }))
+    url.searchParams.set(key, String(value));
+  return url.toString();
 }
 
 /** The resource list of a merchant or discovery response, whichever key the API used. */

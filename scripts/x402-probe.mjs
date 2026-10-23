@@ -22,9 +22,15 @@ import {
   PROBE_MONTHLY_CAP,
   ownProbePayments,
   probeTargets,
+  routeUrl,
   shouldProbe,
 } from './x402-bazaar-read.ts';
-import { readLiveSlugs, readMerchantCatalogue, readPayTo } from './x402-catalogue.mjs';
+import {
+  readExampleQuery,
+  readLiveSlugs,
+  readMerchantCatalogue,
+  readPayTo,
+} from './x402-catalogue.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const base = (process.env.PUBLIC_BASE_URL || 'https://gankdat.com').replace(/\/+$/, '');
@@ -63,11 +69,14 @@ if (!targets.length) {
 const client = path.join(here, 'x402-test-client.mjs');
 const paid = [];
 const failed = [];
+const UA = 'gankdat-x402-probe/2 (+https://gankdat.com)';
 for (const target of targets) {
   console.log(`\n--- ${target.slug} (${target.reason}) ---`);
+  // The declared example query (what the Bazaar's indexer sends): a lookup route needs its key.
+  const query = await readExampleQuery(base, target.slug, UA).catch(() => null);
   const run = spawnSync(process.execPath, [client], {
     stdio: 'inherit',
-    env: { ...process.env, X402_TARGET: target.url },
+    env: { ...process.env, X402_TARGET: routeUrl(base, target.slug, query) },
   });
   (run.status === 0 ? paid : failed).push(target.slug);
   // The facilitator settles one transfer per call; a short gap keeps the receipts readable.

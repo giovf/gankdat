@@ -78,15 +78,30 @@ export function leadingSentences(text: string, budget = DESCRIPTION_BUDGET): str
 }
 
 /**
+ * The CDP facilitator rejects verify and settle when the resource description exceeds 500
+ * characters (seller docs, read 2026-10-23) — so a longer description is not a listing problem
+ * but a route that can never take a payment: 13 of 17 routes were over it from v0.25.0 to
+ * v0.25.3, and the 2026-10-23 probe round settled only on the two under it.
+ */
+export const DESCRIPTION_MAX = 500;
+
+/**
  * The plain, declarative description the catalogue shows agents deciding whether to call:
  * the source's own one-liner cut to whole sentences (the registry descriptions run to 600+
- * chars for the large registers; a catalogue card reads at ~400) plus what one call returns.
+ * chars for the large registers; a catalogue card reads at ~400) plus what one call returns,
+ * never longer than `DESCRIPTION_MAX` in all.
  */
 export function bazaarDescription(source: DataSource): string {
   const shape = source.lookup
     ? 'One call returns one record as JSON.'
     : 'One call returns one page of matching records as JSON (25 by default, per_page up to 100) with the total count and the last refresh time; the query parameters filter the records.';
-  return `${source.title}. ${leadingSentences(source.description)} ${shape}`;
+  const head = `${source.title}.`;
+  const budget = Math.min(DESCRIPTION_BUDGET, DESCRIPTION_MAX - head.length - shape.length - 2);
+  const summary = leadingSentences(source.description, budget);
+  const full = `${head} ${summary} ${shape}`;
+  if (full.length <= DESCRIPTION_MAX) return full;
+  // the first sentence alone is over budget: the title and the shape still describe the call
+  return `${head} ${shape}`.slice(0, DESCRIPTION_MAX);
 }
 
 /** ≤ 5 short tags: two shared ones plus the slug's words (the catalogue drops anything longer). */

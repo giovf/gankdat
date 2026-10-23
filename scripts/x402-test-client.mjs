@@ -97,6 +97,17 @@ try {
   const body = await res.json();
   console.log('\nData received:\n', JSON.stringify(body, null, 2).slice(0, 700));
   if (res.status !== 200 || !settlement) {
+    // A 402 to a signed payment carries the facilitator's reason in PAYMENT-REQUIRED `error`
+    // (2026-10-23: 13 routes answered 402 because their description exceeded CDP's 500 chars).
+    const required = res.headers.get('payment-required');
+    if (required) {
+      try {
+        const doc = JSON.parse(Buffer.from(required, 'base64').toString('utf8'));
+        if (doc?.error) console.error('Payment rejected:', String(doc.error).slice(0, 300));
+      } catch {
+        // unreadable header — the status line below is all we know
+      }
+    }
     console.error('\n❌ No settlement: the response above says why (402 = payment not accepted).');
     process.exit(1);
   }

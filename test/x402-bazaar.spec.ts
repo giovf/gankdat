@@ -2,6 +2,7 @@ import { declareDiscoveryExtension, validateBazaarRouteExtensions } from '@x402/
 import { describe, expect, it } from 'vitest';
 import { listSources } from '../src/sources/registry';
 import {
+  DESCRIPTION_MAX,
   bazaarDescription,
   bazaarExampleInput,
   bazaarInputSchema,
@@ -62,7 +63,8 @@ describe('x402 Bazaar declarations', () => {
       // Content policy: no second person, no imperatives aimed at the reader.
       expect(description, source.slug).not.toMatch(/\b(you|your|please|must|ignore|always)\b/i);
       expect(description, source.slug).not.toMatch(/\b(use|call|try|send|pass) (this|it)\b/i);
-      expect(description.length, source.slug).toBeLessThan(700);
+      // the CDP facilitator rejects verify/settle above 500 chars: 13 routes were unpayable until 10-23
+      expect(description.length, source.slug).toBeLessThanOrEqual(DESCRIPTION_MAX);
     }
   });
 

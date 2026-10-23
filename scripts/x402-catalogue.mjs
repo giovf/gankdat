@@ -2,7 +2,11 @@
 // 2026-10-23): one place for the three keyless reads `scripts/metrics.mjs` (the `bazaar:` clause)
 // and `scripts/x402-probe.mjs` (which routes to pay) share. Plain Node, builtins only; the pure
 // parsing stays in ./x402-bazaar-read.ts.
-import { merchantResources, payToFromPaymentRequired } from './x402-bazaar-read.ts';
+import {
+  exampleQueryFromPaymentRequired,
+  merchantResources,
+  payToFromPaymentRequired,
+} from './x402-bazaar-read.ts';
 
 export const CDP = 'https://api.cdp.coinbase.com/platform/v2/x402';
 
@@ -47,4 +51,18 @@ export async function readMerchantCatalogue(payTo) {
     if (items.length < 100 || resources.length >= total) break;
   }
   return resources;
+}
+
+/**
+ * The example query a route declares for the Bazaar, from its unpaid 402 (keyless): the call
+ * the catalogue's indexer makes, so the probe makes the same one. Null when the route answers
+ * no 402 (paused, 503) or declares no query.
+ */
+export async function readExampleQuery(base, slug, userAgent) {
+  const unpaid = await fetch(`${base}/x402/data/${slug}`, {
+    headers: { 'User-Agent': userAgent },
+    signal: AbortSignal.timeout(15_000),
+  });
+  await unpaid.body?.cancel();
+  return exampleQueryFromPaymentRequired(unpaid.headers.get('payment-required'));
 }

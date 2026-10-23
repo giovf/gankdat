@@ -6,10 +6,13 @@ import {
   bazaarResourceLines,
   bazaarSummary,
   dailyRows,
+  errorFromPaymentRequired,
+  exampleQueryFromPaymentRequired,
   merchantResources,
   ownProbePayments,
   payToFromPaymentRequired,
   probeTargets,
+  routeUrl,
   shouldProbe,
 } from '../scripts/x402-bazaar-read';
 
@@ -31,6 +34,38 @@ describe('payToFromPaymentRequired', () => {
     expect(payToFromPaymentRequired('not-base64!', { accepts: [{ payTo: WALLET }] })).toBe(WALLET);
     expect(payToFromPaymentRequired(encode({ accepts: [{ payTo: 'bob' }] }), null)).toBeNull();
     expect(payToFromPaymentRequired(null, { error: 'payment_required' })).toBeNull();
+  });
+});
+
+describe('exampleQueryFromPaymentRequired + routeUrl + errorFromPaymentRequired', () => {
+  it('reads the declared example query and builds the call the indexer makes', () => {
+    const header = encode({
+      x402Version: 2,
+      accepts: [{ payTo: WALLET }],
+      extensions: {
+        bazaar: {
+          info: {
+            input: { type: 'http', queryParams: { company_number: '00000006', nested: {} } },
+          },
+        },
+      },
+    });
+    expect(exampleQueryFromPaymentRequired(header)).toEqual({ company_number: '00000006' });
+    expect(routeUrl(`${BASE}/`, 'uk-company-profiles', { company_number: '00000006' })).toBe(
+      `${BASE}/x402/data/uk-company-profiles?company_number=00000006`,
+    );
+    expect(routeUrl(BASE, 'uk-tenders', null)).toBe(`${BASE}/x402/data/uk-tenders?per_page=1`);
+    expect(exampleQueryFromPaymentRequired(encode({ extensions: { bazaar: {} } }))).toBeNull();
+    expect(exampleQueryFromPaymentRequired(null)).toBeNull();
+    expect(exampleQueryFromPaymentRequired('nope')).toBeNull();
+  });
+
+  it('reads the facilitator reason from a 402 to a signed payment', () => {
+    expect(
+      errorFromPaymentRequired(encode({ error: 'invalid_payment: description too long' })),
+    ).toBe('invalid_payment: description too long');
+    expect(errorFromPaymentRequired(encode({ error: '' }))).toBeNull();
+    expect(errorFromPaymentRequired(null)).toBeNull();
   });
 });
 
