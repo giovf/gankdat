@@ -576,6 +576,39 @@ describe('/authorize', () => {
     );
   });
 
+  it('accepts every canonical spelling of its own resource and refuses any other host or path', async () => {
+    // MCP authorization spec: https://mcp.example.com/mcp, https://mcp.example.com and the port form
+    // are valid for one server; upper-case scheme and host SHOULD be accepted; the trailing slash is
+    // only discouraged. The two /authorize calls of 10-20..10-23 were refused on a string compare.
+    // Own IPs: /authorize is limited per IP for the whole file.
+    let ip = 0;
+    for (const resource of [
+      `${PUBLIC}`,
+      `${PUBLIC}/`,
+      `${PUBLIC}/mcp/`,
+      'HTTPS://GANKDAT.COM/mcp',
+      'https://gankdat.com:443/mcp',
+    ]) {
+      const ok = await startAuthorize({ resource }, `198.51.100.${(ip += 1)}`);
+      expect(ok.res.status, resource).toBe(200);
+      expect(ok.requestId, resource).not.toBeNull();
+    }
+    for (const resource of [
+      `${PUBLIC}/other`,
+      `${PUBLIC}/mcp#frag`,
+      `${PUBLIC}/mcp?x=1`,
+      'http://gankdat.com/mcp',
+      'https://gankdat.com:8443/mcp',
+      'not a url',
+    ]) {
+      const bad = await startAuthorize({ resource }, `198.51.100.${(ip += 1)}`);
+      expect(bad.res.status, resource).toBe(302);
+      expect(new URL(bad.res.headers.get('location')!).searchParams.get('error'), resource).toBe(
+        'invalid_target',
+      );
+    }
+  });
+
   it('shows consent straight away for a signed-in browser and lets the user cancel', async () => {
     const first = await startAuthorize();
     const cookie = await signInViaMagicLink(first.requestId!, 'cancel@example.com');
@@ -869,6 +902,7 @@ describe('connect funnel points', () => {
     stubOutbound();
     await startAuthorize({ redirect_uri: 'https://evil.example/cb' });
     await startAuthorize({ code_challenge_method: 'plain' });
+    await startAuthorize({ resource: 'https://other.example/mcp' }, '198.51.100.99');
     await SELF.fetch(`${BASE}/authorize`, { headers: { 'CF-Connecting-IP': '203.0.113.42' } });
     await SELF.fetch(`${BASE}/authorize?request=${'0'.repeat(32)}`, {
       headers: { 'CF-Connecting-IP': '203.0.113.42' },
@@ -893,6 +927,7 @@ describe('connect funnel points', () => {
       ['authorize_rejected', 'claude.ai', 'unknown_client'],
       ['authorize_rejected', 'claude.ai', 'redirect_not_allowed'],
       ['authorize_rejected', 'claude.ai', 'invalid_request: code_challenge_method must be S256'],
+      ['authorize_rejected', 'claude.ai', 'invalid_target: https://other.example/mcp'],
       ['authorize_rejected', '', 'bad_query'],
       ['expired', '', 'authorize'],
       ['authorize', 'claude.ai', ''],

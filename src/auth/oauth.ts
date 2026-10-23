@@ -58,6 +58,31 @@ export function resourceUrl(env: CloudflareBindings): string {
   return `${publicBaseUrl(env)}/mcp`;
 }
 
+/**
+ * RFC 8707 resource indicator check (2026-10-23, `oauth-resource-indicator-variants`): the MCP
+ * authorization spec lists `https://mcp.example.com/mcp`, `https://mcp.example.com` and the port
+ * form as valid canonical URIs for one server, asks implementations to accept an upper-case scheme
+ * and host, and only discourages the trailing slash — while a strict string compare refused every
+ * /authorize call of 10-20..10-23 (2 of 2, the Daily numbers row). So the value is parsed and
+ * compared normalised: https, this host (the URL parser lowercases it and drops an explicit :443),
+ * no query, no fragment (invalid per the spec), and a path that is empty, `/` or `/mcp` with or
+ * without the slash. Any other host or path is still refused.
+ */
+export function resourceMatches(env: CloudflareBindings, value: string): boolean {
+  let sent: URL;
+  let own: URL;
+  try {
+    sent = new URL(value);
+    own = new URL(resourceUrl(env));
+  } catch {
+    return false;
+  }
+  if (sent.protocol !== own.protocol || sent.host !== own.host) return false;
+  if (sent.search !== '' || sent.hash !== '' || value.endsWith('#')) return false;
+  const path = sent.pathname.replace(/\/+$/, '');
+  return path === '' || path === own.pathname.replace(/\/+$/, '');
+}
+
 export function resourceMetadataUrl(env: CloudflareBindings): string {
   return `${publicBaseUrl(env)}/.well-known/oauth-protected-resource/mcp`;
 }
@@ -490,7 +515,8 @@ export interface AuthRequest extends AuthRequestInput {
 export type AuthorizeParamError =
   | { error: 'invalid_request'; description: string }
   | { error: 'invalid_scope'; description: string }
-  | { error: 'invalid_target'; description: string };
+  /** `sent` is the value the client passed — the funnel's detail names it, the redirect does not. */
+  | { error: 'invalid_target'; description: string; sent: string };
 
 /**
  * Validate the protocol parameters of an /authorize request once the client
@@ -513,8 +539,12 @@ export function validateAuthorizeParams(
   if (scopes.some((s) => s !== OAUTH_SCOPE && s !== 'offline_access')) {
     return { error: 'invalid_scope', description: `supported scopes: ${OAUTH_SCOPE}` };
   }
-  if (q.resource && q.resource !== resourceUrl(env)) {
-    return { error: 'invalid_target', description: `resource must be ${resourceUrl(env)}` };
+  if (q.resource && !resourceMatches(env, q.resource)) {
+    return {
+      error: 'invalid_target',
+      description: `resource must be ${resourceUrl(env)}`,
+      sent: q.resource,
+    };
   }
   return null;
 }

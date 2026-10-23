@@ -22,6 +22,7 @@ import {
   registrationResponse,
   REQUEST_ID_RE,
   resolveClient,
+  resourceUrl,
   validateAuthorizeParams,
 } from '../auth/oauth';
 import type { AuthRequest, TokenResult } from '../auth/oauth';
@@ -313,11 +314,15 @@ export const oauthRoutes = new Hono<AppEnv>()
     }
     const paramError = validateAuthorizeParams(c.env, q);
     if (paramError) {
+      // An invalid_target names the value the client sent (the row's `rejected (…)` reading showed
+      // only our own description for the two refusals of 10-20..10-23); the redirect keeps the spec text.
       funnel(
         c,
         'authorize_rejected',
         q.client_id,
-        `${paramError.error}: ${paramError.description}`,
+        paramError.error === 'invalid_target'
+          ? `invalid_target: ${paramError.sent.replace(/[()|]/g, '_').slice(0, 120)}`
+          : `${paramError.error}: ${paramError.description}`,
       );
       return c.redirect(
         redirectWith(q.redirect_uri, {
@@ -334,7 +339,8 @@ export const oauthRoutes = new Hono<AppEnv>()
       state: q.state ?? null,
       codeChallenge: q.code_challenge!,
       scope: OAUTH_SCOPE,
-      resource: q.resource ?? null,
+      // Stored in canonical form whatever valid spelling the client sent.
+      resource: q.resource ? resourceUrl(c.env) : null,
     });
     funnel(c, 'authorize', q.client_id);
     return renderAuthorize(c, req);
