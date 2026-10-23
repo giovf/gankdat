@@ -75,6 +75,25 @@ try {
     if (receipt.transaction)
       console.log('Transaction:', `${network.explorer}/tx/${receipt.transaction}`);
   }
+  // The facilitator's Bazaar verdict for this resource rides the settle response (CDP docs
+  // 2026-10-23: `success` = catalogued, `processing` = catalogued asynchronously within 15 min,
+  // `rejected` + rejectedReason = the metadata failed screening; no key = discovery not submitted).
+  const extensions = res.headers.get('extension-responses');
+  if (extensions) {
+    try {
+      const bazaar = JSON.parse(Buffer.from(extensions, 'base64').toString('utf8'))?.bazaar;
+      console.log(
+        'Bazaar status:',
+        bazaar
+          ? `${bazaar.status}${bazaar.rejectedReason ? ` (${bazaar.rejectedReason})` : ''}`
+          : 'not submitted',
+      );
+    } catch {
+      console.log('Bazaar status: unreadable EXTENSION-RESPONSES header');
+    }
+  } else if (settlement) {
+    console.log('Bazaar status: no EXTENSION-RESPONSES header on the settle response');
+  }
   const body = await res.json();
   console.log('\nData received:\n', JSON.stringify(body, null, 2).slice(0, 700));
   if (res.status !== 200 || !settlement) {

@@ -136,16 +136,44 @@ const daysBetween = (a: string, b: string): number =>
   Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) / 86_400_000);
 
 /**
- * Whether the runner spends half a cent today from the probe wallet (action 026 option B):
- * never without the key; always on a forced dispatch; otherwise only when no probe or owner call
- * (`own probe` on a row) landed in the last 7 days AND either the latest `bazaar:` clause still
- * reads `0 listed` (the catalogue has not indexed us — repeat the onboarding payment) or today is
- * the 1st (a monthly liveness payment keeps `lastCalledAt` fresh). An `n/a` clause (the read
- * failed) or no clause at all (the owner makes the first call) never pays.
+ * Half-cent probe payments the rows of the last `days` days record (`(+N own probe)` in the sales
+ * cell — each payment reaches exactly one row, the next morning's).
+ */
+export function ownProbePayments(research: string, today: string, days = 30): number {
+  let n = 0;
+  for (const r of dailyRows(research)) {
+    const age = daysBetween(today, r.date);
+    if (age < 0 || age > days) continue;
+    const m = /\(\+(\d+) own probe\)/.exec(r.text);
+    if (m) n += Number(m[1]);
+  }
+  return n;
+}
+
+/**
+ * The most half-cent calls the probe wallet pays in any 30 days: every route once (the catalogue
+ * drops a resource 30 days after its last settlement, CDP docs 2026-10-23) plus three re-screens
+ * — US$0.10 a month at most, whatever the catalogue does.
+ */
+export const PROBE_MONTHLY_CAP = 20;
+
+/**
+ * Whether the runner reads the catalogue and pays what is due today (action 026 option B): never
+ * without the key; always on a forced dispatch; otherwise only when no probe or owner call
+ * (`own probe` on a row) landed in the last 7 days and the 30-day cap is not spent. Which routes
+ * get a payment is `probeTargets` on the live catalogue: the 10-23 reading showed CDP indexes
+ * one resource per settled payment (uk-tenders, the only route ever paid, was the only one of 17
+ * listed after a week), so `0 listed` and the old monthly liveness call are both covered by it.
  */
 export function shouldProbe(input: ProbeInput): ProbeDecision {
   if (!input.hasKey)
     return { pay: false, reason: 'X402_PROBE_KEY is not set (action 026 option B)' };
+  const spent = ownProbePayments(input.research, input.today);
+  if (input.forced && spent >= PROBE_MONTHLY_CAP)
+    return {
+      pay: false,
+      reason: `forced, but the 30-day cap is spent (${spent} of ${PROBE_MONTHLY_CAP} half-cents)`,
+    };
   if (input.forced) return { pay: true, reason: 'forced by the workflow_dispatch input' };
   const rows = dailyRows(input.research);
   const recent = rows.find(
@@ -156,21 +184,78 @@ export function shouldProbe(input: ProbeInput): ProbeDecision {
   );
   if (recent)
     return { pay: false, reason: `a probe payment landed on ${recent.date} (7-day spacing)` };
-  const withClause = rows.find((r) => /bazaar: /.test(r.text));
-  const clause = withClause ? (/bazaar: [^;|]*/.exec(withClause.text)?.[0] ?? '') : '';
-  if (input.today.endsWith('-01'))
-    return { pay: true, reason: 'monthly liveness payment (1st of the month)' };
-  if (!withClause)
+  if (spent >= PROBE_MONTHLY_CAP)
     return {
       pay: false,
-      reason: 'no bazaar clause on any row yet (the owner makes the first call)',
+      reason: `30-day cap spent (${spent} of ${PROBE_MONTHLY_CAP} half-cents)`,
     };
-  if (/bazaar: 0 listed/.test(clause))
-    return {
-      pay: true,
-      reason: `${withClause.date} row reads "${clause}": repeat the indexing payment`,
-    };
-  return { pay: false, reason: `${withClause.date} row reads "${clause}"` };
+  return {
+    pay: true,
+    reason: `no probe payment in 7 days (${spent} of ${PROBE_MONTHLY_CAP} half-cents in 30 d): reading the catalogue`,
+  };
+}
+
+export interface ProbeTarget {
+  slug: string;
+  url: string;
+  /** `unlisted`, `stale 25 d`, `never called` or `forced`. */
+  reason: string;
+}
+
+export interface ProbeTargetsInput {
+  /** Live x402 route slugs (`/v1/data`). */
+  slugs: string[];
+  /** The catalogue's resources under our payTo (`merchantResources`). */
+  resources: BazaarResource[];
+  base: string;
+  today: string;
+  forced: boolean;
+  /** Days since the last settlement after which a listed route is paid again (default 23). */
+  staleDays?: number;
+}
+
+/**
+ * The routes that need a settled payment today, each with why: every route the catalogue does
+ * not list (CDP indexes per resource), and every listed route whose last settlement is `staleDays`
+ * old or unknown (a resource leaves the catalogue 30 days after its last settlement; 23 leaves
+ * the weekly probe one more chance). A forced run pays every route (a re-screen after a
+ * metadata change is per resource too). The URL asks for one record, the cheapest paid call.
+ */
+export function probeTargets(input: ProbeTargetsInput): ProbeTarget[] {
+  const base = input.base.replace(/\/+$/, '');
+  const prefix = base.toLowerCase() + '/x402/data/';
+  const staleDays = input.staleDays ?? 23;
+  const listed = new Map<string, BazaarResource>();
+  for (const r of input.resources) {
+    const resource = typeof r.resource === 'string' ? r.resource.toLowerCase() : '';
+    if (!resource.startsWith(prefix)) continue;
+    const slug = resource
+      .slice(prefix.length)
+      .replace(/[?#].*$/, '')
+      .replace(/\/+$/, '');
+    if (slug && !listed.has(slug)) listed.set(slug, r);
+  }
+  const targets: ProbeTarget[] = [];
+  for (const slug of input.slugs) {
+    const url = `${base}/x402/data/${slug}?per_page=1`;
+    if (input.forced) {
+      targets.push({ slug, url, reason: 'forced' });
+      continue;
+    }
+    const entry = listed.get(slug.toLowerCase());
+    if (!entry) {
+      targets.push({ slug, url, reason: 'unlisted' });
+      continue;
+    }
+    const at = entry.quality?.lastCalledAt;
+    if (typeof at !== 'string' || !/^\d{4}-\d{2}-\d{2}/.test(at)) {
+      targets.push({ slug, url, reason: 'never called' });
+      continue;
+    }
+    const age = daysBetween(input.today, at.slice(0, 10));
+    if (age >= staleDays) targets.push({ slug, url, reason: `stale ${age} d` });
+  }
+  return targets;
 }
 
 /**

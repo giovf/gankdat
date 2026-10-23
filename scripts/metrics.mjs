@@ -24,13 +24,8 @@ import {
 } from '../src/lib/crawler-hits.ts';
 import { afterWallNote, connectCallersNote, oauthFunnelNote } from '../src/lib/oauth-funnel.ts';
 import { x402CallsBySlug, x402Paid30dNote, x402PaidClause } from '../src/lib/x402-sales.ts';
-import {
-  bazaarClause,
-  bazaarResourceLines,
-  bazaarSummary,
-  merchantResources,
-  payToFromPaymentRequired,
-} from './x402-bazaar-read.ts';
+import { bazaarClause, bazaarResourceLines, bazaarSummary } from './x402-bazaar-read.ts';
+import { readMerchantCatalogue, readPayTo } from './x402-catalogue.mjs';
 
 const ACCOUNT_ID = '37e56f3ce4dfe49919e85d4380467f44'; // not a secret
 const DATABASE_ID = 'ac051277-5f69-46ba-965b-50da2f1ec524'; // wrangler.jsonc
@@ -872,34 +867,14 @@ const x402ValidateNote = await (async () => {
 // indexing call). The receiving wallet is a Worker secret, so the runner reads it from the 402 of
 // the first live route (`PAYMENT-REQUIRED`, keyless, no payment), then asks CDP's keyless merchant
 // discovery endpoint for every active resource under that payTo and sums the quality numbers the
-// Bazaar ranks by. `bazaar: 0 listed` until the one settled payment indexes us (action 026);
+// Bazaar ranks by (both reads in scripts/x402-catalogue.mjs, shared with the probe since
+// 2026-10-23: CDP lists one resource per settled payment, so the probe pays each unlisted route).
 // `n/a (<reason>)` when either read fails. Pure parsing lives in scripts/x402-bazaar-read.ts.
 const bazaarNote = await (async () => {
   const slugs = await x402Slugs;
   if (!slugs.length) throw new Error('no live sources');
-  const unpaid = await fetch(`${x402Base}/x402/data/${slugs[0]}?per_page=1`, {
-    headers: { 'User-Agent': 'gankdat-metrics/1 (+https://gankdat.com)' },
-    signal: AbortSignal.timeout(15_000),
-  });
-  const payTo = payToFromPaymentRequired(
-    unpaid.headers.get('payment-required'),
-    await unpaid.json().catch(() => null),
-  );
-  if (!payTo) throw new Error(`no payTo in the ${unpaid.status} from /x402/data/${slugs[0]}`);
-  const resources = [];
-  for (let offset = 0, page = 0; page < 5; page++, offset += 100) {
-    const url = `https://api.cdp.coinbase.com/platform/v2/x402/discovery/merchant?payTo=${payTo}&limit=100&offset=${offset}`;
-    const res = await fetch(url, {
-      headers: { Accept: 'application/json' },
-      signal: AbortSignal.timeout(20_000),
-    });
-    if (!res.ok) throw new Error(`merchant HTTP ${res.status}`);
-    const body = await res.json();
-    const items = merchantResources(body);
-    resources.push(...items);
-    const total = Number(body?.pagination?.total ?? 0);
-    if (items.length < 100 || resources.length >= total) break;
-  }
+  const payTo = await readPayTo(x402Base, slugs[0], 'gankdat-metrics/1 (+https://gankdat.com)');
+  const resources = await readMerchantCatalogue(payTo);
   for (const line of bazaarResourceLines(resources, x402Base)) console.log(line);
   return bazaarClause(bazaarSummary(resources, x402Base));
 })().catch((e) => `bazaar: n/a (${String(e instanceof Error ? e.message : e).slice(0, 100)})`);
