@@ -159,12 +159,49 @@ export async function recordSilentRefresh(
 ): Promise<RefreshProgress | null> {
   const previous = await readRefreshProgress(env, slug);
   if (!previous) return null;
+  if (await refreshLogRowSince(env, slug, previous.started_at)) {
+    // The attempt did write its row and only the delete was lost (KV's one-write-a-second gap or
+    // a dropped delete): a stale marker, not a death (refresh-marker-false-positive-2026-10-23 —
+    // the lane's first `silent nights:` reading, uk-sanctions 10-22, named a night with an ok row).
+    console.error(
+      JSON.stringify({ level: 'warn', event: 'refresh_progress_stale', source: slug, ...previous }),
+    );
+    await clearRefreshProgress(env, slug);
+    return null;
+  }
   const message = silentRefreshMessage(previous);
   console.error(
     JSON.stringify({ level: 'error', event: 'refresh_died', source: slug, ...previous }),
   );
   await writeRefreshLog(env, slug, 'error', 0, previous.elapsed_ms, message);
   return previous;
+}
+
+/**
+ * True when the slug's newest refresh_log row was created at or after `startedAt` (an ISO stamp) —
+ * the row the marker's own attempt wrote. `created_at` is SQLite's `datetime('now')` at second
+ * precision, so the marker's start is floored to the second before comparing. A row that cannot be
+ * read, or a marker without a start, counts as no row: the night is reported, never hidden.
+ */
+export async function refreshLogRowSince(
+  env: CloudflareBindings,
+  slug: string,
+  startedAt: string,
+): Promise<boolean> {
+  const started = Date.parse(startedAt);
+  if (Number.isNaN(started)) return false;
+  try {
+    const row = await env.DB.prepare(
+      'SELECT created_at FROM refresh_log WHERE source_slug = ?1 ORDER BY id DESC LIMIT 1',
+    )
+      .bind(slug)
+      .first<{ created_at: string }>();
+    if (!row) return false;
+    const created = Date.parse(`${row.created_at.replace(' ', 'T')}Z`);
+    return !Number.isNaN(created) && created >= Math.floor(started / 1000) * 1000;
+  } catch {
+    return false;
+  }
 }
 
 /** One source's refresh, retried once on a transient D1 error while the wave is young; true when it succeeded. */

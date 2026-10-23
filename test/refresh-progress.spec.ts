@@ -70,6 +70,66 @@ describe('refresh progress marker', () => {
     expect(await env.CACHE.get(progressKey('journal-like'))).toBeNull();
   });
 
+  it('a marker whose attempt did write its row is stale: cleared, never reported', async () => {
+    // uk-sanctions 10-22: the ok row landed at 05:01:46, three seconds after the marker's start, and
+    // the delete was lost; the 10-23 row then reported a death that never happened.
+    const started = Date.now() - 60_000;
+    await env.DB.prepare(
+      "INSERT INTO refresh_log (source_slug, status, records, duration_ms, message) VALUES ('stale-marker', 'ok', 6408, 3000, NULL)",
+    ).run();
+    await env.CACHE.put(
+      progressKey('stale-marker'),
+      JSON.stringify({
+        started_at: new Date(started).toISOString(),
+        phase: 'written',
+        detail: '6408 records',
+        elapsed_ms: 3_000,
+        at: new Date(started + 3_000).toISOString(),
+      }),
+    );
+    expect(await recordSilentRefresh(env, 'stale-marker')).toBeNull();
+    expect((await rows('stale-marker')).map((r) => r.status)).toEqual(['ok']);
+    expect(await env.CACHE.get(progressKey('stale-marker'))).toBeNull();
+  });
+
+  it('a marker started after the newest row is still a silent night', async () => {
+    await env.DB.prepare(
+      "INSERT INTO refresh_log (source_slug, status, records, duration_ms, message, created_at) VALUES ('old-row', 'ok', 10, 1000, NULL, '2026-10-20 05:01:00')",
+    ).run();
+    await env.CACHE.put(
+      progressKey('old-row'),
+      JSON.stringify({
+        started_at: '2026-10-22T05:01:43.000Z',
+        phase: 'written',
+        detail: '6408 records',
+        elapsed_ms: 3_000,
+        at: '2026-10-22T05:01:46.000Z',
+      }),
+    );
+    expect(await recordSilentRefresh(env, 'old-row')).not.toBeNull();
+    expect((await rows('old-row')).map((r) => r.status)).toEqual(['ok', 'error']);
+    expect(await env.CACHE.get(progressKey('old-row'))).not.toBeNull();
+  });
+
+  it('a lost delete is retried once after the same-key gap', async () => {
+    progressConfig.minGapMs = 0;
+    await env.CACHE.put(progressKey('flaky-delete'), JSON.stringify({ phase: 'written' }));
+    const original = env.CACHE.delete.bind(env.CACHE);
+    let calls = 0;
+    env.CACHE.delete = ((key: string) => {
+      calls += 1;
+      if (calls === 1) return Promise.reject(new Error('KV delete failed'));
+      return original(key);
+    }) as typeof env.CACHE.delete;
+    try {
+      await clearRefreshProgress(env, 'flaky-delete');
+    } finally {
+      env.CACHE.delete = original;
+    }
+    expect(calls).toBe(2);
+    expect(await env.CACHE.get(progressKey('flaky-delete'))).toBeNull();
+  });
+
   it('a completed attempt leaves no marker and owes nothing', async () => {
     await refreshOne(env, source('clean-night'), Date.now(), 0);
     expect(await env.CACHE.get(progressKey('clean-night'))).toBeNull();

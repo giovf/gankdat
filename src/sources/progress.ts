@@ -107,25 +107,35 @@ export async function readRefreshProgress(
   }
 }
 
-/** Deletes the marker once the attempt has written its own refresh_log row. Never throws. */
+/**
+ * Deletes the marker once the attempt has written its own refresh_log row. A delete that fails is
+ * retried once after the same-key gap (2026-10-23, refresh-marker-false-positive): a marker left
+ * behind reads as a death the next night, so one lost delete is worth a second try. Never throws.
+ */
 export async function clearRefreshProgress(env: CloudflareBindings, slug: string): Promise<void> {
   const last = lastPutAt.get(slug);
   if (last !== undefined) {
     const wait = progressConfig.minGapMs - (progressConfig.now() - last);
     if (wait > 0) await progressConfig.sleep(wait);
   }
-  try {
-    await env.CACHE.delete(progressKey(slug));
-    lastPutAt.delete(slug);
-  } catch (err) {
-    console.error(
-      JSON.stringify({
-        level: 'warn',
-        event: 'refresh_progress_clear_failed',
-        source: slug,
-        message: err instanceof Error ? err.message : String(err),
-      }),
-    );
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      await env.CACHE.delete(progressKey(slug));
+      lastPutAt.delete(slug);
+      return;
+    } catch (err) {
+      console.error(
+        JSON.stringify({
+          level: 'warn',
+          event: 'refresh_progress_clear_failed',
+          source: slug,
+          attempt,
+          message: err instanceof Error ? err.message : String(err),
+        }),
+      );
+      if (attempt === 2) return;
+      await progressConfig.sleep(progressConfig.minGapMs);
+    }
   }
 }
 
