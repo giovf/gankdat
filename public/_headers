@@ -56,3 +56,27 @@
 
 /docs.html
   Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://cdn.jsdelivr.net https://fonts.gstatic.com; connect-src 'self' https://cdn.jsdelivr.net; form-action 'self'; frame-ancestors 'none'; base-uri 'none'; object-src 'none'
+
+# /addin/* — the Excel add-in's pages load Office.js from Microsoft's CDN and run inside
+# Office's webview (an iframe on Excel for the web), so these pages alone allow Microsoft's
+# frames and script host; X-Frame-Options DENY from /* would break the pane, so it is overridden.
+/addin
+  ! X-Frame-Options
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://appsforoffice.microsoft.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://appsforoffice.microsoft.com; form-action 'self'; frame-ancestors https://*.officeapps.live.com https://*.office.com https://*.microsoft.com https://*.sharepoint.com https://*.officeapps.live.com https://*.cloud.microsoft; base-uri 'none'; object-src 'none'
+
+/addin.html
+  ! X-Frame-Options
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://appsforoffice.microsoft.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://appsforoffice.microsoft.com; form-action 'self'; frame-ancestors https://*.officeapps.live.com https://*.office.com https://*.microsoft.com https://*.sharepoint.com https://*.officeapps.live.com https://*.cloud.microsoft; base-uri 'none'; object-src 'none'
+
+/addin/taskpane.html
+  ! X-Frame-Options
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://appsforoffice.microsoft.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://appsforoffice.microsoft.com; form-action 'self'; frame-ancestors https://*.officeapps.live.com https://*.office.com https://*.microsoft.com https://*.sharepoint.com https://*.officeapps.live.com https://*.cloud.microsoft; base-uri 'none'; object-src 'none'
+
+/addin/functions.html
+  ! X-Frame-Options
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://appsforoffice.microsoft.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://appsforoffice.microsoft.com; form-action 'self'; frame-ancestors https://*.officeapps.live.com https://*.office.com https://*.microsoft.com https://*.sharepoint.com https://*.officeapps.live.com https://*.cloud.microsoft; base-uri 'none'; object-src 'none'
+
+/addin/commands.html
+  ! X-Frame-Options
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://appsforoffice.microsoft.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://appsforoffice.microsoft.com; form-action 'self'; frame-ancestors https://*.officeapps.live.com https://*.office.com https://*.microsoft.com https://*.sharepoint.com https://*.officeapps.live.com https://*.cloud.microsoft; base-uri 'none'; object-src 'none'
+

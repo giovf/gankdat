@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  gankdat for Excel — add-in-only manifest (Office Add-ins XML manifest, Excel custom functions +
+  task pane). Every file it names is served from https://gankdat.com/addin/ by the gankdat Worker
+  (Workers Assets), so the custom-functions HTML, JavaScript and JSON metadata share one domain
+  (AppSource certification policy 1120.5.2). No mobile form factor is declared: the task pane sells
+  API keys and credit packs, which policy 1120.2 forbids on iOS/Android. Version tracks APP_VERSION
+  (src/lib/constants.ts) with a fourth .0 segment; test/addin.spec.ts asserts the coupling.
+-->
+<OfficeApp
+  xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+  xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
+  xsi:type="TaskPaneApp">
+  <Id>5f1a0c2e-7b3d-4e8a-9c6b-2d4f8a1e0b37</Id>
+  <Version>0.26.0.0</Version>
+  <ProviderName>gankdat</ProviderName>
+  <DefaultLocale>en-GB</DefaultLocale>
+  <DisplayName DefaultValue="gankdat: UK registers in Excel" />
+  <Description DefaultValue="UK registers as Excel formulas: =GANKDAT.UKCOMPANY, UKCHARITY, CQC, SANCTIONS, TENDERS and QUERY over 17 official datasets (Companies House, charities, CQC, UK sanctions, Find a Tender). Free preview; a free gankdat API key unlocks the formulas." />
+  <IconUrl DefaultValue="https://gankdat.com/addin/icon-32.png" />
+  <HighResolutionIconUrl DefaultValue="https://gankdat.com/addin/icon-64.png" />
+  <SupportUrl DefaultValue="https://gankdat.com/feedback" />
+  <AppDomains>
+    <AppDomain>https://gankdat.com</AppDomain>
+  </AppDomains>
+  <Hosts>
+    <Host Name="Workbook" />
+  </Hosts>
+  <Requirements>
+    <Sets DefaultMinVersion="1.1">
+      <Set Name="CustomFunctionsRuntime" MinVersion="1.1" />
+    </Sets>
+  </Requirements>
+  <DefaultSettings>
+    <SourceLocation DefaultValue="https://gankdat.com/addin/taskpane.html" />
+  </DefaultSettings>
+  <Permissions>ReadWriteDocument</Permissions>
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
+    <Hosts>
+      <Host xsi:type="Workbook">
+        <Runtimes>
+          <Runtime resid="Functions.Script.Url" lifetime="long" />
+        </Runtimes>
+        <AllFormFactors>
+          <ExtensionPoint xsi:type="CustomFunctions">
+            <Script>
+              <SourceLocation resid="Functions.Script.Url" />
+            </Script>
+            <Page>
+              <SourceLocation resid="Functions.Page.Url" />
+            </Page>
+            <Metadata>
+              <SourceLocation resid="Functions.Metadata.Url" />
+            </Metadata>
+            <Namespace resid="Functions.Namespace" />
+          </ExtensionPoint>
+        </AllFormFactors>
+        <DesktopFormFactor>
+          <GetStarted>
+            <Title resid="GetStarted.Title" />
+            <Description resid="GetStarted.Description" />
+            <LearnMoreUrl resid="Help.Url" />
+          </GetStarted>
+          <FunctionFile resid="Commands.Url" />
+          <ExtensionPoint xsi:type="PrimaryCommandSurface">
+            <OfficeTab id="TabHome">
+              <Group id="Gankdat.Group">
+                <Label resid="Group.Label" />
+                <Icon>
+                  <bt:Image size="16" resid="Icon.16" />
+                  <bt:Image size="32" resid="Icon.32" />
+                  <bt:Image size="80" resid="Icon.80" />
+                </Icon>
+                <Control xsi:type="Button" id="Gankdat.TaskpaneButton">
+                  <Label resid="Taskpane.Label" />
+                  <Supertip>
+                    <Title resid="Taskpane.Label" />
+                    <Description resid="Taskpane.Tooltip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Icon.16" />
+                    <bt:Image size="32" resid="Icon.32" />
+                    <bt:Image size="80" resid="Icon.80" />
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>Gankdat.Taskpane</TaskpaneId>
+                    <SourceLocation resid="Taskpane.Url" />
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </DesktopFormFactor>
+      </Host>
+    </Hosts>
+    <Resources>
+      <bt:Images>
+        <bt:Image id="Icon.16" DefaultValue="https://gankdat.com/addin/icon-16.png" />
+        <bt:Image id="Icon.32" DefaultValue="https://gankdat.com/addin/icon-32.png" />
+        <bt:Image id="Icon.80" DefaultValue="https://gankdat.com/addin/icon-80.png" />
+      </bt:Images>
+      <bt:Urls>
+        <bt:Url id="Functions.Script.Url" DefaultValue="https://gankdat.com/addin/functions.js" />
+        <bt:Url id="Functions.Page.Url" DefaultValue="https://gankdat.com/addin/functions.html" />
+        <bt:Url id="Functions.Metadata.Url" DefaultValue="https://gankdat.com/addin/functions.json" />
+        <bt:Url id="Taskpane.Url" DefaultValue="https://gankdat.com/addin/taskpane.html" />
+        <bt:Url id="Commands.Url" DefaultValue="https://gankdat.com/addin/commands.html" />
+        <bt:Url id="Help.Url" DefaultValue="https://gankdat.com/addin" />
+      </bt:Urls>
+      <bt:ShortStrings>
+        <bt:String id="Functions.Namespace" DefaultValue="GANKDAT" />
+        <bt:String id="GetStarted.Title" DefaultValue="gankdat formulas are ready" />
+        <bt:String id="Group.Label" DefaultValue="gankdat" />
+        <bt:String id="Taskpane.Label" DefaultValue="UK registers" />
+      </bt:ShortStrings>
+      <bt:LongStrings>
+        <bt:String id="GetStarted.Description" DefaultValue="Type =GANKDAT.UKCOMPANY(&quot;00000006&quot;) in a cell, or open the UK registers pane on the Home tab to try a free preview and add your API key." />
+        <bt:String id="Taskpane.Tooltip" DefaultValue="Preview any gankdat register, then add your API key so the GANKDAT formulas fill your sheet." />
+      </bt:LongStrings>
+    </Resources>
+  </VersionOverrides>
+</OfficeApp>

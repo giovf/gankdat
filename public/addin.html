@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>gankdat for Excel — UK registers as formulas</title>
+    <meta
+      name="description"
+      content="Excel add-in: =GANKDAT.UKCOMPANY, UKCHARITY, CQC, SANCTIONS, TENDERS and QUERY pull Companies House, Charity Commission, CQC, UK sanctions and Find a Tender records into your sheet from gankdat's API. Free preview, free key, credit packs."
+    />
+    <link rel="canonical" href="https://gankdat.com/addin" />
+    <link rel="icon" href="/favicon.png" />
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      body {
+        font:
+          16px/1.55 system-ui,
+          -apple-system,
+          'Segoe UI',
+          sans-serif;
+        margin: 0;
+        color: #1b1b1b;
+        background: #fff;
+      }
+      @media (prefers-color-scheme: dark) {
+        body {
+          color: #e6e6e6;
+          background: #141414;
+        }
+        code,
+        pre,
+        th {
+          background: #242424;
+        }
+      }
+      main {
+        max-width: 820px;
+        margin: 0 auto;
+        padding: 32px 20px 64px;
+      }
+      h1 {
+        font-size: 30px;
+        margin: 0 0 8px;
+      }
+      h2 {
+        font-size: 20px;
+        margin: 32px 0 8px;
+      }
+      code,
+      pre {
+        font-family: Consolas, ui-monospace, monospace;
+        font-size: 14px;
+        background: #f3f3f3;
+        border-radius: 3px;
+      }
+      code {
+        padding: 1px 5px;
+      }
+      pre {
+        padding: 10px 12px;
+        overflow-x: auto;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 15px;
+      }
+      th,
+      td {
+        border: 1px solid #ccc;
+        padding: 6px 8px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #f3f3f3;
+      }
+      a {
+        color: #0f6cbd;
+      }
+      .muted {
+        opacity: 0.8;
+        font-size: 15px;
+      }
+      nav a {
+        margin-right: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <nav class="muted">
+        <a href="/">gankdat</a><a href="/docs">API docs</a><a href="/account">account</a
+        ><a href="/privacy">privacy</a><a href="/terms">terms</a><a href="/feedback">support</a>
+      </nav>
+      <h1>gankdat for Excel</h1>
+      <p>
+        Six custom functions that put official UK and EU registers in a cell: Companies House, the
+        Charity Commission register, the CQC care directory, the UK sanctions list, Find a Tender —
+        and <code>GANKDAT.QUERY</code> for the other registers gankdat serves (schools, NHS
+        organisations, food hygiene, visa sponsors, EU TED, US exclusions, new incorporations,
+        insolvency, contract awards, the trade marks journal, gambling licences). Each formula is
+        one call to the <a href="/docs">gankdat API</a> with your own key; results spill as a header
+        row plus data rows.
+      </p>
+      <p class="muted">
+        Listed free on Microsoft AppSource; the add-in itself costs nothing. A gankdat API key is
+        free for 250 calls a month, and paid plans or one-off credit packs add more — bought on
+        gankdat.com, never through the store ("Additional purchase may be required" on the listing
+        says exactly this).
+      </p>
+
+      <h2 id="install">Install</h2>
+      <ol>
+        <li>
+          In Excel (Windows, Mac or the web), <strong>Home → Add-ins → More add-ins</strong>, search
+          for <em>gankdat</em> and add it. Until the AppSource listing is live, sideload the
+          manifest instead: <a href="/addin/manifest.xml">manifest.xml</a> (Excel on the web:
+          Add-ins → More add-ins → <em>Upload my add-in</em>).
+        </li>
+        <li>
+          Open the <strong>UK registers</strong> button on the Home tab. Preview any register — no
+          key needed, five rows a call.
+        </li>
+        <li>
+          Paste your API key from <a href="/account">gankdat.com/account</a> (free). The key is kept
+          in the add-in's own storage for this Excel profile and is only ever sent to gankdat.com.
+        </li>
+      </ol>
+
+      <h2 id="functions">Functions</h2>
+      <table>
+        <tr>
+          <th>Formula</th>
+          <th>Returns</th>
+          <th>Register</th>
+        </tr>
+        <tr id="ukcompany">
+          <td><code>=GANKDAT.UKCOMPANY(company, [field])</code></td>
+          <td>
+            One company's record by number (<code>"00000006"</code>) or name (top search hit):
+            status, type, incorporation date, SIC codes, registered office, charges, filings and
+            controller counts. With <code>field</code> (e.g. <code>"status"</code>,
+            <code>"incorporated_on"</code>, <code>"postal_code"</code>) a single cell.
+          </td>
+          <td><a href="/stats/uk-company-profiles">uk-company-profiles</a></td>
+        </tr>
+        <tr id="ukcharity">
+          <td><code>=GANKDAT.UKCHARITY(charity, [rows])</code></td>
+          <td>Charities whose name contains the text, or the one with that registered number.</td>
+          <td><a href="/stats/uk-charities">uk-charities</a></td>
+        </tr>
+        <tr id="cqc">
+          <td><code>=GANKDAT.CQC(search, [rows])</code></td>
+          <td>
+            Regulated care locations matching a name or provider; a postcode or outward code
+            (<code>"SW1A"</code>) filters by postcode.
+          </td>
+          <td><a href="/stats/uk-care-locations">uk-care-locations</a></td>
+        </tr>
+        <tr id="sanctions">
+          <td><code>=GANKDAT.SANCTIONS(name, [rows])</code></td>
+          <td>
+            UK sanctions list designations whose name contains the text; <code>no match</code> when
+            none. A screening aid, not legal advice.
+          </td>
+          <td><a href="/stats/uk-sanctions">uk-sanctions</a></td>
+        </tr>
+        <tr id="tenders">
+          <td><code>=GANKDAT.TENDERS(search, [rows])</code></td>
+          <td>Find a Tender notices matching the words, newest first.</td>
+          <td><a href="/stats/uk-tenders">uk-tenders</a></td>
+        </tr>
+        <tr id="query">
+          <td><code>=GANKDAT.QUERY(source, filter, value, [rows])</code></td>
+          <td>
+            Any register with one filter:
+            <code>=GANKDAT.QUERY("uk-schools", "postcode", "OX1")</code>. Filters are the dataset's
+            query parameters in the <a href="/docs">API docs</a>; <code>"q"</code> searches every
+            text field.
+          </td>
+          <td>all 17</td>
+        </tr>
+      </table>
+      <p class="muted">
+        <code>rows</code> is 1–100 (default 10). Each formula spends one credit per recalculation of
+        that cell, whatever the row count; Excel recalculates a volatile sheet on open, so paste
+        values once a lookup is final.
+      </p>
+
+      <h2 id="examples">Examples</h2>
+      <pre>
+=GANKDAT.UKCOMPANY(A2, "status")            ' one cell per company number in column A
+=GANKDAT.UKCOMPANY("Marks and Spencer")      ' whole record, two rows
+=GANKDAT.SANCTIONS(B2, 3)                    ' header + up to 3 hits, or "no match"
+=GANKDAT.QUERY("uk-food-hygiene", "postcode", "M1", 50)</pre>
+
+      <h2 id="errors">Errors</h2>
+      <p>
+        A <code>#VALUE!</code> with a message starting <em>gankdat:</em> says what happened: no key
+        saved yet, an unknown or revoked key, the month's credits spent (top up at
+        <a href="/account">/account</a>), or an unknown field or filter — the message lists the
+        valid names. The preview in the pane is capped at 5 rows and 20 calls a day per device.
+      </p>
+
+      <h2 id="data">Data and privacy</h2>
+      <p>
+        Records come from the publishers' own open feeds under their licences (per-dataset table in
+        the <a href="/terms#licences">terms</a>); personal data is dropped at ingest. The add-in
+        sends gankdat.com only your formula arguments and your key; nothing is read from your
+        workbook except the arguments you pass. Details: <a href="/privacy">privacy policy</a>.
+        Support: <a href="/feedback">gankdat.com/feedback</a>.
+      </p>
+    </main>
+  </body>
+</html>

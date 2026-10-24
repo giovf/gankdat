@@ -1,0 +1,131 @@
+{
+  "allowCustomDataForDataTypeAny": false,
+  "functions": [
+    {
+      "id": "UKCOMPANY",
+      "name": "UKCOMPANY",
+      "description": "Companies House record for one company: name, status, type, incorporation date, SIC codes, registered office, charges and filings count (gankdat uk-company-profiles).",
+      "helpUrl": "https://gankdat.com/addin#ukcompany",
+      "result": { "dimensionality": "matrix" },
+      "parameters": [
+        {
+          "name": "company",
+          "description": "Company number (e.g. 00000006) or a company name (the register's top search hit).",
+          "type": "string"
+        },
+        {
+          "name": "field",
+          "description": "Optional: one field to return as a single value (company, status, company_type, incorporated_on, sic_codes, postal_code, locality, charges_outstanding ...). Leave out for the whole record as two rows.",
+          "type": "string",
+          "optional": true
+        }
+      ]
+    },
+    {
+      "id": "UKCHARITY",
+      "name": "UKCHARITY",
+      "description": "Charity Commission register rows matching a charity name or number (gankdat uk-charities).",
+      "helpUrl": "https://gankdat.com/addin#ukcharity",
+      "result": { "dimensionality": "matrix" },
+      "parameters": [
+        {
+          "name": "charity",
+          "description": "Charity name (substring) or registered charity number.",
+          "type": "string"
+        },
+        {
+          "name": "rows",
+          "description": "Optional: how many matching rows to return (1-100, default 10).",
+          "type": "number",
+          "optional": true
+        }
+      ]
+    },
+    {
+      "id": "CQC",
+      "name": "CQC",
+      "description": "CQC regulated care locations matching a location name, provider or postcode (gankdat uk-care-locations).",
+      "helpUrl": "https://gankdat.com/addin#cqc",
+      "result": { "dimensionality": "matrix" },
+      "parameters": [
+        {
+          "name": "search",
+          "description": "Location or provider name (substring), or a postcode / outward code (e.g. SW1A).",
+          "type": "string"
+        },
+        {
+          "name": "rows",
+          "description": "Optional: how many matching rows to return (1-100, default 10).",
+          "type": "number",
+          "optional": true
+        }
+      ]
+    },
+    {
+      "id": "SANCTIONS",
+      "name": "SANCTIONS",
+      "description": "UK sanctions list designations whose name matches (gankdat uk-sanctions). Returns a header row and 'no match' when empty.",
+      "helpUrl": "https://gankdat.com/addin#sanctions",
+      "result": { "dimensionality": "matrix" },
+      "parameters": [
+        {
+          "name": "name",
+          "description": "Name to screen (case-insensitive substring of the designated name).",
+          "type": "string"
+        },
+        {
+          "name": "rows",
+          "description": "Optional: how many matching rows to return (1-100, default 10).",
+          "type": "number",
+          "optional": true
+        }
+      ]
+    },
+    {
+      "id": "TENDERS",
+      "name": "TENDERS",
+      "description": "UK public procurement notices from Find a Tender matching a search (gankdat uk-tenders), newest first.",
+      "helpUrl": "https://gankdat.com/addin#tenders",
+      "result": { "dimensionality": "matrix" },
+      "parameters": [
+        {
+          "name": "search",
+          "description": "Words to search across the notice (title, buyer, description).",
+          "type": "string"
+        },
+        {
+          "name": "rows",
+          "description": "Optional: how many notices to return (1-100, default 10).",
+          "type": "number",
+          "optional": true
+        }
+      ]
+    },
+    {
+      "id": "QUERY",
+      "name": "QUERY",
+      "description": "Any gankdat register with one filter: =GANKDAT.QUERY(\"uk-schools\", \"postcode\", \"SW1\"). Filters are the dataset's query parameters listed at gankdat.com/docs; \"q\" searches every text field.",
+      "helpUrl": "https://gankdat.com/addin#query",
+      "result": { "dimensionality": "matrix" },
+      "parameters": [
+        {
+          "name": "source",
+          "description": "Dataset slug, e.g. uk-schools, nhs-ods, uk-food-hygiene, uk-sponsors, eu-ted, sam-exclusions.",
+          "type": "string"
+        },
+        {
+          "name": "filter",
+          "description": "Query parameter name, e.g. q, name, postcode, status.",
+          "type": "string"
+        },
+        { "name": "value", "description": "Value for that parameter.", "type": "string" },
+        {
+          "name": "rows",
+          "description": "Optional: how many rows to return (1-100, default 10).",
+          "type": "number",
+          "optional": true
+        }
+      ]
+    }
+  ]
+}

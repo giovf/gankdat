@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>gankdat — UK registers</title>
+    <meta name="robots" content="noindex" />
+    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      body {
+        font:
+          14px/1.45 'Segoe UI',
+          system-ui,
+          sans-serif;
+        margin: 0;
+        padding: 12px 14px 24px;
+        color: #1b1b1b;
+        background: #fff;
+      }
+      @media (prefers-color-scheme: dark) {
+        body {
+          color: #e6e6e6;
+          background: #1f1f1f;
+        }
+        input,
+        select {
+          color: inherit;
+          background: #2b2b2b;
+          border-color: #555;
+        }
+        table th {
+          background: #2b2b2b;
+        }
+      }
+      h1 {
+        font-size: 17px;
+        margin: 0 0 4px;
+      }
+      h2 {
+        font-size: 14px;
+        margin: 18px 0 6px;
+      }
+      p {
+        margin: 6px 0;
+      }
+      code {
+        font-family: Consolas, ui-monospace, monospace;
+        font-size: 12.5px;
+      }
+      label {
+        display: block;
+        font-size: 12px;
+        margin-top: 8px;
+      }
+      input,
+      select,
+      button {
+        font: inherit;
+        width: 100%;
+        box-sizing: border-box;
+        margin-top: 3px;
+        padding: 6px 8px;
+        border: 1px solid #8a8a8a;
+        border-radius: 3px;
+      }
+      button {
+        background: #0f6cbd;
+        color: #fff;
+        border-color: #0f6cbd;
+        cursor: pointer;
+        margin-top: 8px;
+      }
+      button.secondary {
+        background: transparent;
+        color: inherit;
+        border-color: #8a8a8a;
+      }
+      button[disabled] {
+        opacity: 0.6;
+        cursor: wait;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 12px;
+        margin-top: 8px;
+        display: block;
+        overflow-x: auto;
+      }
+      th,
+      td {
+        border: 1px solid #ccc;
+        padding: 3px 5px;
+        text-align: left;
+        white-space: nowrap;
+        max-width: 220px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      th {
+        background: #f2f2f2;
+      }
+      .muted {
+        font-size: 12px;
+        opacity: 0.8;
+      }
+      .status {
+        font-size: 12px;
+        min-height: 1.4em;
+        margin-top: 6px;
+      }
+      .ok {
+        color: #107c10;
+      }
+      .err {
+        color: #c50f1f;
+      }
+      a {
+        color: #0f6cbd;
+      }
+      hr {
+        border: 0;
+        border-top: 1px solid #ccc;
+        margin: 16px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>UK registers in Excel</h1>
+    <p class="muted">
+      Official UK and EU registers as formulas — Companies House, Charity Commission, CQC, the UK
+      sanctions list, Find a Tender and twelve more. Data from the publishers' own open feeds, one
+      clean schema, no scraping.
+    </p>
+
+    <h2>1. Try a register — no key needed</h2>
+    <form id="preview-form">
+      <label
+        >Register
+        <select id="preview-source">
+          <option value="uk-company-profiles">uk-company-profiles — Companies House lookup</option>
+          <option value="uk-charities">uk-charities — Charity Commission register</option>
+          <option value="uk-care-locations">uk-care-locations — CQC care directory</option>
+          <option value="uk-sanctions">uk-sanctions — UK sanctions list</option>
+          <option value="uk-tenders" selected>uk-tenders — Find a Tender notices</option>
+          <option value="uk-contract-awards">uk-contract-awards — Contracts Finder awards</option>
+          <option value="eu-ted">eu-ted — EU procurement (TED)</option>
+          <option value="sam-exclusions">sam-exclusions — US federal exclusions</option>
+          <option value="uk-insolvency">uk-insolvency — Gazette corporate insolvency</option>
+          <option value="uk-companies">uk-companies — new incorporations</option>
+          <option value="uk-food-hygiene">uk-food-hygiene — FSA ratings</option>
+          <option value="uk-sponsors">uk-sponsors — licensed visa sponsors</option>
+          <option value="uk-schools">uk-schools — schools in England</option>
+          <option value="nhs-ods">nhs-ods — NHS organisations</option>
+          <option value="uk-trademark-journal">uk-trademark-journal — trade marks journal</option>
+          <option value="uk-gambling-operators">
+            uk-gambling-operators — Gambling Commission licences
+          </option>
+        </select>
+      </label>
+      <label
+        >Search
+        <input
+          id="preview-q"
+          type="text"
+          placeholder="e.g. software, Oxford, 00000006"
+          autocomplete="off"
+      /></label>
+      <button type="submit" id="preview-run">Preview 5 rows</button>
+      <div class="status" id="preview-status"></div>
+      <div id="preview-table"></div>
+    </form>
+    <p class="muted">
+      Previews are capped at 5 rows and 20 a day; the formulas below return full pages.
+    </p>
+
+    <hr />
+    <h2>2. Add your API key</h2>
+    <p class="muted">
+      A free key gives 250 calls a month, every register, plus the daily change feeds. Paid plans
+      and one-off credit packs add more calls; the key is stored only in this workbook's add-in
+      storage and sent only to gankdat.com.
+    </p>
+    <form id="key-form">
+      <label
+        >API key
+        <input
+          id="key-input"
+          type="password"
+          placeholder="fapi_…"
+          autocomplete="off"
+          spellcheck="false"
+      /></label>
+      <button type="submit">Save key</button>
+      <button type="button" class="secondary" id="key-clear">Remove key</button>
+      <div class="status" id="key-status"></div>
+    </form>
+    <p>
+      <a href="https://gankdat.com/account" target="_blank" rel="noopener"
+        >Get a free key or buy credits →</a
+      >
+    </p>
+
+    <hr />
+    <h2>3. Formulas</h2>
+    <p>
+      <code>=GANKDAT.UKCOMPANY("00000006")</code> — one company's record (add a field name for one
+      cell)
+    </p>
+    <p>
+      <code>=GANKDAT.UKCHARITY("oxfam")</code> · <code>=GANKDAT.CQC("SW1A")</code> ·
+      <code>=GANKDAT.SANCTIONS("name")</code>
+    </p>
+    <p>
+      <code>=GANKDAT.TENDERS("software", 20)</code> ·
+      <code>=GANKDAT.QUERY("uk-schools", "postcode", "OX1")</code>
+    </p>
+    <p class="muted">
+      Results spill as a header row plus rows. One formula = one API call (one credit). Guide and
+      field lists:
+      <a href="https://gankdat.com/addin" target="_blank" rel="noopener">gankdat.com/addin</a> ·
+      <a href="https://gankdat.com/privacy" target="_blank" rel="noopener">privacy</a> ·
+      <a href="https://gankdat.com/terms" target="_blank" rel="noopener">terms</a> ·
+      <a href="https://gankdat.com/feedback" target="_blank" rel="noopener">support</a>
+    </p>
+    <script src="/js/addin-taskpane.js"></script>
+  </body>
+</html>
