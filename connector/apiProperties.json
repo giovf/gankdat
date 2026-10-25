@@ -1,0 +1,23 @@
+{
+  "properties": {
+    "connectionParameters": {
+      "api_key": {
+        "type": "securestring",
+        "uiDefinition": {
+          "displayName": "API key (in the form 'Bearer yourKey')",
+          "description": "Your gankdat key, entered as 'Bearer yourKey' (create one at https://gankdat.com/account).",
+          "tooltip": "Provide your gankdat key as 'Bearer yourKey'",
+          "constraints": {
+            "tabIndex": 2,
+            "clearText": false,
+            "required": "true"
+          }
+        }
+      }
+    },
+    "iconBrandColor": "#0a0a0a",
+    "capabilities": [],
+    "publisher": "gankdat",
+    "stackOwner": "gankdat"
+  }
+}

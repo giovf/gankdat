@@ -58,7 +58,7 @@ function queryParameters(source: DataSource): JsonObject[] {
   }));
 }
 
-const paginationMeta = z.object({
+export const paginationMeta = z.object({
   source: z.string(),
   page: z.int(),
   per_page: z.int(),
@@ -301,7 +301,7 @@ const keysPaths: JsonObject = {
   },
 };
 
-const sourceListingSchema = z.array(
+export const sourceListingSchema = z.array(
   z.object({
     slug: z.string(),
     title: z.string(),
@@ -322,7 +322,7 @@ const sourceListingSchema = z.array(
   }),
 );
 
-const changeRowSchema = z.object({
+export const changeRowSchema = z.object({
   change: z.enum(['added', 'removed', 'changed']),
   changed_at: z.string(),
   record_id: z.string(),
