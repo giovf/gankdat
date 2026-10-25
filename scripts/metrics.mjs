@@ -24,6 +24,7 @@ import {
 } from '../src/lib/crawler-hits.ts';
 import { afterWallNote, connectCallersNote, oauthFunnelNote } from '../src/lib/oauth-funnel.ts';
 import { changesByUaNote } from '../src/lib/change-feed-callers.ts';
+import { restByUaNote } from '../src/lib/rest-callers.ts';
 import { x402CallsBySlug, x402Paid30dNote, x402PaidClause } from '../src/lib/x402-sales.ts';
 import { bazaarClause, bazaarResourceLines, bazaarSummary } from './x402-bazaar-read.ts';
 import { readMerchantCatalogue, readPayTo } from './x402-catalogue.mjs';
@@ -771,6 +772,15 @@ const internalAccountIds = await sql(`SELECT id FROM accounts WHERE ${INTERNAL_E
   .catch(() => null);
 const notIn = (blob) =>
   ` AND ${blob} != ''${internalAccountIds.length ? ` AND ${blob} NOT IN (${internalAccountIds.map((id) => `'${id}'`).join(', ')})` : ''}`;
+// Who calls the REST data routes (2026-10-25, `rest-callers-by-user-agent-reading`): the Excel
+// add-in's and the Power Platform connector's proofs read user agents on `rest_data`, and no clause
+// did — `datasets 30d` is by slug, `datasets 30d external` by account. External accounts only
+// (the same NOT IN as the external line), probes excluded; `n/a` while the account read failed.
+const restByUa = internalAccountIds
+  ? await ae(
+      `SELECT blob2 AS ua, blob5 AS slug, SUM(_sample_interval * double1) AS n FROM gankdat_traffic WHERE blob1 = 'rest_data' AND blob2 NOT LIKE 'gankdat-mcp-probe/%' AND blob2 NOT LIKE 'gankdat-x402-probe/%'${notIn('blob4')} AND timestamp > NOW() - INTERVAL '7' DAY GROUP BY ua, slug LIMIT 500`,
+    ).catch(() => null)
+  : null;
 const datasetsExternalNote = internalAccountIds
   ? await datasetQueries30d(
       ' external',
@@ -898,6 +908,7 @@ const notes = [
   `MCP 24h: ${kinds.mcp_authed ?? 0} authed, ${kinds.mcp_anon ?? 0} anon, ${kinds.mcp_preview ?? 0} preview, ${paywall} paywall hits${wantedNote}`,
   `changes 7d: ${changesMcp + changesRest} (mcp ${changesMcp}, rest ${changesRest})`,
   changesByUaNote(changesByUa),
+  restByUaNote(restByUa),
   indexnowNote,
   x402ValidateNote,
   bazaarNote,
