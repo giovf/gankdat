@@ -23,6 +23,7 @@ import {
   zoneStatsRows,
 } from '../src/lib/crawler-hits.ts';
 import { afterWallNote, connectCallersNote, oauthFunnelNote } from '../src/lib/oauth-funnel.ts';
+import { changesByUaNote } from '../src/lib/change-feed-callers.ts';
 import { x402CallsBySlug, x402Paid30dNote, x402PaidClause } from '../src/lib/x402-sales.ts';
 import { bazaarClause, bazaarResourceLines, bazaarSummary } from './x402-bazaar-read.ts';
 import { readMerchantCatalogue, readPayTo } from './x402-catalogue.mjs';
@@ -229,6 +230,12 @@ const changeFeed = Object.fromEntries(
 );
 const changesMcp = changeFeed.mcp_authed ?? 0;
 const changesRest = changeFeed.rest_changes ?? 0;
+// Who made them (2026-10-25, `x402-buyer-vs-survey-split`): the 10-21 reading was the first
+// non-zero after 20 rows at 0 and named nobody, so the same filter grouped by user agent renders
+// `changes 7d by UA: python-requests 4 (rest)` — a scanner's sweep tagged `prober` by its name.
+const changesByUa = await ae(
+  "SELECT blob1 AS kind, blob2 AS ua, SUM(_sample_interval * double1) AS n FROM gankdat_traffic WHERE timestamp > NOW() - INTERVAL '7' DAY AND blob2 NOT LIKE 'gankdat-mcp-probe/%' AND blob2 NOT LIKE 'gankdat-x402-probe/%' AND ((blob1 = 'mcp_authed' AND blob5 LIKE '%get_changes%') OR blob1 = 'rest_changes') GROUP BY kind, ua LIMIT 500",
+).catch(() => null);
 
 // Keyless Atom feeds (build 2026-10-05, queue `change-feed-rss`): proof is ≥ 20 distinct feed-reader /
 // automation user agents on /feeds in 30 days and a key issued with a /feeds referrer, so the row
@@ -730,18 +737,32 @@ async function datasetQueries30d(label = '', restWhere = '', mcpWhere = '', extr
     .sort();
   return `datasets 30d${label}: ${used.length ? used.join(', ') : 'none'}${zero.length ? `; 0: ${zero.join(', ')}` : ''}`;
 }
+const x402Base = (process.env.PUBLIC_BASE_URL || 'https://gankdat.com').replace(/\/+$/, '');
+// The live source list, shared by the sales clauses here and the validate and Bazaar clauses
+// below (one read; a failure makes each clause `n/a` with the same reason).
+const x402Slugs = (async () => {
+  const listing = await fetch(`${x402Base}/v1/data`, { signal: AbortSignal.timeout(15_000) });
+  if (!listing.ok) throw new Error(`/v1/data ${listing.status}`);
+  return (await listing.json()).data.map((s) => s.slug);
+})();
+x402Slugs.catch(() => {}); // each clause reports the rejection itself
+// The route count is the buyer-vs-prober split's sweep threshold (one client paying every route
+// once in a day is the Bazaar indexer, not a customer); unread, only the UA rule applies.
+const x402RouteCount = await x402Slugs.then((slugs) => slugs.length).catch(() => null);
 // What sold on the x402 lane (2026-10-19, `x402-paid-by-source-reading`): the `x402_paid` point
 // carries the UA (blob2), the slug (blob5) and the hashed client id (blob6), so the row names the
 // source, the distinct clients and the UA family behind its count — the lane's first three
 // external payments (10-17/18) reached the row as a bare `3 x402 paid`. Grouped reads for 24 h
-// and 30 d, the probe's user agent excluded; a failed read leaves the bare count in place.
-const x402PaidRows = (days) =>
+// and 30 d, the probe's user agent excluded; a failed read leaves the bare count in place. The
+// 30-day read is grouped by UTC day as well (2026-10-25, `x402-buyer-vs-survey-split`) so the
+// split can see a one-day catalogue sweep and a buyer who paid on two or more days (repeat).
+const x402PaidRows = (days, byDay = false) =>
   ae(
-    `SELECT blob5 AS slug, blob2 AS ua, blob6 AS client, SUM(_sample_interval * double1) AS n FROM gankdat_traffic WHERE blob1 = 'x402_paid' AND blob2 NOT LIKE 'gankdat-x402-probe/%' AND timestamp > NOW() - INTERVAL '${days}' DAY GROUP BY slug, ua, client LIMIT 5000`,
+    `SELECT blob5 AS slug, blob2 AS ua, blob6 AS client${byDay ? ", toStartOfInterval(timestamp, INTERVAL '1' DAY) AS day" : ''}, SUM(_sample_interval * double1) AS n FROM gankdat_traffic WHERE blob1 = 'x402_paid' AND blob2 NOT LIKE 'gankdat-x402-probe/%' AND timestamp > NOW() - INTERVAL '${days}' DAY GROUP BY slug, ua, client${byDay ? ', day' : ''} LIMIT 5000`,
   ).catch(() => null);
 const x402Rows24 = await x402PaidRows(1);
-const x402Rows30 = await x402PaidRows(30);
-const x402Note30d = x402Paid30dNote(x402Rows30);
+const x402Rows30 = await x402PaidRows(30, true);
+const x402Note30d = x402Paid30dNote(x402Rows30, x402RouteCount);
 const datasetsNote = await datasetQueries30d().catch(
   (e) => `datasets 30d: n/a (${e.message.slice(0, 100)})`,
 );
@@ -755,7 +776,7 @@ const datasetsExternalNote = internalAccountIds
       ' external',
       notIn('blob4'),
       notIn('blob6'),
-      x402CallsBySlug(x402Rows30),
+      x402CallsBySlug(x402Rows30, x402RouteCount),
     ).catch((e) => `datasets 30d external: n/a (${e.message.slice(0, 100)})`)
   : 'datasets 30d external: n/a (internal accounts unreadable from D1)';
 
@@ -768,7 +789,7 @@ const ownX402 = await ae(
 )
   .then((rows) => Math.round(Number(rows[0]?.n ?? 0)))
   .catch(() => 0);
-const sales = `${x402PaidClause(kinds.x402_paid ?? 0, x402Rows24)}${ownX402 ? ` (+${ownX402} own probe)` : ''}`;
+const sales = `${x402PaidClause(kinds.x402_paid ?? 0, x402Rows24, x402RouteCount)}${ownX402 ? ` (+${ownX402} own probe)` : ''}`;
 
 const file = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'RESEARCH.md');
 let md = await readFile(file, 'utf8');
@@ -816,15 +837,6 @@ function firstPreflightFailure(body) {
 // first preflight failure each, or `n/a (<reason>)` when the listing or the endpoint cannot be
 // read. Validation does not cover the metadata content policy: the indexed count comes from
 // the discovery API (`metrics-bazaar-merchant-read`), never from this line.
-const x402Base = (process.env.PUBLIC_BASE_URL || 'https://gankdat.com').replace(/\/+$/, '');
-// The live source list, shared by the validate and Bazaar clauses below (one read; a failure
-// makes both `n/a` with the same reason).
-const x402Slugs = (async () => {
-  const listing = await fetch(`${x402Base}/v1/data`, { signal: AbortSignal.timeout(15_000) });
-  if (!listing.ok) throw new Error(`/v1/data ${listing.status}`);
-  return (await listing.json()).data.map((s) => s.slug);
-})();
-x402Slugs.catch(() => {}); // each clause reports the rejection itself
 const x402ValidateNote = await (async () => {
   const base = x402Base;
   const slugs = await x402Slugs;
@@ -885,6 +897,7 @@ const notes = [
   // or a presented key is bad. Both are blob1 kinds written by routes/mcp.ts + mcp/server.ts.
   `MCP 24h: ${kinds.mcp_authed ?? 0} authed, ${kinds.mcp_anon ?? 0} anon, ${kinds.mcp_preview ?? 0} preview, ${paywall} paywall hits${wantedNote}`,
   `changes 7d: ${changesMcp + changesRest} (mcp ${changesMcp}, rest ${changesRest})`,
+  changesByUaNote(changesByUa),
   indexnowNote,
   x402ValidateNote,
   bazaarNote,
