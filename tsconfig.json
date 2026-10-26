@@ -6,6 +6,7 @@
     "strict": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
     "types": ["@cloudflare/vitest-pool-workers/types"],
     "lib": ["ESNext"],
     "jsx": "react-jsx",

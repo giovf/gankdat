@@ -7,7 +7,7 @@
 // it touched and, when the agent names itself a probe, that too — the clause lists what arrives,
 // it never guesses a vendor's string. Pure functions only (Workers-pool tests + metrics.mjs).
 
-import { isProberUa, uaFamily } from './x402-sales';
+import { isProberUa, uaFamily } from './x402-sales.ts';
 
 export interface RestCallRow {
   /** User agent (blob2). */

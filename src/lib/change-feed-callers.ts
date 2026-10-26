@@ -6,7 +6,7 @@
 // per UA family with the surface and, when the agent names itself a probe, that too. Pure
 // functions only, so the Workers-pool tests import them and `scripts/metrics.mjs` renders them.
 
-import { isProberUa, uaFamily } from './x402-sales';
+import { isProberUa, uaFamily } from './x402-sales.ts';
 
 export interface ChangeCallRow {
   /** `mcp_authed` or `rest_changes` (blob1). */
