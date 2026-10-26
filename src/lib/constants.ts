@@ -1,4 +1,4 @@
-export const APP_VERSION = '0.26.0';
+export const APP_VERSION = '0.26.1';
 /** x402 pay-per-call price per request unless X402_PRICE_USD or a source's x402PriceUsd says otherwise. */
 export const X402_DEFAULT_PRICE_USD = '$0.005';
 

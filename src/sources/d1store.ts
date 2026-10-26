@@ -1,9 +1,23 @@
 import type { StatsFacet, StatsGroupSpec, StatsSpec } from './types';
 import type { DataSource } from './types';
 import { PRESENT_SUFFIX, type QueryPage } from './query';
-import type { ChangeDay, FacetStats, MonthlyTrend, SourceStats, StatsGroup } from '../lib/stats';
+import type {
+  ChangeDay,
+  FacetPage,
+  FacetStats,
+  MonthlyTrend,
+  SourceStats,
+  StatsGroup,
+} from '../lib/stats';
 import { sortGroupRows } from '../lib/stats';
-import { putSourceStats, writeRefreshLog } from './cache';
+import {
+  type CachedStats,
+  putSourceStats,
+  readSourceStats,
+  snapshotTtlSeconds,
+  statsKey,
+  writeRefreshLog,
+} from './cache';
 import { traceOrigin, zeroRecordsError } from './origin';
 import { markRefreshProgress } from './progress';
 
@@ -677,7 +691,7 @@ async function refreshD1Delta(
       `delta +${added} ~${changed} -${removed}`,
     );
     await markRefreshProgress(env, source.slug, start, 'stats');
-    await precomputeStats(env, source, generation, meta);
+    await precomputeStats(env, source, generation, meta, start);
     return meta;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -686,27 +700,92 @@ async function refreshD1Delta(
   }
 }
 
+/** Facet aggregation stops this long after the wave started, whatever its own budget says. */
+export const STATS_DEADLINE_MS = 11 * 60_000;
+
+/** Every facet page the previous blob holds, dated by the refresh it was computed for. */
+function carriedFacets(previous: CachedStats | null, facets: StatsFacet[]): FacetStats[] {
+  return facets.map((facet) => ({
+    segment: facet.segment,
+    field: facet.field,
+    title: facet.title,
+    pages: facet.values.flatMap(({ value, label }) => {
+      const prev = previousFacetPage(previous, facet.segment, value);
+      return prev ? [{ ...prev.page, label, as_of: prev.asOf }] : [];
+    }),
+  }));
+}
+
 /**
  * Precompute the /stats aggregation once here (cron), so the public,
  * unauthenticated /stats page never runs a full-table GROUP BY per request.
  * Best-effort: a stats-cache failure must not fail the data refresh.
+ *
+ * Written in two steps (gankdat `sitemap-5xx-read`, 2026-10-26): the parent stats go to KV
+ * as soon as they exist, with every facet page carried from the previous blob, and the facets
+ * are aggregated after — under their own budget and the wave's STATS_DEADLINE_MS — then written
+ * again. Before, the one write came after the facets, so a wave killed inside the journal's
+ * 45-page pass (its ok row already written since 10-18) renewed nothing night after night and
+ * the blob expired with its 7-day retention: from 10-25 every journal stats page, the parent
+ * included, was a 503 and Search Console mailed "Server error (5xx)" for sitemap pages. A
+ * failure in the aggregation re-puts the previous blob with a fresh TTL instead (`retained`),
+ * so a page once computed never disappears while the register is served. The facet pass gets
+ * its own progress marker, started after the ok row so the stale-marker rule does not hide it:
+ * a wave killed there is the next night's `silent nights:` reading, phase `stats facets`.
  */
 async function precomputeStats(
   env: CloudflareBindings,
   source: DataSource,
   generation: number,
   meta: SourceMeta,
+  start: number,
 ): Promise<void> {
+  const previous = await readSourceStats(env, source.slug).catch((): null => null);
   try {
+    const facets = source.stats?.facets;
     const stats = await aggregateD1Stats(env, source, generation, meta.total);
+    if (facets) {
+      stats.facets = carriedFacets(previous, facets);
+      await putSourceStats(env, source, stats, meta.last_refreshed_at);
+      const elapsed = Math.round((Date.now() - start) / 1000);
+      // One second ahead of the ok row: refresh_log's created_at is second precision and
+      // recordSilentRefresh floors the marker's start before comparing (store.ts).
+      await markRefreshProgress(
+        env,
+        source.slug,
+        Date.now() + 1_000,
+        'stats facets',
+        `parent stats written at ${elapsed} s`,
+      );
+      stats.facets = await aggregateFacets(
+        env,
+        source,
+        generation,
+        facets,
+        previous,
+        start + STATS_DEADLINE_MS,
+      );
+    }
     await putSourceStats(env, source, stats, meta.last_refreshed_at);
   } catch (statsErr) {
+    let retained = false;
+    if (previous) {
+      try {
+        await env.CACHE.put(statsKey(source.slug), JSON.stringify(previous), {
+          expirationTtl: snapshotTtlSeconds(source),
+        });
+        retained = true;
+      } catch {
+        // The previous blob keeps its remaining TTL; the warning below names the night.
+      }
+    }
     console.log(
       JSON.stringify({
         level: 'warn',
         event: 'stats_precompute_failed',
         source: source.slug,
         reason: statsErr instanceof Error ? statsErr.message : String(statsErr),
+        retained,
       }),
     );
   }
@@ -810,7 +889,7 @@ async function refreshD1Full(
     await markRefreshProgress(env, source.slug, start, 'written', `${total} rows`);
     await writeRefreshLog(env, source.slug, 'ok', total, Date.now() - start, null);
     await markRefreshProgress(env, source.slug, start, 'stats');
-    await precomputeStats(env, source, generation, meta);
+    await precomputeStats(env, source, generation, meta, start);
     return meta;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -1057,19 +1136,49 @@ async function aggregateGroups(
 /**
  * Wall-clock budget for the facet sub-pages of one source: each listed value
  * costs 2 + groupBy.length scans of the generation, so a 45-value facet is a
- * few hundred statements. Past the budget the remaining pages are left out
- * (they 503 "being prepared" until tomorrow) rather than risk the wave's
- * 15-minute Cron Trigger limit.
+ * few hundred statements. Past the budget the remaining pages are carried over
+ * from the previous blob (gankdat `sitemap-5xx-read`, 2026-10-26: the journal's
+ * 45 Nice-class pages outgrew the budget as the window filled, so the pages past
+ * the cut 503'd "being prepared" every night — Search Console mailed "Server
+ * error (5xx)" for sitemap pages on 10-26, and a relay HEAD of each 503 cost the
+ * round 90 s of Retry-After retries). Values are computed stalest first, so a
+ * page that was carried last night is refreshed tonight and no page is ever
+ * older than a few refreshes; a carried page keeps the date it was computed for
+ * (`FacetPage.as_of`). A value with no page in the previous blob is still left
+ * out (503 until the next refresh reaches it) rather than risk the wave's
+ * 15-minute Cron Trigger limit — which STATS_DEADLINE_MS, measured from the wave's
+ * start, guards as well.
  */
 const FACETS_BUDGET_MS = 240_000;
+/** Test seam: the clock the facet budget reads (tests spend it at once). */
+export const facetsClock = { now: (): number => Date.now() };
+
+/** The previous blob's page for a value and the date it was computed for. */
+function previousFacetPage(
+  previous: CachedStats | null,
+  segment: string,
+  value: string,
+): { page: FacetPage; asOf: string } | null {
+  const page = previous?.stats.facets
+    ?.find((f) => f.segment === segment)
+    ?.pages.find((p) => p.value === value);
+  if (!page || !previous) return null;
+  return { page, asOf: page.as_of ?? previous.last_refreshed_at };
+}
 
 async function aggregateFacets(
   env: CloudflareBindings,
   source: DataSource,
   generation: number,
   facets: StatsFacet[],
+  previous: CachedStats | null,
+  deadline: number,
 ): Promise<FacetStats[]> {
-  const started = Date.now();
+  const started = facetsClock.now();
+  const outOfTime = (): boolean => {
+    const now = facetsClock.now();
+    return now - started > FACETS_BUDGET_MS || now > deadline;
+  };
   const out: FacetStats[] = [];
   for (const facet of facets) {
     const stats: FacetStats = {
@@ -1078,19 +1187,28 @@ async function aggregateFacets(
       title: facet.title,
       pages: [],
     };
-    for (const { value, label } of facet.values) {
-      if (Date.now() - started > FACETS_BUDGET_MS) {
-        console.log(
-          JSON.stringify({
-            level: 'warn',
-            event: 'stats_facets_budget',
-            source: source.slug,
-            segment: facet.segment,
-            computed: stats.pages.length,
-            of: facet.values.length,
-          }),
-        );
-        break;
+    // Stalest first: a value never computed, then the oldest carried pages, so a night that
+    // runs out of budget leaves behind the pages refreshed most recently. Output keeps spec order.
+    const order = facet.values.map((v, index) => ({
+      ...v,
+      index,
+      prev: previousFacetPage(previous, facet.segment, v.value),
+    }));
+    order.sort(
+      (a, b) => (a.prev?.asOf ?? '').localeCompare(b.prev?.asOf ?? '') || a.index - b.index,
+    );
+    const pages = new Map<string, FacetPage>();
+    let carried = 0;
+    let missing = 0;
+    for (const { value, label, prev } of order) {
+      if (outOfTime()) {
+        if (prev) {
+          pages.set(value, { ...prev.page, label, as_of: prev.asOf });
+          carried++;
+        } else {
+          missing++;
+        }
+        continue;
       }
       const where = buildWhere(source.slug, generation, { [facet.field]: value });
       const count = await env.DB.prepare(
@@ -1098,13 +1216,31 @@ async function aggregateFacets(
       )
         .bind(...where.binds)
         .first<{ n: number }>();
-      stats.pages.push({
+      pages.set(value, {
         value,
         label,
         total: count?.n ?? 0,
         monthly: facet.date ? await aggregateMonthly(env, where, facet.date) : null,
         groups: await aggregateGroups(env, where, facet.groupBy),
       });
+    }
+    if (carried + missing > 0) {
+      console.log(
+        JSON.stringify({
+          level: 'warn',
+          event: 'stats_facets_budget',
+          source: source.slug,
+          segment: facet.segment,
+          computed: facet.values.length - carried - missing,
+          carried,
+          missing,
+          of: facet.values.length,
+        }),
+      );
+    }
+    for (const { value } of facet.values) {
+      const page = pages.get(value);
+      if (page) stats.pages.push(page);
     }
     out.push(stats);
   }
@@ -1124,6 +1260,6 @@ async function aggregateD1Stats(
   const where = buildWhere(source.slug, generation, {});
   stats.monthly = await aggregateMonthly(env, where, spec.date);
   stats.groups = await aggregateGroups(env, where, spec.groupBy);
-  if (spec.facets) stats.facets = await aggregateFacets(env, source, generation, spec.facets);
+  // Facets are precomputeStats's second step (after the parent blob is written).
   return stats;
 }

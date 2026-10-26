@@ -179,7 +179,9 @@ function facetPageHtml(
   refreshedAt: string | null,
   baseUrl: string,
 ): string {
-  const updated = refreshedAt ? refreshedAt.slice(0, 10) : 'daily';
+  // A page carried past the facet budget keeps the date it was computed for (d1store.ts).
+  const pageRefreshedAt = page.as_of ?? refreshedAt;
+  const updated = pageRefreshedAt ? pageRefreshedAt.slice(0, 10) : 'daily';
   const query = filterQuery(facet.field, page.value);
   const title = `${source.title} — ${facet.segment} ${page.value}: ${page.label}`;
   const share = parentTotal > 0 ? `${((100 * page.total) / parentTotal).toFixed(1)}%` : '—';
@@ -209,7 +211,7 @@ ${hasChangeFeed(source) ? `<link rel="alternate" type="application/atom+xml" tit
 <meta property="og:title" content="${esc(title)} — statistics">
 <meta property="og:description" content="${esc(description)}">
 <meta property="og:url" content="${pageUrl}">
-<script type="application/ld+json">${jsonLd(source, baseUrl, refreshedAt, { stats: facet, page })}</script>
+<script type="application/ld+json">${jsonLd(source, baseUrl, pageRefreshedAt, { stats: facet, page })}</script>
 <style>${STYLE}</style>
 </head>
 <body><main>

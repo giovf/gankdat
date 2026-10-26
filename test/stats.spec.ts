@@ -1,8 +1,8 @@
 import { env, SELF } from 'cloudflare:test';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { computeStats } from '../src/lib/stats';
-import { snapshotWrites } from '../src/sources/cache';
-import { listSources } from '../src/sources/registry';
+import { putSourceStats, snapshotWrites } from '../src/sources/cache';
+import { getSource, listSources } from '../src/sources/registry';
 import { isRunnerFed, refreshAllSources } from '../src/sources/store';
 import { planningResponse, stubOrigins, tendersResponse } from './helpers/origin-mock';
 
@@ -172,6 +172,51 @@ describe('GET /stats', () => {
     const html = await res.text();
     expect(html).toMatch(/\/stats\/uk-planning">[^<]*<\/a>[^—]*· paused<\/span>/);
     expect(html).toMatch(/\/stats\/uk-tenders">[^<]*<\/a>(?:(?!paused)[^—])*—/);
+  });
+
+  it('dates a facet page carried past the refresh budget by the refresh it was computed for', async () => {
+    // d1store carries a facet page from the previous blob when the 4-minute facet budget runs out
+    // (gankdat sitemap-5xx-read, 2026-10-26); the page then shows its own date, not the parent's.
+    const source = getSource('uk-trademark-journal')!;
+    await putSourceStats(
+      env,
+      source,
+      {
+        total: 10,
+        monthly: null,
+        groups: [],
+        facets: [
+          {
+            segment: 'class',
+            field: 'classes',
+            title: 'By Nice class',
+            pages: [
+              { value: '09', label: 'Nine', total: 4, monthly: null, groups: [] },
+              {
+                value: '42',
+                label: 'Forty-two',
+                total: 3,
+                monthly: null,
+                groups: [],
+                as_of: '2026-10-24T06:05:00.000Z',
+              },
+            ],
+          },
+        ],
+      },
+      '2026-10-26T06:05:00.000Z',
+    );
+    const fresh = await SELF.fetch('https://example.com/stats/uk-trademark-journal/class/09');
+    expect(fresh.status).toBe(200);
+    expect(await fresh.text()).toContain('<td>last refreshed</td><td>2026-10-26</td>');
+    const carried = await SELF.fetch('https://example.com/stats/uk-trademark-journal/class/42');
+    expect(carried.status).toBe(200);
+    const html = await carried.text();
+    expect(html).toContain('<td>last refreshed</td><td>2026-10-24</td>');
+    expect(html).toContain('"dateModified":"2026-10-24T06:05:00.000Z"');
+    // A value past the budget with no earlier page is still being prepared.
+    const missing = await SELF.fetch('https://example.com/stats/uk-trademark-journal/class/01');
+    expect(missing.status).toBe(503);
   });
 
   it('returns 503 (never refreshes) for a source whose stats are not yet computed', async () => {

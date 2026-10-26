@@ -31,6 +31,12 @@ export interface FacetPage {
   total: number;
   monthly: MonthlyTrend | null;
   groups: StatsGroup[];
+  /**
+   * Set when the refresh's facet budget ran out before this value and the page was carried
+   * from the previous blob: the `last_refreshed_at` it was computed for, shown on the page
+   * instead of the parent's date. Absent on a page computed in this refresh.
+   */
+  as_of?: string;
 }
 
 export interface FacetStats {

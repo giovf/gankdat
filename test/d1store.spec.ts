@@ -6,6 +6,7 @@ import {
   BACKFILL_HANDOVER_MS,
   BACKFILL_UPDATE_SQL,
   backfillClock,
+  facetsClock,
   hash53,
   queryD1Source,
   refreshD1Source,
@@ -458,5 +459,109 @@ describe('d1store delta refresh', () => {
     expect(hash53('{"a":1}')).toBe(hash53('{"a":1}'));
     expect(hash53('{"a":1}')).not.toBe(hash53('{"a":2}'));
     expect(Number.isSafeInteger(hash53('uk-food-hygiene:123456'))).toBe(true);
+  });
+  it('writes the parent stats before the facets, so a spent budget still leaves a blob', async () => {
+    const source: DataSource = {
+      ...makeSource('d1-facet-first'),
+      stats: {
+        date: { field: 'listed_on', title: 'Listed by month' },
+        groupBy: [{ field: 'classification', title: 'By classification' }],
+        facets: [
+          {
+            segment: 'kind',
+            field: 'classification',
+            title: 'By kind',
+            values: [{ value: 'Firm', label: 'Firms' }],
+            groupBy: [],
+          },
+        ],
+      },
+    };
+    const realNow = facetsClock.now;
+    try {
+      let calls = 0;
+      facetsClock.now = (): number => Date.now() + (calls++ === 0 ? 0 : 300_000); // spent at once
+      await refreshD1Source(env, source);
+      const cached = await readSourceStats(env, 'd1-facet-first');
+      expect(cached?.stats.total).toBe(RECORDS.length);
+      expect(cached?.stats.facets).toEqual([
+        { segment: 'kind', field: 'classification', title: 'By kind', pages: [] },
+      ]);
+    } finally {
+      facetsClock.now = realNow;
+    }
+  });
+
+  it('carries facet pages past the budget from the previous blob, stalest first', async () => {
+    const source: DataSource = {
+      ...makeSource('d1-facet-budget'),
+      stats: {
+        date: { field: 'listed_on', title: 'Listed by month' },
+        groupBy: [{ field: 'country', title: 'By country' }],
+        facets: [
+          {
+            segment: 'kind',
+            field: 'classification',
+            title: 'By kind',
+            values: [
+              { value: 'Firm', label: 'Firms' },
+              { value: 'Individual', label: 'People' },
+              { value: 'Vessel', label: 'Vessels' },
+            ],
+            groupBy: [{ field: 'country', title: 'By country' }],
+          },
+        ],
+      },
+    };
+    const pagesOf = async (): Promise<{
+      at: string;
+      pages: [string, number, string | undefined][];
+    }> => {
+      const cached = await readSourceStats(env, 'd1-facet-budget');
+      return {
+        at: cached!.last_refreshed_at,
+        pages: (cached!.stats.facets?.[0]?.pages ?? []).map((p) => [p.value, p.total, p.as_of]),
+      };
+    };
+    // Night 1: the whole facet fits the budget.
+    await refreshD1Source(env, source);
+    const night1 = await pagesOf();
+    expect(night1.pages).toEqual([
+      ['Firm', 3, undefined],
+      ['Individual', 2, undefined],
+      ['Vessel', 1, undefined],
+    ]);
+    const realNow = facetsClock.now;
+    // The budget runs out after the first value of a facet: one page computed, the rest carried.
+    const spendAfterOne = (): void => {
+      let calls = 0;
+      const base = Date.now();
+      facetsClock.now = (): number => base + (calls++ < 2 ? 0 : 300_000);
+    };
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 5)); // a later last_refreshed_at
+      spendAfterOne();
+      await refreshD1Source(env, source);
+      const night2 = await pagesOf();
+      expect(night2.at > night1.at).toBe(true);
+      // Nothing had been carried before, so spec order decides: Firm fresh, the others as of night 1.
+      expect(night2.pages).toEqual([
+        ['Firm', 3, undefined],
+        ['Individual', 2, night1.at],
+        ['Vessel', 1, night1.at],
+      ]);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      spendAfterOne();
+      await refreshD1Source(env, source);
+      const night3 = await pagesOf();
+      // Stalest first: Individual (night 1) is recomputed; Vessel stays night 1, Firm is now night 2.
+      expect(night3.pages).toEqual([
+        ['Firm', 3, night2.at],
+        ['Individual', 2, undefined],
+        ['Vessel', 1, night1.at],
+      ]);
+    } finally {
+      facetsClock.now = realNow;
+    }
   });
 });
