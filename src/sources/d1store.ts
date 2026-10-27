@@ -1181,8 +1181,19 @@ export const FACETS_WRITE_GAP_MS = 20_000;
 export const facetsClock = {
   now: (): number => Date.now(),
   writeGapMs: FACETS_WRITE_GAP_MS,
+  /** Run before a page's queries (tests fail a page there) and after a computed page (tests kill the pass there). */
+  beforePage: null as ((value: string) => void) | null,
   afterPage: null as ((value: string) => void) | null,
 };
+
+/**
+ * A page whose D1 statements fail is logged and carried (or left out), and the pass goes on to
+ * the next value; this many failures in a row end the pass instead, so a D1 outage does not
+ * spend the wave on 45 doomed pages. The 2026-10-27 06:05 wave ran to `ok` in 167 s with 4.4 s
+ * of CPU and wrote no page at all: the pass threw (not killed), and before this one failure
+ * cost every page of the night.
+ */
+const FACET_FAILURES_IN_A_ROW = 3;
 
 /** How a facet pass reports and persists as it goes: the progress marker and an interim blob write. */
 interface FacetPassSink {
@@ -1257,8 +1268,10 @@ async function aggregateFacets(
     ];
     let carried = 0;
     let missing = 0;
+    let failed = 0;
+    let failuresInARow = 0;
     for (const { value, label, prev } of order) {
-      if (outOfTime()) {
+      if (outOfTime() || failuresInARow >= FACET_FAILURES_IN_A_ROW) {
         if (prev) {
           pages.set(value, { ...prev.page, label, as_of: prev.asOf });
           carried++;
@@ -1267,19 +1280,48 @@ async function aggregateFacets(
         }
         continue;
       }
-      const where = buildWhere(source.slug, generation, { [facet.field]: value });
-      const count = await env.DB.prepare(
-        `SELECT COUNT(*) AS n FROM source_records WHERE ${where.sql}`,
-      )
-        .bind(...where.binds)
-        .first<{ n: number }>();
-      pages.set(value, {
-        value,
-        label,
-        total: count?.n ?? 0,
-        monthly: facet.date ? await aggregateMonthly(env, where, facet.date) : null,
-        groups: await aggregateGroups(env, where, facet.groupBy),
-      });
+      const pageStarted = facetsClock.now();
+      let page: FacetPage;
+      try {
+        facetsClock.beforePage?.(value);
+        const where = buildWhere(source.slug, generation, { [facet.field]: value });
+        const count = await env.DB.prepare(
+          `SELECT COUNT(*) AS n FROM source_records WHERE ${where.sql}`,
+        )
+          .bind(...where.binds)
+          .first<{ n: number }>();
+        page = {
+          value,
+          label,
+          total: count?.n ?? 0,
+          monthly: facet.date ? await aggregateMonthly(env, where, facet.date) : null,
+          groups: await aggregateGroups(env, where, facet.groupBy),
+        };
+      } catch (pageErr) {
+        failed++;
+        failuresInARow++;
+        console.log(
+          JSON.stringify({
+            level: 'warn',
+            event: 'stats_facet_page_failed',
+            source: source.slug,
+            segment: facet.segment,
+            value,
+            reason: pageErr instanceof Error ? pageErr.message : String(pageErr),
+            elapsed_ms: facetsClock.now() - pageStarted,
+            failures_in_a_row: failuresInARow,
+          }),
+        );
+        if (prev) {
+          pages.set(value, { ...prev.page, label, as_of: prev.asOf });
+          carried++;
+        } else {
+          missing++;
+        }
+        continue;
+      }
+      failuresInARow = 0;
+      pages.set(value, page);
       computed++;
       await sink.progress(`page ${computed} of ${total} (${facet.segment}/${value})`);
       const now = facetsClock.now();
@@ -1300,6 +1342,7 @@ async function aggregateFacets(
           computed: facet.values.length - carried - missing,
           carried,
           missing,
+          failed,
           of: facet.values.length,
         }),
       );

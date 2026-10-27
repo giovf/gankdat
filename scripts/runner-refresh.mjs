@@ -276,7 +276,19 @@ async function readWaveLogs() {
         console.error(`wave log ${slug}: ${q.reason} ${q.bodyText.slice(0, 300)}`);
         continue;
       }
-      const all = parseWaveLogEvents(q.body);
+      // The slug needle matches every request line naming the slug (a relay round or a crawler
+      // fills the 20 newest lines within minutes), so a second query reads the Worker's own
+      // structured lines for the source — `"source":"<slug>"` is how every JSON event names it
+      // (2026-10-27, gankdat `sitemap-5xx-verify`: the 06:05 pass's stats_precompute_failed line
+      // sat behind ten request lines of the morning).
+      const structured = await observabilityQuery(waveLogQuery(`"source":"${slug}"`, now));
+      const own = structured.reason ? [] : parseWaveLogEvents(structured.body);
+      if (structured.reason) console.error(`wave log ${slug} (structured): ${structured.reason}`);
+      const seen = new Set(own.map((e) => `${e.at} ${e.message}`));
+      const all = [
+        ...own,
+        ...parseWaveLogEvents(q.body).filter((e) => !seen.has(`${e.at} ${e.message}`)),
+      ].sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
       const events = dropNoise(all);
       sources[slug] = { status: q.status, events, reason: null, lines: all.length, wave };
       console.log(`wave log ${slug}: ${all.length} line(s) in 24 h, ${events.length} readable`);

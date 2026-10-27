@@ -622,4 +622,81 @@ describe('d1store delta refresh', () => {
       facetsClock.afterPage = null;
     }
   });
+
+  it('a page whose statements fail is carried and the pass goes on to the next value', async () => {
+    const source: DataSource = {
+      ...makeSource('d1-facet-page-fail'),
+      stats: {
+        date: { field: 'listed_on', title: 'Listed by month' },
+        groupBy: [{ field: 'country', title: 'By country' }],
+        facets: [
+          {
+            segment: 'kind',
+            field: 'classification',
+            title: 'By kind',
+            values: [
+              { value: 'Firm', label: 'Firms' },
+              { value: 'Individual', label: 'People' },
+              { value: 'Vessel', label: 'Vessels' },
+            ],
+            groupBy: [{ field: 'country', title: 'By country' }],
+          },
+        ],
+      },
+    };
+    const pagesOf = async (): Promise<{
+      at: string;
+      pages: [string, number, string | undefined][];
+    }> => {
+      const cached = await readSourceStats(env, 'd1-facet-page-fail');
+      return {
+        at: cached!.last_refreshed_at,
+        pages: (cached!.stats.facets?.[0]?.pages ?? []).map((p) => [p.value, p.total, p.as_of]),
+      };
+    };
+    try {
+      // Night 1, no previous blob: the failing page is left out, the other two are computed.
+      facetsClock.beforePage = (value): void => {
+        if (value === 'Individual') throw new Error('D1_ERROR: statement timed out');
+      };
+      await refreshD1Source(env, source);
+      const night1 = await pagesOf();
+      expect(night1.pages).toEqual([
+        ['Firm', 3, undefined],
+        ['Vessel', 1, undefined],
+      ]);
+      // Night 2, the page fails again: it is still missing, the rest are fresh.
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      await refreshD1Source(env, source);
+      expect((await pagesOf()).pages).toEqual([
+        ['Firm', 3, undefined],
+        ['Vessel', 1, undefined],
+      ]);
+      // Night 3, it computes: all three pages, none carried.
+      facetsClock.beforePage = null;
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      await refreshD1Source(env, source);
+      const night3 = await pagesOf();
+      expect(night3.pages).toEqual([
+        ['Firm', 3, undefined],
+        ['Individual', 2, undefined],
+        ['Vessel', 1, undefined],
+      ]);
+      // Night 4, every page fails: the three in a row end the pass, and every page is carried from night 3.
+      facetsClock.beforePage = (): void => {
+        throw new Error('D1_ERROR: internal error');
+      };
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      await refreshD1Source(env, source);
+      const night4 = await pagesOf();
+      expect(night4.at > night3.at).toBe(true);
+      expect(night4.pages).toEqual([
+        ['Firm', 3, night3.at],
+        ['Individual', 2, night3.at],
+        ['Vessel', 1, night3.at],
+      ]);
+    } finally {
+      facetsClock.beforePage = null;
+    }
+  });
 });
