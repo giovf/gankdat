@@ -564,4 +564,62 @@ describe('d1store delta refresh', () => {
       facetsClock.now = realNow;
     }
   });
+
+  it('a facet pass that dies keeps the pages written so far; the failure path does not clobber them', async () => {
+    const source: DataSource = {
+      ...makeSource('d1-facet-partial'),
+      stats: {
+        date: { field: 'listed_on', title: 'Listed by month' },
+        groupBy: [{ field: 'country', title: 'By country' }],
+        facets: [
+          {
+            segment: 'kind',
+            field: 'classification',
+            title: 'By kind',
+            values: [
+              { value: 'Firm', label: 'Firms' },
+              { value: 'Individual', label: 'People' },
+              { value: 'Vessel', label: 'Vessels' },
+            ],
+            groupBy: [{ field: 'country', title: 'By country' }],
+          },
+        ],
+      },
+    };
+    const pagesOf = async (): Promise<{
+      at: string;
+      pages: [string, number, string | undefined][];
+    }> => {
+      const cached = await readSourceStats(env, 'd1-facet-partial');
+      return {
+        at: cached!.last_refreshed_at,
+        pages: (cached!.stats.facets?.[0]?.pages ?? []).map((p) => [p.value, p.total, p.as_of]),
+      };
+    };
+    await refreshD1Source(env, source);
+    const night1 = await pagesOf();
+    expect(night1.pages.map((p) => p[0])).toEqual(['Firm', 'Individual', 'Vessel']);
+    const realGap = facetsClock.writeGapMs;
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      // Every computed page is written at once, and the pass dies after the first one — the
+      // shape of a wave the platform kills or an aggregation that throws mid-pass.
+      facetsClock.writeGapMs = 0;
+      facetsClock.afterPage = (value): void => {
+        if (value === 'Firm') throw new Error('killed after the first page');
+      };
+      await refreshD1Source(env, source); // the refresh itself succeeds: stats are best-effort
+      const night2 = await pagesOf();
+      expect(night2.at > night1.at).toBe(true);
+      // Firm is tonight's page; the two the pass never reached are carried from night 1.
+      expect(night2.pages).toEqual([
+        ['Firm', 3, undefined],
+        ['Individual', 2, night1.at],
+        ['Vessel', 1, night1.at],
+      ]);
+    } finally {
+      facetsClock.writeGapMs = realGap;
+      facetsClock.afterPage = null;
+    }
+  });
 });

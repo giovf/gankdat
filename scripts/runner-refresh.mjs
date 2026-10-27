@@ -243,7 +243,24 @@ async function readWaveLogs() {
   const rows = await sql(
     "SELECT source_slug, MAX(CASE WHEN status = 'ok' THEN created_at END) AS last_ok, SUM(status = 'error' AND created_at > datetime('now','-1 day')) AS errors_today FROM refresh_log WHERE created_at > datetime('now','-30 days') GROUP BY source_slug HAVING last_ok IS NULL OR last_ok < datetime('now','-26 hours') OR errors_today > 0",
   );
-  const slugs = rows.map((r) => String(r.source_slug)).sort();
+  const stale = new Set(rows.map((r) => String(r.source_slug)));
+  // Missing facet pages (2026-10-27, gankdat `sitemap-5xx-verify`): the journal's ok row hid a
+  // facet pass that wrote nothing — every Nice-class page a 503 while this read saw no stale
+  // source — so a source whose stats blob holds fewer facet pages than its spec lists is read too.
+  for (const source of listSources()) {
+    const facets = source.stats?.facets;
+    if (!facets) continue;
+    const blob = await kvGet(statsKey(source.slug)).catch(() => null);
+    const declared = facets.reduce((n, f) => n + f.values.length, 0);
+    const present = (blob?.stats?.facets ?? []).reduce((n, f) => n + f.pages.length, 0);
+    if (present < declared) {
+      console.log(
+        `stats facets ${source.slug}: ${present} of ${declared} pages in the blob${blob ? '' : ' (no blob)'}`,
+      );
+      stale.add(source.slug);
+    }
+  }
+  const slugs = [...stale].sort();
   const now = Date.now();
   const sourceBySlug = new Map(listSources().map((s) => [s.slug, s]));
   /** @type {Record<string, import('../src/lib/wave-logs.ts').WaveLogResult>} */

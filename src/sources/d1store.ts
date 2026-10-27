@@ -741,6 +741,9 @@ async function precomputeStats(
   start: number,
 ): Promise<void> {
   const previous = await readSourceStats(env, source.slug).catch((): null => null);
+  // Set once an interim facet write has landed: that blob (the pages computed so far plus every
+  // page carried from the previous one) is newer than `previous` and must not be clobbered by it.
+  let interim = false;
   try {
     const facets = source.stats?.facets;
     const stats = await aggregateD1Stats(env, source, generation, meta.total);
@@ -750,10 +753,11 @@ async function precomputeStats(
       const elapsed = Math.round((Date.now() - start) / 1000);
       // One second ahead of the ok row: refresh_log's created_at is second precision and
       // recordSilentRefresh floors the marker's start before comparing (store.ts).
+      const facetStart = Date.now() + 1_000;
       await markRefreshProgress(
         env,
         source.slug,
-        Date.now() + 1_000,
+        facetStart,
         'stats facets',
         `parent stats written at ${elapsed} s`,
       );
@@ -764,12 +768,23 @@ async function precomputeStats(
         facets,
         previous,
         start + STATS_DEADLINE_MS,
+        {
+          progress: (detail) =>
+            markRefreshProgress(env, source.slug, facetStart, 'stats facets', detail),
+          write: async (pages) => {
+            await putSourceStats(env, source, { ...stats, facets: pages }, meta.last_refreshed_at);
+            interim = true;
+          },
+        },
       );
     }
     await putSourceStats(env, source, stats, meta.last_refreshed_at);
   } catch (statsErr) {
-    let retained = false;
-    if (previous) {
+    let retained: boolean | 'interim' = false;
+    if (interim) {
+      // The interim blob already holds every page the pass computed plus the carried ones.
+      retained = 'interim';
+    } else if (previous) {
       try {
         await env.CACHE.put(statsKey(source.slug), JSON.stringify(previous), {
           expirationTtl: snapshotTtlSeconds(source),
@@ -1150,8 +1165,30 @@ async function aggregateGroups(
  * start, guards as well.
  */
 const FACETS_BUDGET_MS = 240_000;
-/** Test seam: the clock the facet budget reads (tests spend it at once). */
-export const facetsClock = { now: (): number => Date.now() };
+/**
+ * Facet pages reach KV as they are computed (gankdat `sitemap-5xx-verify`, 2026-10-27): the first
+ * wave on v0.26.1 wrote the parent blob at 45 s and never the second one — every Nice-class page
+ * was still a 503 at 09:13 with no previous page to carry — so a pass that dies (killed, or a
+ * thrown aggregation) now leaves behind the pages it finished, and stalest-first fills the rest
+ * over the following nights. At most one interim write per this gap (KV takes one write a
+ * second per key, and a 45-page pass is a few hundred D1 statements over a few minutes).
+ */
+export const FACETS_WRITE_GAP_MS = 20_000;
+/**
+ * Test seams: the clock the facet budget reads (tests spend it at once), the interim write gap
+ * (tests set it to 0) and a hook run after each computed page (tests kill the pass there).
+ */
+export const facetsClock = {
+  now: (): number => Date.now(),
+  writeGapMs: FACETS_WRITE_GAP_MS,
+  afterPage: null as ((value: string) => void) | null,
+};
+
+/** How a facet pass reports and persists as it goes: the progress marker and an interim blob write. */
+interface FacetPassSink {
+  progress: (detail: string) => Promise<unknown>;
+  write: (facets: FacetStats[]) => Promise<void>;
+}
 
 /** The previous blob's page for a value and the date it was computed for. */
 function previousFacetPage(
@@ -1173,14 +1210,19 @@ async function aggregateFacets(
   facets: StatsFacet[],
   previous: CachedStats | null,
   deadline: number,
+  sink: FacetPassSink,
 ): Promise<FacetStats[]> {
   const started = facetsClock.now();
   const outOfTime = (): boolean => {
     const now = facetsClock.now();
     return now - started > FACETS_BUDGET_MS || now > deadline;
   };
+  const total = facets.reduce((n, f) => n + f.values.length, 0);
+  let computed = 0;
+  let writes = 0;
+  let lastWriteAt = started;
   const out: FacetStats[] = [];
-  for (const facet of facets) {
+  for (const [facetIndex, facet] of facets.entries()) {
     const stats: FacetStats = {
       segment: facet.segment,
       field: facet.field,
@@ -1198,6 +1240,21 @@ async function aggregateFacets(
       (a, b) => (a.prev?.asOf ?? '').localeCompare(b.prev?.asOf ?? '') || a.index - b.index,
     );
     const pages = new Map<string, FacetPage>();
+    // The blob as it stands mid-pass: finished facets, this facet's computed pages with the rest
+    // carried, and the facets not yet started carried whole — every page that can be served.
+    const snapshot = (): FacetStats[] => [
+      ...out,
+      {
+        ...stats,
+        pages: facet.values.flatMap(({ value, label }) => {
+          const page = pages.get(value);
+          if (page) return [page];
+          const prev = previousFacetPage(previous, facet.segment, value);
+          return prev ? [{ ...prev.page, label, as_of: prev.asOf }] : [];
+        }),
+      },
+      ...carriedFacets(previous, facets.slice(facetIndex + 1)),
+    ];
     let carried = 0;
     let missing = 0;
     for (const { value, label, prev } of order) {
@@ -1223,6 +1280,15 @@ async function aggregateFacets(
         monthly: facet.date ? await aggregateMonthly(env, where, facet.date) : null,
         groups: await aggregateGroups(env, where, facet.groupBy),
       });
+      computed++;
+      await sink.progress(`page ${computed} of ${total} (${facet.segment}/${value})`);
+      const now = facetsClock.now();
+      if (now - lastWriteAt >= facetsClock.writeGapMs) {
+        await sink.write(snapshot());
+        writes++;
+        lastWriteAt = now;
+      }
+      facetsClock.afterPage?.(value);
     }
     if (carried + missing > 0) {
       console.log(
@@ -1244,6 +1310,17 @@ async function aggregateFacets(
     }
     out.push(stats);
   }
+  console.log(
+    JSON.stringify({
+      level: 'info',
+      event: 'stats_facets_done',
+      source: source.slug,
+      computed,
+      of: total,
+      interim_writes: writes,
+      elapsed_s: Math.round((facetsClock.now() - started) / 1000),
+    }),
+  );
   return out;
 }
 
