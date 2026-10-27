@@ -24,6 +24,7 @@ import {
   parseWaveInvocations,
   parseWaveLogEvents,
   waveInvocationQuery,
+  invocationLinesQuery,
   waveLogQuery,
   waveWindowQuery,
 } from '../src/lib/wave-logs.ts';
@@ -278,33 +279,31 @@ async function readWaveLogs() {
         continue;
       }
       // The slug needle matches every request line naming the slug (a relay round or a crawler
-      // fills the 20 newest lines within minutes), so a second query reads the Worker's own
-      // structured lines for the source — `"source":"<slug>"` is how every JSON event names it
-      // (2026-10-27, gankdat `sitemap-5xx-verify`: the 06:05 pass's stats_precompute_failed line
-      // sat behind ten request lines of the morning).
-      const structured = await observabilityQuery(waveLogQuery(`"source":"${slug}"`, now));
-      const own = structured.reason ? [] : parseWaveLogEvents(structured.body);
-      if (structured.reason) console.error(`wave log ${slug} (structured): ${structured.reason}`);
-      // And the wave's own minutes: the 24 h read hands back the ten newest lines, so the lines
-      // the wave wrote (its warn on a failed stats pass above all) are read from the window of
-      // the invocation found above — its end, less its wall time, with ten seconds either side.
+      // fills the ten newest lines within minutes) and never a JSON line the Worker logged — those
+      // arrive as a `source` object with no message (raw rows read 2026-10-27, gankdat
+      // `sitemap-5xx-verify`: the 06:05 wave's stats_precompute_failed sat unread for a day). So
+      // the lines of the wave's own invocation are read by its `$metadata.requestId`, which every
+      // line it wrote shares, over the invocation's window (its end less its wall time); when the
+      // invocation carries no id, the window is read by the slug needle instead, and a window with
+      // no structured line prints its raw rows so the next query is written against the live shape.
       const invocation = wave?.invocations[0];
       let window = [];
       if (invocation?.at) {
         const end = Date.parse(invocation.at) + 10_000;
         const begin = end - (invocation.wallTimeMs ?? 15 * 60_000) - 20_000;
-        const w = await observabilityQuery(waveWindowQuery(slug, begin, end));
-        if (w.reason) console.error(`wave log ${slug} (wave window): ${w.reason}`);
+        const w = await observabilityQuery(
+          invocation.requestId
+            ? invocationLinesQuery(invocation.requestId, begin, end)
+            : waveWindowQuery(slug, begin, end),
+        );
+        const how = invocation.requestId ? `requestId ${invocation.requestId}` : 'slug needle';
+        if (w.reason) console.error(`wave log ${slug} (wave window, ${how}): ${w.reason}`);
         else {
           window = parseWaveLogEvents(w.body);
           console.log(
-            `wave log ${slug} (wave window ${new Date(begin).toISOString()} – ${new Date(end).toISOString()}): ${window.length} line(s)`,
+            `wave log ${slug} (wave window ${new Date(begin).toISOString()} – ${new Date(end).toISOString()}, ${how}): ${window.length} line(s)`,
           );
         }
-        // A wave logs structured JSON lines (refresh_delta, stats_precompute_failed …) and the
-        // needle search has never returned one (10-16, 10-27), so when the window shows none,
-        // print the raw rows of every line the Worker wrote in it: where the JSON lives is the
-        // one thing the next query needs to know.
         if (!window.some((e) => e.message.includes('event='))) {
           const rawQ = await observabilityQuery(waveWindowQuery(null, begin, end, 10));
           if (rawQ.reason) console.error(`wave log ${slug} (raw window): ${rawQ.reason}`);
@@ -320,7 +319,7 @@ async function readWaveLogs() {
         }
       }
       const seen = new Set();
-      const all = [...window, ...own, ...parseWaveLogEvents(q.body)]
+      const all = [...window, ...parseWaveLogEvents(q.body)]
         .filter((e) => {
           const key = `${e.at} ${e.message}`;
           if (seen.has(key)) return false;

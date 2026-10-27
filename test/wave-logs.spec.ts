@@ -12,6 +12,7 @@ import {
   waveLogNote,
   waveLogQuery,
   waveWindowQuery,
+  invocationLinesQuery,
   type WaveLogEvent,
   type WaveLogFile,
 } from '../src/lib/wave-logs';
@@ -46,7 +47,53 @@ describe('waveLogQuery', () => {
   });
 });
 
+describe('invocationLinesQuery', () => {
+  it('filters on the invocation’s requestId with no needle', () => {
+    const q = invocationLinesQuery('8be812928b8f1d5fcce96daa8cdae80a', 1, 2);
+    const p = q.parameters as { filters: { key: string; value: string }[] };
+    expect(p.filters.map((f) => [f.key, f.value])).toEqual([
+      ['$metadata.service', WAVE_LOG_SERVICE],
+      ['$metadata.requestId', '8be812928b8f1d5fcce96daa8cdae80a'],
+    ]);
+    expect('needle' in (q.parameters as Record<string, unknown>)).toBe(false);
+    expect(q.timeframe).toEqual({ from: 1, to: 2 });
+  });
+});
+
 describe('parseWaveLogEvents', () => {
+  it('reads a JSON console.log kept as the `source` object (the live shape, 2026-10-27)', () => {
+    const rows = [
+      {
+        source: {
+          retained: false,
+          level: 'warn',
+          event: 'stats_precompute_failed',
+          source: 'uk-trademark-journal',
+          reason: 'D1_ERROR: D1 DB exceeded its CPU time limit and was reset.',
+        },
+        dataset: 'cloudflare-workers',
+        timestamp: 1793081298567,
+        $workers: { eventType: 'scheduled', event: { cron: '5 6 * * *' } },
+        $metadata: { requestId: '8be812928b8f1d5fcce96daa8cdae80a', service: 'faceless-api' },
+      },
+      {
+        source: { level: 'info', message: 'GET https://gankdat.com/wp-login.php' },
+        dataset: 'cloudflare-workers',
+        timestamp: 1793081298156,
+        $metadata: { requestId: '981a2289eb3cb7389584c127eb5b0c6e', service: 'faceless-api' },
+      },
+    ];
+    const events = parseWaveLogEvents({ result: { events: { events: rows } } });
+    expect(events.map((e) => [e.at, e.level, e.message])).toEqual([
+      [
+        '2026-10-27T06:08:18.567Z',
+        'warn',
+        'event=stats_precompute_failed source=uk-trademark-journal reason=D1_ERROR: D1 DB exceeded its CPU time limit and was reset. retained=false',
+      ],
+      ['2026-10-27T06:08:18.156Z', 'info', 'GET https://gankdat.com/wp-login.php'],
+    ]);
+  });
+
   it('reads the Query Builder shape and leads a structured line with its event and source', () => {
     const body = {
       success: true,
@@ -219,6 +266,7 @@ describe('parseWaveInvocations', () => {
         wallTimeMs: 900120,
         cpuTimeMs: null,
         cron: '5 6 * * *',
+        requestId: null,
       },
       {
         at: '2026-10-15T06:05:01.000Z',
@@ -226,6 +274,7 @@ describe('parseWaveInvocations', () => {
         wallTimeMs: 812345,
         cpuTimeMs: 2450,
         cron: '5 6 * * *',
+        requestId: null,
       },
     ]);
   });
@@ -246,6 +295,7 @@ describe('parseWaveInvocations', () => {
         wallTimeMs: 12,
         cpuTimeMs: null,
         cron: null,
+        requestId: null,
       },
     ]);
     expect(parseWaveInvocations({ result: rows })).toHaveLength(2);
@@ -282,6 +332,7 @@ describe('parseWaveInvocations', () => {
         wallTimeMs: null,
         cpuTimeMs: null,
         cron: '5 6 * * *',
+        requestId: null,
       },
       {
         at: '2026-10-16T06:06:01.000Z',
@@ -289,6 +340,7 @@ describe('parseWaveInvocations', () => {
         wallTimeMs: null,
         cpuTimeMs: null,
         cron: null,
+        requestId: null,
       },
     ]);
     // Without a cron to match, newest first as before.
@@ -309,6 +361,7 @@ describe('waveInvocationText', () => {
       wallTimeMs: 900120,
       cpuTimeMs: null,
       cron: '5 6 * * *',
+      requestId: null,
     };
     expect(
       waveInvocationText({ cron: '5 6 * * *', status: 200, invocations: [inv], reason: null }, NOW),
@@ -380,6 +433,7 @@ describe('waveLogNote', () => {
                 wallTimeMs: 900120,
                 cpuTimeMs: null,
                 cron: '5 6 * * *',
+                requestId: null,
               },
             ],
           },

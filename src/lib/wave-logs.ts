@@ -54,6 +54,8 @@ export interface WaveInvocation {
   cpuTimeMs: number | null;
   /** `$workers.event.cron`, when carried. */
   cron: string | null;
+  /** `$metadata.requestId`: shared by every line the invocation wrote (read 2026-10-27). */
+  requestId: string | null;
 }
 
 /** The invocation query for a source's wave, next to its slug search. */
@@ -118,6 +120,35 @@ export function waveWindowQuery(
       // shape when a wave's structured lines are missing from the needle search: 2026-10-27,
       // the journal's window held one request line and none of the JSON lines the refresh logs).
       ...(needle === null ? {} : { needle: { value: needle, isRegex: false, matchCase: false } }),
+      calculations: [],
+      groupBys: [],
+    },
+    view: 'events',
+    limit,
+  };
+}
+
+/**
+ * Every line one invocation wrote: Workers Logs stamps the invocation row and each of its log
+ * lines with the same `$metadata.requestId` (raw rows read 2026-10-27 — the 06:05 wave's
+ * `stats_precompute_failed` carried the invocation's id), so the filter needs no needle and no
+ * guess at the window; the window only bounds the scan.
+ */
+export function invocationLinesQuery(
+  requestId: string,
+  fromMs: number,
+  toMs: number,
+  limit = WAVE_LOG_LIMIT,
+): Record<string, unknown> {
+  return {
+    queryId: `wave-invocation-lines`,
+    timeframe: { from: fromMs, to: toMs },
+    parameters: {
+      datasets: ['cloudflare-workers'],
+      filters: [
+        { key: '$metadata.service', operation: 'eq', value: WAVE_LOG_SERVICE, type: 'string' },
+        { key: '$metadata.requestId', operation: 'eq', value: requestId, type: 'string' },
+      ],
       calculations: [],
       groupBys: [],
     },
@@ -222,8 +253,15 @@ function timestampOf(e: Record<string, unknown>, meta: Record<string, unknown>):
 function eventOf(raw: unknown): WaveLogEvent | null {
   if (!isRecord(raw)) return null;
   const meta = isRecord(raw.$metadata) ? raw.$metadata : {};
-  const level = text(meta.level ?? raw.level ?? 'log');
-  let message = text(meta.message ?? raw.message);
+  // Workers Logs keeps what the Worker logged under `source` (read raw 2026-10-27, gankdat
+  // `sitemap-5xx-verify`): a string log as `{ level, message }`, a JSON log as the parsed object
+  // itself — `{ level: 'warn', event: 'stats_precompute_failed', source: 'uk-trademark-journal',
+  // reason: 'D1_ERROR: …' }` — with no `message` anywhere, which is why no structured line was
+  // ever read before. Such an object is the message.
+  const logged = isRecord(raw.source) ? raw.source : null;
+  const level = text(meta.level ?? logged?.level ?? raw.level ?? 'log');
+  let message = text(meta.message ?? raw.message ?? logged?.message);
+  if (!message && logged && !('message' in logged)) message = JSON.stringify(logged);
   // A console.log(JSON.stringify({ level, event, source, … })) line arrives as its JSON text;
   // lead with the fields a wave writes so the reading says what happened, then the rest.
   if (message.startsWith('{')) {
@@ -308,6 +346,7 @@ function invocationOf(raw: unknown): WaveInvocation | null {
     wallTimeMs: numberOf(fieldOf(raw, ['$workers', 'wallTimeMs'])),
     cpuTimeMs: numberOf(fieldOf(raw, ['$workers', 'cpuTimeMs'])),
     cron,
+    requestId: nonEmpty(meta.requestId),
   };
 }
 
