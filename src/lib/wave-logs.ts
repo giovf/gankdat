@@ -101,20 +101,23 @@ export function waveLogQuery(
  * time), where the Worker's own lines for the source stand alone.
  */
 export function waveWindowQuery(
-  needle: string,
+  needle: string | null,
   fromMs: number,
   toMs: number,
   limit = WAVE_LOG_LIMIT,
 ): Record<string, unknown> {
   return {
-    queryId: `wave-log-${needle}`,
+    queryId: `wave-log-${needle ?? 'all'}`,
     timeframe: { from: fromMs, to: toMs },
     parameters: {
       datasets: ['cloudflare-workers'],
       filters: [
         { key: '$metadata.service', operation: 'eq', value: WAVE_LOG_SERVICE, type: 'string' },
       ],
-      needle: { value: needle, isRegex: false, matchCase: false },
+      // No needle reads every line of the Worker in the window (the runner prints their raw
+      // shape when a wave's structured lines are missing from the needle search: 2026-10-27,
+      // the journal's window held one request line and none of the JSON lines the refresh logs).
+      ...(needle === null ? {} : { needle: { value: needle, isRegex: false, matchCase: false } }),
       calculations: [],
       groupBys: [],
     },

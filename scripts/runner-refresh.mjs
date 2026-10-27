@@ -301,6 +301,23 @@ async function readWaveLogs() {
             `wave log ${slug} (wave window ${new Date(begin).toISOString()} – ${new Date(end).toISOString()}): ${window.length} line(s)`,
           );
         }
+        // A wave logs structured JSON lines (refresh_delta, stats_precompute_failed …) and the
+        // needle search has never returned one (10-16, 10-27), so when the window shows none,
+        // print the raw rows of every line the Worker wrote in it: where the JSON lives is the
+        // one thing the next query needs to know.
+        if (!window.some((e) => e.message.includes('event='))) {
+          const rawQ = await observabilityQuery(waveWindowQuery(null, begin, end, 10));
+          if (rawQ.reason) console.error(`wave log ${slug} (raw window): ${rawQ.reason}`);
+          else {
+            const result = rawQ.body?.result ?? rawQ.body;
+            const rows = result?.events?.events ?? result?.events ?? result;
+            const list = Array.isArray(rows) ? rows : [];
+            console.log(
+              `wave log ${slug} (raw window): ${list.length} row(s); response keys ${Object.keys(result ?? {}).join(',')}`,
+            );
+            for (const row of list) console.log(`  ${JSON.stringify(row).slice(0, 700)}`);
+          }
+        }
       }
       const seen = new Set();
       const all = [...window, ...own, ...parseWaveLogEvents(q.body)]

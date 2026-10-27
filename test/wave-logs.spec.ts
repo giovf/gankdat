@@ -40,6 +40,9 @@ describe('waveLogQuery', () => {
     const p = q.parameters as { filters: { value: string }[]; needle: { value: string } };
     expect(p.filters[0]?.value).toBe(WAVE_LOG_SERVICE);
     expect(p.needle.value).toBe('uk-trademark-journal');
+    const all = waveWindowQuery(null, end - 177_328, end, 10);
+    expect(all.limit).toBe(10);
+    expect('needle' in (all.parameters as Record<string, unknown>)).toBe(false);
   });
 });
 
