@@ -25,6 +25,7 @@ import {
   parseWaveLogEvents,
   waveInvocationQuery,
   waveLogQuery,
+  waveWindowQuery,
 } from '../src/lib/wave-logs.ts';
 import { snapshotWrites, statsKey } from '../src/sources/cache.ts';
 import { isOriginUnavailable } from '../src/sources/origin.ts';
@@ -284,11 +285,32 @@ async function readWaveLogs() {
       const structured = await observabilityQuery(waveLogQuery(`"source":"${slug}"`, now));
       const own = structured.reason ? [] : parseWaveLogEvents(structured.body);
       if (structured.reason) console.error(`wave log ${slug} (structured): ${structured.reason}`);
-      const seen = new Set(own.map((e) => `${e.at} ${e.message}`));
-      const all = [
-        ...own,
-        ...parseWaveLogEvents(q.body).filter((e) => !seen.has(`${e.at} ${e.message}`)),
-      ].sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
+      // And the wave's own minutes: the 24 h read hands back the ten newest lines, so the lines
+      // the wave wrote (its warn on a failed stats pass above all) are read from the window of
+      // the invocation found above — its end, less its wall time, with ten seconds either side.
+      const invocation = wave?.invocations[0];
+      let window = [];
+      if (invocation?.at) {
+        const end = Date.parse(invocation.at) + 10_000;
+        const begin = end - (invocation.wallTimeMs ?? 15 * 60_000) - 20_000;
+        const w = await observabilityQuery(waveWindowQuery(slug, begin, end));
+        if (w.reason) console.error(`wave log ${slug} (wave window): ${w.reason}`);
+        else {
+          window = parseWaveLogEvents(w.body);
+          console.log(
+            `wave log ${slug} (wave window ${new Date(begin).toISOString()} – ${new Date(end).toISOString()}): ${window.length} line(s)`,
+          );
+        }
+      }
+      const seen = new Set();
+      const all = [...window, ...own, ...parseWaveLogEvents(q.body)]
+        .filter((e) => {
+          const key = `${e.at} ${e.message}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })
+        .sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
       const events = dropNoise(all);
       sources[slug] = { status: q.status, events, reason: null, lines: all.length, wave };
       console.log(`wave log ${slug}: ${all.length} line(s) in 24 h, ${events.length} readable`);

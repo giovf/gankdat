@@ -11,6 +11,7 @@ import {
   waveInvocationText,
   waveLogNote,
   waveLogQuery,
+  waveWindowQuery,
   type WaveLogEvent,
   type WaveLogFile,
 } from '../src/lib/wave-logs';
@@ -26,6 +27,16 @@ describe('waveLogQuery', () => {
     expect(q.view).toBe('events');
     expect(q.limit).toBe(20);
     expect(q.timeframe).toEqual({ from: NOW - 24 * 3_600_000, to: NOW });
+    const p = q.parameters as { filters: { value: string }[]; needle: { value: string } };
+    expect(p.filters[0]?.value).toBe(WAVE_LOG_SERVICE);
+    expect(p.needle.value).toBe('uk-trademark-journal');
+  });
+
+  it('reads an explicit window — the wave’s own minutes — with the same filters', () => {
+    const end = Date.parse('2026-10-27T06:08:23Z');
+    const q = waveWindowQuery('uk-trademark-journal', end - 177_328, end);
+    expect(q.timeframe).toEqual({ from: end - 177_328, to: end });
+    expect(q.limit).toBe(20);
     const p = q.parameters as { filters: { value: string }[]; needle: { value: string } };
     expect(p.filters[0]?.value).toBe(WAVE_LOG_SERVICE);
     expect(p.needle.value).toBe('uk-trademark-journal');

@@ -90,9 +90,25 @@ export function waveLogQuery(
   hours = 24,
   limit = WAVE_LOG_LIMIT,
 ): Record<string, unknown> {
+  return waveWindowQuery(needle, nowMs - hours * 60 * 60 * 1000, nowMs, limit);
+}
+
+/**
+ * The same search over an explicit window — the wave's own minutes (2026-10-27, gankdat
+ * `sitemap-5xx-verify`): the 24 h read returns the newest lines first and the API hands back ten,
+ * so a relay round or a crawler naming the slug buries a wave's warn line within minutes of it.
+ * The runner reads the window of the invocation it found (`WaveInvocation.at`, less its wall
+ * time), where the Worker's own lines for the source stand alone.
+ */
+export function waveWindowQuery(
+  needle: string,
+  fromMs: number,
+  toMs: number,
+  limit = WAVE_LOG_LIMIT,
+): Record<string, unknown> {
   return {
     queryId: `wave-log-${needle}`,
-    timeframe: { from: nowMs - hours * 60 * 60 * 1000, to: nowMs },
+    timeframe: { from: fromMs, to: toMs },
     parameters: {
       datasets: ['cloudflare-workers'],
       filters: [
