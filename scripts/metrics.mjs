@@ -694,7 +694,10 @@ const workerErrorsNote = await (async () => {
   const folded = foldErrorLines(JSON.parse(text));
   // One plain line per message (GitHub's log masking mangles JSON braces, 2026-10-29 19:40).
   console.log(`worker errors: ${folded.lines} lines, ${folded.requests} request events`);
-  for (const m of folded.messages) console.log(`worker error ×${m.n}: ${m.message}`);
+  for (const m of folded.messages) {
+    const paths = m.paths.map((p) => `${p.path} ${p.n}`).join(', ');
+    console.log(`worker error ×${m.n}: ${m.message}${paths ? ` — on ${paths}` : ''}`);
+  }
   if (folded.lines === 0) console.log(`worker errors body: ${text.slice(0, 400)}`);
   return errorLinesNote(folded);
 })().catch((e) => `worker errors 24h: n/a (${e.message.slice(0, 100)})`);

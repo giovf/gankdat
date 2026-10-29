@@ -6,10 +6,15 @@ import {
   foldErrorLines,
 } from '../src/lib/error-lines.js';
 
-const line = (level: string, message: string, shape: 'source' | 'text' = 'source'): unknown =>
+const line = (
+  level: string,
+  message: string,
+  shape: 'source' | 'text' = 'source',
+  requestId = 'r1',
+): unknown =>
   shape === 'source'
-    ? { $metadata: { level, service: 'faceless-api' }, source: { level, message, requestId: 'r1' } }
-    : { $metadata: { level, message } };
+    ? { $metadata: { level, service: 'faceless-api', requestId }, source: { level, message } }
+    : { $metadata: { level, message, requestId } };
 
 describe('worker error lines', () => {
   it('builds the Query Builder body filtered to the service and the error level', () => {
@@ -40,27 +45,39 @@ describe('worker error lines', () => {
     const body = {
       result: {
         events: [
-          line('error', 'TypeError: x is not a function'),
-          line('error', 'POST https://gankdat.com/mcp'),
-          line('error', 'D1_ERROR: too many SQL variables'),
+          line('error', 'TypeError: x is not a function', 'source', 'r1'),
+          line('error', 'POST https://gankdat.com/mcp', 'source', 'r1'),
+          line('error', 'D1_ERROR: internal error; reference = abc123', 'source', 'r2'),
+          line(
+            'error',
+            'GET https://gankdat.com/v1/data/uk-company-profiles?company_number=1',
+            'source',
+            'r2',
+          ),
           line('info', 'ignored'),
-          line('error', 'TypeError: x is not a function'),
+          line('error', 'TypeError: x is not a function', 'source', 'r3'),
           line('error', 'a'),
           line('error', 'b'),
         ],
       },
     };
     const folded = foldErrorLines(body);
-    expect(folded.lines).toBe(6);
-    expect(folded.requests).toBe(1);
+    expect(folded.lines).toBe(7);
+    expect(folded.requests).toBe(2);
     expect(folded.messages.map((m) => m.n)).toEqual([2, 1, 1, 1]);
+    expect(folded.messages[0]!.paths).toEqual([{ path: '/mcp', n: 1 }]);
+    expect(folded.messages.find((m) => m.message.startsWith('D1_ERROR'))).toEqual({
+      message: 'D1_ERROR: internal error; reference = …',
+      n: 1,
+      paths: [{ path: '/v1/data/uk-company-profiles', n: 1 }],
+    });
     expect(folded.top).toEqual([
       { message: 'TypeError: x is not a function', n: 2 },
       { message: 'a', n: 1 },
       { message: 'b', n: 1 },
     ]);
     expect(errorLinesNote(folded)).toBe(
-      'worker errors 24h: 6 (TypeError: x is not a function ×2, a ×1, b ×1 +1 more)',
+      'worker errors 24h: 7 (TypeError: x is not a function ×2, a ×1, b ×1 +1 more)',
     );
     expect(errorLinesNote(foldErrorLines({ result: { events: [] } }))).toBe('worker errors 24h: 0');
   });

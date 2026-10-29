@@ -82,40 +82,79 @@ export interface ErrorLines {
   lines: number;
   /** Error-level invocation events (`METHOD https://…`): the request a thrown error belonged to. */
   requests: number;
-  /** Every distinct logged message, most frequent first (the job log prints them all). */
-  messages: { message: string; n: number }[];
+  /**
+   * Every distinct logged message, most frequent first (the job log prints them all), with the
+   * request paths it was thrown on — the invocation event that shares the line's requestId.
+   */
+  messages: { message: string; n: number; paths: { path: string; n: number }[] }[];
   /** The first TOP of `messages`, for the row. */
   top: { message: string; n: number }[];
 }
 
 /**
  * An invocation event at error level reads as its request line (`POST https://gankdat.com/mcp`,
- * first read 2026-10-29 19:40): the Worker's own message is the console.error line beside it.
+ * first read 2026-10-29 19:40): the Worker's own message is the console.error line beside it, and
+ * both carry the invocation's `$metadata.requestId` (wave-logs.ts, 2026-10-27).
  */
-const isRequestLine = (message: string): boolean => /^[A-Z]+ https?:\/\//.test(message);
+const REQUEST_LINE = /^[A-Z]+ (https?:\/\/\S+)/;
 
-/** The error-level lines of a Query Builder response, folded by message. */
+const requestIdOf = (raw: unknown): string => {
+  if (!isRecord(raw)) return '';
+  const meta = isRecord(raw.$metadata) ? raw.$metadata : {};
+  return text(meta.requestId ?? raw.requestId);
+};
+
+/** D1's per-incident reference ids would make every internal error its own message. */
+const normalise = (message: string): string =>
+  message.replace(/reference = [a-z0-9]+/g, 'reference = …');
+
+/** The error-level lines of a Query Builder response, folded by message, each with its request paths. */
 export function foldErrorLines(body: unknown): ErrorLines {
   const result = isRecord(body) && 'result' in body ? body.result : body;
   const rows = firstArray(result) ?? [];
-  const counts = new Map<string, number>();
+  const pathByRequest = new Map<string, string>();
+  const thrown: { key: string; requestId: string }[] = [];
   let lines = 0;
   let requests = 0;
   for (const row of rows) {
     const message = errorLineOf(row);
     if (message === null) continue;
     lines += 1;
-    if (isRequestLine(message)) {
+    const request = REQUEST_LINE.exec(message);
+    if (request) {
       requests += 1;
+      try {
+        pathByRequest.set(requestIdOf(row), new URL(request[1]!).pathname);
+      } catch {
+        /* not a URL after all — the message stays a count */
+      }
       continue;
     }
-    const key = message.slice(0, MESSAGE_CHARS);
-    counts.set(key, (counts.get(key) ?? 0) + 1);
+    thrown.push({ key: normalise(message).slice(0, MESSAGE_CHARS), requestId: requestIdOf(row) });
+  }
+  const counts = new Map<string, { n: number; paths: Map<string, number> }>();
+  for (const t of thrown) {
+    const entry = counts.get(t.key) ?? { n: 0, paths: new Map<string, number>() };
+    entry.n += 1;
+    const path = (t.requestId && pathByRequest.get(t.requestId)) || '';
+    if (path) entry.paths.set(path, (entry.paths.get(path) ?? 0) + 1);
+    counts.set(t.key, entry);
   }
   const messages = [...counts.entries()]
-    .map(([message, n]) => ({ message, n }))
+    .map(([message, e]) => ({
+      message,
+      n: e.n,
+      paths: [...e.paths.entries()]
+        .map(([path, n]) => ({ path, n }))
+        .sort((a, b) => b.n - a.n || a.path.localeCompare(b.path)),
+    }))
     .sort((a, b) => b.n - a.n || a.message.localeCompare(b.message));
-  return { lines, requests, messages, top: messages.slice(0, TOP) };
+  return {
+    lines,
+    requests,
+    messages,
+    top: messages.slice(0, TOP).map(({ message, n }) => ({ message, n })),
+  };
 }
 
 /** The Daily numbers clause: `worker errors 24h: N (msg ×n, …)` or `worker errors 24h: 0`. */
