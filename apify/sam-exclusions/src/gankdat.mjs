@@ -7,7 +7,14 @@ const API = 'https://gankdat.com/v1';
 const PER_PAGE = 100;
 const USER_AGENT = 'gankdat-apify-actor/1.2';
 
+// A 5xx is retried twice (2 s, 4 s): Apify's daily QA run is one call on a cold key, and on
+// 2026-10-27..29 that one call met a transient D1 error in the API's auth read (`D1_ERROR:
+// internal error`, 29 such lines on 10-29, one on this route) and the actor was flagged
+// "under maintenance" — a retry a moment later answers.
+const SERVER_ERROR_RETRIES = 2;
+
 async function apiGet(key, url, params) {
+  let serverErrors = 0;
   for (;;) {
     const qs = new URLSearchParams(params);
     const res = await fetch(`${url}?${qs}`, {
@@ -16,6 +23,13 @@ async function apiGet(key, url, params) {
     if (res.status === 429) {
       const wait = Number(res.headers.get('retry-after') ?? '5') * 1000;
       log.warning(`Rate limited by the API; waiting ${wait} ms`);
+      await new Promise((r) => setTimeout(r, wait));
+      continue;
+    }
+    if (res.status >= 500 && serverErrors < SERVER_ERROR_RETRIES) {
+      serverErrors += 1;
+      const wait = 2000 * serverErrors;
+      log.warning(`API answered ${res.status}; retry ${serverErrors} in ${wait} ms`);
       await new Promise((r) => setTimeout(r, wait));
       continue;
     }
