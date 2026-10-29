@@ -78,11 +78,21 @@ export function errorLineOf(raw: unknown): string | null {
 }
 
 export interface ErrorLines {
-  /** Error-level lines in the window. */
+  /** Error-level lines in the window, the invocation events included. */
   lines: number;
-  /** Distinct messages, most frequent first, at most TOP. */
+  /** Error-level invocation events (`METHOD https://…`): the request a thrown error belonged to. */
+  requests: number;
+  /** Every distinct logged message, most frequent first (the job log prints them all). */
+  messages: { message: string; n: number }[];
+  /** The first TOP of `messages`, for the row. */
   top: { message: string; n: number }[];
 }
+
+/**
+ * An invocation event at error level reads as its request line (`POST https://gankdat.com/mcp`,
+ * first read 2026-10-29 19:40): the Worker's own message is the console.error line beside it.
+ */
+const isRequestLine = (message: string): boolean => /^[A-Z]+ https?:\/\//.test(message);
 
 /** The error-level lines of a Query Builder response, folded by message. */
 export function foldErrorLines(body: unknown): ErrorLines {
@@ -90,23 +100,28 @@ export function foldErrorLines(body: unknown): ErrorLines {
   const rows = firstArray(result) ?? [];
   const counts = new Map<string, number>();
   let lines = 0;
+  let requests = 0;
   for (const row of rows) {
     const message = errorLineOf(row);
     if (message === null) continue;
     lines += 1;
+    if (isRequestLine(message)) {
+      requests += 1;
+      continue;
+    }
     const key = message.slice(0, MESSAGE_CHARS);
     counts.set(key, (counts.get(key) ?? 0) + 1);
   }
-  const top = [...counts.entries()]
+  const messages = [...counts.entries()]
     .map(([message, n]) => ({ message, n }))
-    .sort((a, b) => b.n - a.n || a.message.localeCompare(b.message))
-    .slice(0, TOP);
-  return { lines, top };
+    .sort((a, b) => b.n - a.n || a.message.localeCompare(b.message));
+  return { lines, requests, messages, top: messages.slice(0, TOP) };
 }
 
 /** The Daily numbers clause: `worker errors 24h: N (msg ×n, …)` or `worker errors 24h: 0`. */
 export function errorLinesNote(folded: ErrorLines, hours = ERROR_LOG_HOURS): string {
   if (folded.lines === 0) return `worker errors ${hours}h: 0`;
   const named = folded.top.map((t) => `${t.message} ×${t.n}`).join(', ');
-  return `worker errors ${hours}h: ${folded.lines} (${named})`;
+  const more = folded.messages.length - folded.top.length;
+  return `worker errors ${hours}h: ${folded.lines} (${named}${more > 0 ? ` +${more} more` : ''})`;
 }

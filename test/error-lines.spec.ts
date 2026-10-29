@@ -41,20 +41,26 @@ describe('worker error lines', () => {
       result: {
         events: [
           line('error', 'TypeError: x is not a function'),
+          line('error', 'POST https://gankdat.com/mcp'),
           line('error', 'D1_ERROR: too many SQL variables'),
           line('info', 'ignored'),
           line('error', 'TypeError: x is not a function'),
+          line('error', 'a'),
+          line('error', 'b'),
         ],
       },
     };
     const folded = foldErrorLines(body);
-    expect(folded.lines).toBe(3);
+    expect(folded.lines).toBe(6);
+    expect(folded.requests).toBe(1);
+    expect(folded.messages.map((m) => m.n)).toEqual([2, 1, 1, 1]);
     expect(folded.top).toEqual([
       { message: 'TypeError: x is not a function', n: 2 },
-      { message: 'D1_ERROR: too many SQL variables', n: 1 },
+      { message: 'a', n: 1 },
+      { message: 'b', n: 1 },
     ]);
     expect(errorLinesNote(folded)).toBe(
-      'worker errors 24h: 3 (TypeError: x is not a function ×2, D1_ERROR: too many SQL variables ×1)',
+      'worker errors 24h: 6 (TypeError: x is not a function ×2, a ×1, b ×1 +1 more)',
     );
     expect(errorLinesNote(foldErrorLines({ result: { events: [] } }))).toBe('worker errors 24h: 0');
   });
