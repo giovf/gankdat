@@ -16,7 +16,7 @@
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
     "traffic": "node --env-file=.env scripts/traffic.mjs",
     "scoreboard": "node --env-file=.env scripts/scoreboard.mjs",
-    "check": "npm run lint && npm run typecheck && npm run format:check && npm test && npm run build",
+    "check": "npm run lint && npm run typecheck && npm run format:check && npm test && npm run build && npm run -s entry-imports --prefix ../..",
     "metrics": "node --env-file=.env scripts/metrics.mjs",
     "schedules": "node --env-file=.env scripts/schedules.mjs",
     "runner-refresh": "esbuild scripts/runner-refresh.mjs --bundle --platform=node --format=esm --target=node22 --log-level=warning --outfile=dist/runner-refresh.mjs && node --env-file-if-exists=.env dist/runner-refresh.mjs",
