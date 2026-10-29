@@ -901,6 +901,22 @@ const bazaarNote = await (async () => {
   return bazaarClause(bazaarSummary(resources, x402Base));
 })().catch((e) => `bazaar: n/a (${String(e instanceof Error ? e.message : e).slice(0, 100)})`);
 
+// Payhip twin listing of the tax workbook (tax-workbook `payhip-twin-listing`, 2026-10-29): the
+// landing Worker's /hooks/payhip receives Payhip's paid/refunded webhooks and serves a keyless
+// 30-day summary (counts and pence only); the row carries it so the Payhip funnel is read without
+// mail. `n/a (<reason>)` when the summary cannot be read.
+const payhipNote = await fetch('https://apps.gankdat.com/hooks/payhip/summary', {
+  headers: { 'user-agent': 'gankdat-metrics/1 (+https://gankdat.com)' },
+  signal: AbortSignal.timeout(15_000),
+})
+  .then(async (res) => {
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const s = await res.json();
+    const net = (Number(s.net_pence ?? 0) / 100).toFixed(2);
+    return `payhip 30d: ${s.sales ?? 0} sales, ${s.refunds ?? 0} refunds, net ${s.currency === 'GBP' ? '£' : `${s.currency} `}${net}`;
+  })
+  .catch((e) => `payhip 30d: n/a (${String(e instanceof Error ? e.message : e).slice(0, 80)})`);
+
 const notes = [
   // preview = keyless data-tool calls (5 rows, 20/day per client, since 2026-09-30 for the
   // Claude Connectors Directory); paywall hits = the plan text shown when that budget is spent
@@ -926,6 +942,7 @@ const notes = [
   oauthNote,
   connectCallersText,
   funnelNote,
+  payhipNote,
   afterWallText,
   cfNote,
   crawlersNote,
