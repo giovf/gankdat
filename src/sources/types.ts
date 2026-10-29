@@ -45,9 +45,11 @@ export interface StatsGroupSpec {
 /**
  * Bounded sub-pages `/stats/<slug>/<segment>/<value>`, one per listed value
  * (never derived from the data — programmatic SEO stays bounded, see
- * ARCHITECTURE "out of scope"). A value selects records with the query
- * engine's rule for a string param on `field` (case-insensitive substring), so
- * a comma-separated list field such as Nice classes works with one value.
+ * ARCHITECTURE "out of scope"). A value selects the records whose `field`
+ * equals it, or whose array / comma-separated list contains it (trimmed), so a
+ * list field such as Nice classes works with one value — the same records the
+ * query engine's string rule selects for a short code (d1store `scanFacet`,
+ * one scan of the generation per statement since 2026-10-29).
  * Each sub-page carries its own trend and breakdown tables, precomputed at
  * refresh like the parent page.
  */

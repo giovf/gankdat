@@ -492,211 +492,205 @@ describe('d1store delta refresh', () => {
     }
   });
 
-  it('carries facet pages past the budget from the previous blob, stalest first', async () => {
-    const source: DataSource = {
-      ...makeSource('d1-facet-budget'),
-      stats: {
-        date: { field: 'listed_on', title: 'Listed by month' },
-        groupBy: [{ field: 'country', title: 'By country' }],
-        facets: [
-          {
-            segment: 'kind',
-            field: 'classification',
-            title: 'By kind',
-            values: [
-              { value: 'Firm', label: 'Firms' },
-              { value: 'Individual', label: 'People' },
-              { value: 'Vessel', label: 'Vessels' },
-            ],
-            groupBy: [{ field: 'country', title: 'By country' }],
-          },
+  const twoFacets = (slug: string): DataSource => ({
+    ...makeSource(slug),
+    stats: {
+      date: { field: 'listed_on', title: 'Listed by month' },
+      groupBy: [{ field: 'country', title: 'By country' }],
+      facets: ['kind', 'kind-again'].map((segment) => ({
+        segment,
+        field: 'classification',
+        title: 'By kind',
+        values: [
+          { value: 'Firm', label: 'Firms' },
+          { value: 'Individual', label: 'People' },
+          { value: 'Vessel', label: 'Vessels' },
         ],
-      },
-    };
-    const pagesOf = async (): Promise<{
-      at: string;
-      pages: [string, number, string | undefined][];
-    }> => {
-      const cached = await readSourceStats(env, 'd1-facet-budget');
-      return {
-        at: cached!.last_refreshed_at,
-        pages: (cached!.stats.facets?.[0]?.pages ?? []).map((p) => [p.value, p.total, p.as_of]),
-      };
-    };
-    // Night 1: the whole facet fits the budget.
+        groupBy: [{ field: 'country', title: 'By country' }],
+      })),
+    },
+  });
+  type FacetRead = { at: string; facets: Record<string, [string, number, string | undefined][]> };
+  const facetsOf = async (slug: string): Promise<FacetRead> => {
+    const cached = await readSourceStats(env, slug);
+    const facets: FacetRead['facets'] = {};
+    for (const facet of cached!.stats.facets ?? []) {
+      facets[facet.segment] = facet.pages.map((p) => [p.value, p.total, p.as_of]);
+    }
+    return { at: cached!.last_refreshed_at, facets };
+  };
+  const fresh: [string, number, undefined][] = [
+    ['Firm', 3, undefined],
+    ['Individual', 2, undefined],
+    ['Vessel', 1, undefined],
+  ];
+  const asOf = (at: string): [string, number, string][] => [
+    ['Firm', 3, at],
+    ['Individual', 2, at],
+    ['Vessel', 1, at],
+  ];
+
+  it('carries facets past the budget from the previous blob, stalest first', async () => {
+    const source = twoFacets('d1-facet-budget');
+    // Night 1: both facets fit the budget.
     await refreshD1Source(env, source);
-    const night1 = await pagesOf();
-    expect(night1.pages).toEqual([
-      ['Firm', 3, undefined],
-      ['Individual', 2, undefined],
-      ['Vessel', 1, undefined],
-    ]);
+    const night1 = await facetsOf('d1-facet-budget');
+    expect(night1.facets).toEqual({ kind: fresh, 'kind-again': fresh });
     const realNow = facetsClock.now;
-    // The budget runs out after the first value of a facet: one page computed, the rest carried.
+    // The budget runs out after the first facet: its pages computed, the other facet carried.
+    // Clock reads per computed facet: pass start, the budget check, the facet start, the write gap.
     const spendAfterOne = (): void => {
       let calls = 0;
       const base = Date.now();
-      facetsClock.now = (): number => base + (calls++ < 2 ? 0 : 300_000);
+      facetsClock.now = (): number => base + (calls++ < 4 ? 0 : 300_000);
     };
     try {
       await new Promise((resolve) => setTimeout(resolve, 5)); // a later last_refreshed_at
       spendAfterOne();
       await refreshD1Source(env, source);
-      const night2 = await pagesOf();
+      const night2 = await facetsOf('d1-facet-budget');
       expect(night2.at > night1.at).toBe(true);
-      // Nothing had been carried before, so spec order decides: Firm fresh, the others as of night 1.
-      expect(night2.pages).toEqual([
-        ['Firm', 3, undefined],
-        ['Individual', 2, night1.at],
-        ['Vessel', 1, night1.at],
-      ]);
+      // Nothing had been carried before, so spec order decides: kind fresh, kind-again as of night 1.
+      expect(night2.facets).toEqual({ kind: fresh, 'kind-again': asOf(night1.at) });
       await new Promise((resolve) => setTimeout(resolve, 5));
       spendAfterOne();
       await refreshD1Source(env, source);
-      const night3 = await pagesOf();
-      // Stalest first: Individual (night 1) is recomputed; Vessel stays night 1, Firm is now night 2.
-      expect(night3.pages).toEqual([
-        ['Firm', 3, night2.at],
-        ['Individual', 2, undefined],
-        ['Vessel', 1, night1.at],
-      ]);
+      const night3 = await facetsOf('d1-facet-budget');
+      // Stalest first: kind-again (night 1) is recomputed; kind is now as of night 2.
+      expect(night3.facets).toEqual({ kind: asOf(night2.at), 'kind-again': fresh });
     } finally {
       facetsClock.now = realNow;
     }
   });
 
-  it('a facet pass that dies keeps the pages written so far; the failure path does not clobber them', async () => {
-    const source: DataSource = {
-      ...makeSource('d1-facet-partial'),
-      stats: {
-        date: { field: 'listed_on', title: 'Listed by month' },
-        groupBy: [{ field: 'country', title: 'By country' }],
-        facets: [
-          {
-            segment: 'kind',
-            field: 'classification',
-            title: 'By kind',
-            values: [
-              { value: 'Firm', label: 'Firms' },
-              { value: 'Individual', label: 'People' },
-              { value: 'Vessel', label: 'Vessels' },
-            ],
-            groupBy: [{ field: 'country', title: 'By country' }],
-          },
-        ],
-      },
-    };
-    const pagesOf = async (): Promise<{
-      at: string;
-      pages: [string, number, string | undefined][];
-    }> => {
-      const cached = await readSourceStats(env, 'd1-facet-partial');
-      return {
-        at: cached!.last_refreshed_at,
-        pages: (cached!.stats.facets?.[0]?.pages ?? []).map((p) => [p.value, p.total, p.as_of]),
-      };
-    };
+  it('a facet pass that dies keeps the facets written so far; the failure path does not clobber them', async () => {
+    const source = twoFacets('d1-facet-partial');
     await refreshD1Source(env, source);
-    const night1 = await pagesOf();
-    expect(night1.pages.map((p) => p[0])).toEqual(['Firm', 'Individual', 'Vessel']);
+    const night1 = await facetsOf('d1-facet-partial');
+    expect(night1.facets).toEqual({ kind: fresh, 'kind-again': fresh });
     const realGap = facetsClock.writeGapMs;
     try {
       await new Promise((resolve) => setTimeout(resolve, 5));
-      // Every computed page is written at once, and the pass dies after the first one — the
+      // Every computed facet is written at once, and the pass dies after the first one — the
       // shape of a wave the platform kills or an aggregation that throws mid-pass.
       facetsClock.writeGapMs = 0;
-      facetsClock.afterPage = (value): void => {
-        if (value === 'Firm') throw new Error('killed after the first page');
+      facetsClock.afterFacet = (segment): void => {
+        if (segment === 'kind') throw new Error('killed after the first facet');
       };
       await refreshD1Source(env, source); // the refresh itself succeeds: stats are best-effort
-      const night2 = await pagesOf();
+      const night2 = await facetsOf('d1-facet-partial');
       expect(night2.at > night1.at).toBe(true);
-      // Firm is tonight's page; the two the pass never reached are carried from night 1.
-      expect(night2.pages).toEqual([
-        ['Firm', 3, undefined],
-        ['Individual', 2, night1.at],
-        ['Vessel', 1, night1.at],
-      ]);
+      // kind is tonight's; the facet the pass never reached is carried from night 1.
+      expect(night2.facets).toEqual({ kind: fresh, 'kind-again': asOf(night1.at) });
     } finally {
       facetsClock.writeGapMs = realGap;
-      facetsClock.afterPage = null;
+      facetsClock.afterFacet = null;
     }
   });
 
-  it('a page whose statements fail is carried and the pass goes on to the next value', async () => {
-    const source: DataSource = {
-      ...makeSource('d1-facet-page-fail'),
-      stats: {
-        date: { field: 'listed_on', title: 'Listed by month' },
-        groupBy: [{ field: 'country', title: 'By country' }],
-        facets: [
-          {
-            segment: 'kind',
-            field: 'classification',
-            title: 'By kind',
-            values: [
-              { value: 'Firm', label: 'Firms' },
-              { value: 'Individual', label: 'People' },
-              { value: 'Vessel', label: 'Vessels' },
-            ],
-            groupBy: [{ field: 'country', title: 'By country' }],
-          },
-        ],
-      },
-    };
-    const pagesOf = async (): Promise<{
-      at: string;
-      pages: [string, number, string | undefined][];
-    }> => {
-      const cached = await readSourceStats(env, 'd1-facet-page-fail');
-      return {
-        at: cached!.last_refreshed_at,
-        pages: (cached!.stats.facets?.[0]?.pages ?? []).map((p) => [p.value, p.total, p.as_of]),
-      };
-    };
+  it('a facet whose statements fail is carried and the pass goes on to the next facet', async () => {
+    const source = twoFacets('d1-facet-fail');
     try {
-      // Night 1, no previous blob: the failing page is left out, the other two are computed.
-      facetsClock.beforePage = (value): void => {
-        if (value === 'Individual') throw new Error('D1_ERROR: statement timed out');
+      // Night 1, no previous blob: the failing facet has no pages, the other is computed.
+      facetsClock.beforeFacet = (segment): void => {
+        if (segment === 'kind') throw new Error('D1_ERROR: statement timed out');
       };
       await refreshD1Source(env, source);
-      const night1 = await pagesOf();
-      expect(night1.pages).toEqual([
-        ['Firm', 3, undefined],
-        ['Vessel', 1, undefined],
-      ]);
-      // Night 2, the page fails again: it is still missing, the rest are fresh.
+      const night1 = await facetsOf('d1-facet-fail');
+      expect(night1.facets).toEqual({ kind: [], 'kind-again': fresh });
+      // Night 2, it fails again: still no pages, the other facet fresh.
       await new Promise((resolve) => setTimeout(resolve, 5));
       await refreshD1Source(env, source);
-      expect((await pagesOf()).pages).toEqual([
-        ['Firm', 3, undefined],
-        ['Vessel', 1, undefined],
-      ]);
-      // Night 3, it computes: all three pages, none carried.
-      facetsClock.beforePage = null;
+      expect((await facetsOf('d1-facet-fail')).facets).toEqual({ kind: [], 'kind-again': fresh });
+      // Night 3, it computes: both facets, nothing carried.
+      facetsClock.beforeFacet = null;
       await new Promise((resolve) => setTimeout(resolve, 5));
       await refreshD1Source(env, source);
-      const night3 = await pagesOf();
-      expect(night3.pages).toEqual([
-        ['Firm', 3, undefined],
-        ['Individual', 2, undefined],
-        ['Vessel', 1, undefined],
-      ]);
-      // Night 4, every page fails: the three in a row end the pass, and every page is carried from night 3.
-      facetsClock.beforePage = (): void => {
+      const night3 = await facetsOf('d1-facet-fail');
+      expect(night3.facets).toEqual({ kind: fresh, 'kind-again': fresh });
+      // Night 4, every facet fails: each is carried from night 3.
+      facetsClock.beforeFacet = (): void => {
         throw new Error('D1_ERROR: internal error');
       };
       await new Promise((resolve) => setTimeout(resolve, 5));
       await refreshD1Source(env, source);
-      const night4 = await pagesOf();
+      const night4 = await facetsOf('d1-facet-fail');
       expect(night4.at > night3.at).toBe(true);
-      expect(night4.pages).toEqual([
-        ['Firm', 3, night3.at],
-        ['Individual', 2, night3.at],
-        ['Vessel', 1, night3.at],
-      ]);
+      expect(night4.facets).toEqual({ kind: asOf(night3.at), 'kind-again': asOf(night3.at) });
     } finally {
-      facetsClock.beforePage = null;
+      facetsClock.beforeFacet = null;
     }
+  });
+
+  it('groups records under every element of an array or comma-list facet field in one scan per statement', async () => {
+    const records = [
+      { tags: ['a', 'b'], classes: '09,35', country: 'GBR', published: '2026-01-05' },
+      { tags: ['b'], classes: '35', country: 'ESP', published: '2026-02-05' },
+      { tags: 'c', classes: '42, 09', country: 'GBR', published: '2026-02-10' },
+      { classes: 'he said "09"', country: 'FRA', published: '2026-03-01' },
+    ];
+    const source: DataSource = {
+      ...makeSource('d1-facet-elements', records),
+      stats: {
+        date: { field: 'published', title: 'By month' },
+        groupBy: [{ field: 'country', title: 'By country' }],
+        facets: [
+          {
+            segment: 'tag',
+            field: 'tags',
+            title: 'By tag',
+            values: [
+              { value: 'a', label: 'A' },
+              { value: 'b', label: 'B' },
+              { value: 'c', label: 'C' },
+            ],
+            groupBy: [],
+          },
+          {
+            segment: 'class',
+            field: 'classes',
+            title: 'By class',
+            values: [
+              { value: '09', label: 'Class 9' },
+              { value: '35', label: 'Class 35' },
+              { value: '42', label: 'Class 42' },
+              { value: '99', label: 'Class 99' },
+            ],
+            date: { field: 'published', title: 'By month' },
+            groupBy: [{ field: 'country', title: 'By country', limit: 1 }],
+          },
+        ],
+      },
+    };
+    await refreshD1Source(env, source);
+    const cached = await readSourceStats(env, 'd1-facet-elements');
+    const [tag, cls] = cached!.stats.facets!;
+    expect(tag!.pages.map((p) => [p.value, p.label, p.total])).toEqual([
+      ['a', 'A', 1],
+      ['b', 'B', 2],
+      ['c', 'C', 1],
+    ]);
+    expect(cls!.pages.map((p) => [p.value, p.total])).toEqual([
+      ['09', 2],
+      ['35', 2],
+      ['42', 1],
+      ['99', 0],
+    ]);
+    const nine = cls!.pages[0]!;
+    expect(nine.monthly).toEqual({
+      title: 'By month',
+      buckets: [
+        { month: '2026-01', count: 1 },
+        { month: '2026-02', count: 1 },
+      ],
+    });
+    expect(nine.groups).toEqual([{ title: 'By country', rows: [{ value: 'GBR', count: 2 }] }]);
+    expect(cls!.pages[3]).toEqual({
+      value: '99',
+      label: 'Class 99',
+      total: 0,
+      monthly: null,
+      groups: [],
+    });
   });
 });

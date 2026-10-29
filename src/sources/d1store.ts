@@ -1149,9 +1149,10 @@ async function aggregateGroups(
 }
 
 /**
- * Wall-clock budget for the facet sub-pages of one source: each listed value
- * costs 2 + groupBy.length scans of the generation, so a 45-value facet is a
- * few hundred statements. Past the budget the remaining pages are carried over
+ * Wall-clock budget for the facet sub-pages of one source: each facet costs
+ * 2 + groupBy.length scans of the generation (one per statement since 2026-10-29,
+ * `scanFacet`; before, each listed value cost that many, a few hundred statements
+ * for a 45-value facet). Past the budget the remaining facets are carried over
  * from the previous blob (gankdat `sitemap-5xx-read`, 2026-10-26: the journal's
  * 45 Nice-class pages outgrew the budget as the window filled, so the pages past
  * the cut 503'd "being prepared" every night — Search Console mailed "Server
@@ -1181,15 +1182,15 @@ export const FACETS_WRITE_GAP_MS = 20_000;
 export const facetsClock = {
   now: (): number => Date.now(),
   writeGapMs: FACETS_WRITE_GAP_MS,
-  /** Run before a page's queries (tests fail a page there) and after a computed page (tests kill the pass there). */
-  beforePage: null as ((value: string) => void) | null,
-  afterPage: null as ((value: string) => void) | null,
+  /** Run before a facet's statements (tests fail a facet there) and after a computed facet (tests kill the pass there). */
+  beforeFacet: null as ((segment: string) => void) | null,
+  afterFacet: null as ((segment: string) => void) | null,
 };
 
 /**
- * A page whose D1 statements fail is logged and carried (or left out), and the pass goes on to
- * the next value; this many failures in a row end the pass instead, so a D1 outage does not
- * spend the wave on 45 doomed pages. The 2026-10-27 06:05 wave ran to `ok` in 167 s with 4.4 s
+ * A facet whose D1 statements fail is logged and carried (or left out), and the pass goes on to
+ * the next facet; this many failures in a row end the pass instead, so a D1 outage does not
+ * spend the wave on doomed statements. The 2026-10-27 06:05 wave ran to `ok` in 167 s with 4.4 s
  * of CPU and wrote no page at all: the pass threw (not killed), and before this one failure
  * cost every page of the night.
  */
@@ -1214,6 +1215,125 @@ function previousFacetPage(
   return { page, asOf: page.as_of ?? previous.last_refreshed_at };
 }
 
+/**
+ * The facet field's elements per record as a JSON array for `json_each`: an array as it is, a
+ * comma-separated text split into its items (the journal's `classes`, "09,35,42"), any other
+ * scalar wrapped — so one scan of the generation groups every record under every listed value
+ * it carries. A text that would not split into valid JSON (control characters) is treated as one
+ * scalar rather than failing the statement.
+ */
+function facetElementsExpr(field: string): string {
+  const p = path(field);
+  const v = `json_extract(record, ${p})`;
+  const split = `'["' || replace(replace(replace(${v}, '\\', '\\\\'), '"', '\\"'), ',', '","') || '"]'`;
+  return `CASE json_type(record, ${p})
+    WHEN 'array' THEN ${v}
+    WHEN 'text' THEN CASE WHEN json_valid(${split}) THEN ${split} ELSE json_array(${v}) END
+    ELSE json_array(${v}) END`;
+}
+
+/**
+ * One facet's pages in 2 + groupBy.length statements, each a single scan of the generation
+ * (gankdat `facet-aggregation-one-scan`, 2026-10-29): `json_each` over the facet field's
+ * elements with GROUP BY value, so the journal's 45 Nice-class pages cost 7 statements instead
+ * of 315 — the 10-27 wave ran 7 per value, each a json_extract + substring scan of the 196k-row
+ * generation, and one exceeded D1's per-statement CPU limit every night (`D1_ERROR: D1 DB
+ * exceeded its CPU time limit and was reset`), so no class page was computable. The months are
+ * grouped per value and cut to the newest 12 here; each breakdown is a windowed top-N
+ * (`ROW_NUMBER() OVER (PARTITION BY value …)`) so the result stays values × limit rows. A value
+ * selects the records whose field equals it or whose array / comma-list contains it (trimmed),
+ * the same records `?<field>=<value>` selects for a list of short codes.
+ */
+async function scanFacet(
+  env: CloudflareBindings,
+  slug: string,
+  generation: number,
+  facet: StatsFacet,
+): Promise<Map<string, FacetPage>> {
+  const values = facet.values.map((v) => v.value);
+  const labels = new Map(facet.values.map((v) => [v.value, v.label]));
+  const from = `FROM source_records, json_each(${facetElementsExpr(facet.field)}) AS e`;
+  const where = `WHERE source_slug = ? AND generation = ? AND trim(e.value) IN (${values.map(() => '?').join(', ')})`;
+  const binds: (string | number)[] = [slug, generation, ...values];
+  const pages = new Map<string, FacetPage>();
+  const pageOf = (value: string): FacetPage => {
+    let page = pages.get(value);
+    if (!page) {
+      page = { value, label: labels.get(value) ?? value, total: 0, monthly: null, groups: [] };
+      pages.set(value, page);
+    }
+    return page;
+  };
+  const totals = await env.DB.prepare(
+    `SELECT trim(e.value) AS value, COUNT(*) AS n ${from} ${where} GROUP BY 1`,
+  )
+    .bind(...binds)
+    .all<{ value: string; n: number }>();
+  for (const row of totals.results ?? []) pageOf(String(row.value)).total = row.n;
+
+  if (facet.date) {
+    const dateExpr = `json_extract(record, ${path(facet.date.field)})`;
+    const months = await env.DB.prepare(
+      `SELECT trim(e.value) AS value, substr(${dateExpr}, 1, 7) AS month, COUNT(*) AS n
+       ${from} ${where} AND ${dateExpr} GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]*'
+       GROUP BY 1, 2 ORDER BY 1, 2 DESC`,
+    )
+      .bind(...binds)
+      .all<{ value: string; month: string; n: number }>();
+    const byValue = new Map<string, { month: string; count: number }[]>();
+    for (const row of months.results ?? []) {
+      const list = byValue.get(String(row.value)) ?? [];
+      if (list.length < 12) list.push({ month: row.month, count: row.n });
+      byValue.set(String(row.value), list);
+    }
+    for (const [value, buckets] of byValue) {
+      pageOf(value).monthly = { title: facet.date.title, buckets: buckets.reverse() };
+    }
+  }
+
+  for (const group of facet.groupBy) {
+    const valueExpr = `json_extract(record, ${path(group.field)})`;
+    const order = group.sort === 'value' ? `${valueExpr} ASC` : `COUNT(*) DESC, ${valueExpr} ASC`;
+    const rows = await env.DB.prepare(
+      `SELECT value, gv, n FROM (
+         SELECT trim(e.value) AS value, ${valueExpr} AS gv, COUNT(*) AS n,
+                ROW_NUMBER() OVER (PARTITION BY trim(e.value) ORDER BY ${order}) AS rn
+         ${from} ${where} AND ${valueExpr} IS NOT NULL AND ${valueExpr} != ''
+         GROUP BY 1, 2
+       ) WHERE rn <= ?`,
+    )
+      .bind(...binds, group.limit ?? 10)
+      .all<{ value: string; gv: string | number; n: number }>();
+    const byValue = new Map<string, { value: string; count: number }[]>();
+    for (const row of rows.results ?? []) {
+      const list = byValue.get(String(row.value)) ?? [];
+      list.push({ value: String(row.gv), count: row.n });
+      byValue.set(String(row.value), list);
+    }
+    for (const [value, groupRows] of byValue) {
+      if (groupRows.length > 0) {
+        pageOf(value).groups.push({
+          title: group.title,
+          rows: sortGroupRows(groupRows, group.sort),
+        });
+      }
+    }
+  }
+  for (const value of values) pageOf(value);
+  return pages;
+}
+
+/** When a facet's pages were last computed: '' for one with a value never computed, else its oldest page's date. */
+function facetStaleness(previous: CachedStats | null, facet: StatsFacet): string {
+  let oldest = '~';
+  for (const { value } of facet.values) {
+    const prev = previousFacetPage(previous, facet.segment, value);
+    if (!prev) return '';
+    if (prev.asOf < oldest) oldest = prev.asOf;
+  }
+  return oldest;
+}
+
 async function aggregateFacets(
   env: CloudflareBindings,
   source: DataSource,
@@ -1231,127 +1351,83 @@ async function aggregateFacets(
   const total = facets.reduce((n, f) => n + f.values.length, 0);
   let computed = 0;
   let writes = 0;
+  let failuresInARow = 0;
   let lastWriteAt = started;
-  const out: FacetStats[] = [];
-  for (const [facetIndex, facet] of facets.entries()) {
-    const stats: FacetStats = {
-      segment: facet.segment,
-      field: facet.field,
-      title: facet.title,
-      pages: [],
-    };
-    // Stalest first: a value never computed, then the oldest carried pages, so a night that
-    // runs out of budget leaves behind the pages refreshed most recently. Output keeps spec order.
-    const order = facet.values.map((v, index) => ({
-      ...v,
-      index,
-      prev: previousFacetPage(previous, facet.segment, v.value),
-    }));
-    order.sort(
-      (a, b) => (a.prev?.asOf ?? '').localeCompare(b.prev?.asOf ?? '') || a.index - b.index,
-    );
-    const pages = new Map<string, FacetPage>();
-    // The blob as it stands mid-pass: finished facets, this facet's computed pages with the rest
-    // carried, and the facets not yet started carried whole — every page that can be served.
-    const snapshot = (): FacetStats[] => [
-      ...out,
-      {
-        ...stats,
-        pages: facet.values.flatMap(({ value, label }) => {
-          const page = pages.get(value);
-          if (page) return [page];
-          const prev = previousFacetPage(previous, facet.segment, value);
-          return prev ? [{ ...prev.page, label, as_of: prev.asOf }] : [];
-        }),
-      },
-      ...carriedFacets(previous, facets.slice(facetIndex + 1)),
-    ];
-    let carried = 0;
-    let missing = 0;
-    let failed = 0;
-    let failuresInARow = 0;
-    for (const { value, label, prev } of order) {
-      if (outOfTime() || failuresInARow >= FACET_FAILURES_IN_A_ROW) {
-        if (prev) {
-          pages.set(value, { ...prev.page, label, as_of: prev.asOf });
-          carried++;
-        } else {
-          missing++;
-        }
-        continue;
-      }
-      const pageStarted = facetsClock.now();
-      let page: FacetPage;
-      try {
-        facetsClock.beforePage?.(value);
-        const where = buildWhere(source.slug, generation, { [facet.field]: value });
-        const count = await env.DB.prepare(
-          `SELECT COUNT(*) AS n FROM source_records WHERE ${where.sql}`,
-        )
-          .bind(...where.binds)
-          .first<{ n: number }>();
-        page = {
-          value,
-          label,
-          total: count?.n ?? 0,
-          monthly: facet.date ? await aggregateMonthly(env, where, facet.date) : null,
-          groups: await aggregateGroups(env, where, facet.groupBy),
-        };
-      } catch (pageErr) {
-        failed++;
-        failuresInARow++;
-        console.log(
-          JSON.stringify({
-            level: 'warn',
-            event: 'stats_facet_page_failed',
-            source: source.slug,
-            segment: facet.segment,
-            value,
-            reason: pageErr instanceof Error ? pageErr.message : String(pageErr),
-            elapsed_ms: facetsClock.now() - pageStarted,
-            failures_in_a_row: failuresInARow,
-          }),
-        );
-        if (prev) {
-          pages.set(value, { ...prev.page, label, as_of: prev.asOf });
-          carried++;
-        } else {
-          missing++;
-        }
-        continue;
-      }
-      failuresInARow = 0;
-      pages.set(value, page);
-      computed++;
-      await sink.progress(`page ${computed} of ${total} (${facet.segment}/${value})`);
-      const now = facetsClock.now();
-      if (now - lastWriteAt >= facetsClock.writeGapMs) {
-        await sink.write(snapshot());
-        writes++;
-        lastWriteAt = now;
-      }
-      facetsClock.afterPage?.(value);
-    }
-    if (carried + missing > 0) {
+  const done = new Map<string, FacetStats>();
+  // Stalest first: a facet with a value never computed, then the one whose oldest carried page
+  // is oldest, so a night that runs out of budget leaves behind the pages refreshed most
+  // recently. Output keeps spec order.
+  const order = facets.map((facet, index) => ({
+    facet,
+    index,
+    stale: facetStaleness(previous, facet),
+  }));
+  order.sort((a, b) => a.stale.localeCompare(b.stale) || a.index - b.index);
+  // The blob as it stands mid-pass: the facets computed so far, every other one carried whole.
+  const snapshot = (): FacetStats[] =>
+    facets.map((facet) => done.get(facet.segment) ?? carriedFacets(previous, [facet])[0]!);
+  for (const { facet } of order) {
+    const carried = carriedFacets(previous, [facet])[0]!;
+    const budgetLine = (failed: number): void =>
       console.log(
         JSON.stringify({
           level: 'warn',
           event: 'stats_facets_budget',
           source: source.slug,
           segment: facet.segment,
-          computed: facet.values.length - carried - missing,
-          carried,
-          missing,
+          computed: 0,
+          carried: carried.pages.length,
+          missing: facet.values.length - carried.pages.length,
           failed,
           of: facet.values.length,
         }),
       );
+    if (outOfTime() || failuresInARow >= FACET_FAILURES_IN_A_ROW) {
+      done.set(facet.segment, carried);
+      budgetLine(0);
+      continue;
     }
-    for (const { value } of facet.values) {
-      const page = pages.get(value);
-      if (page) stats.pages.push(page);
+    const facetStarted = facetsClock.now();
+    let pages: Map<string, FacetPage>;
+    try {
+      facetsClock.beforeFacet?.(facet.segment);
+      pages = await scanFacet(env, source.slug, generation, facet);
+    } catch (facetErr) {
+      failuresInARow++;
+      console.log(
+        JSON.stringify({
+          level: 'warn',
+          event: 'stats_facet_failed',
+          source: source.slug,
+          segment: facet.segment,
+          values: facet.values.length,
+          reason: facetErr instanceof Error ? facetErr.message : String(facetErr),
+          elapsed_ms: facetsClock.now() - facetStarted,
+          failures_in_a_row: failuresInARow,
+        }),
+      );
+      done.set(facet.segment, carried);
+      budgetLine(1);
+      continue;
     }
-    out.push(stats);
+    failuresInARow = 0;
+    done.set(facet.segment, {
+      segment: facet.segment,
+      field: facet.field,
+      title: facet.title,
+      pages: facet.values.map(({ value }) => pages.get(value)!),
+    });
+    computed += facet.values.length;
+    await sink.progress(
+      `facet ${facet.segment}: ${facet.values.length} pages in ${2 + facet.groupBy.length} statements, ${computed} of ${total}`,
+    );
+    const now = facetsClock.now();
+    if (now - lastWriteAt >= facetsClock.writeGapMs) {
+      await sink.write(snapshot());
+      writes++;
+      lastWriteAt = now;
+    }
+    facetsClock.afterFacet?.(facet.segment);
   }
   console.log(
     JSON.stringify({
@@ -1364,7 +1440,7 @@ async function aggregateFacets(
       elapsed_s: Math.round((facetsClock.now() - started) / 1000),
     }),
   );
-  return out;
+  return facets.map((facet) => done.get(facet.segment)!);
 }
 
 async function aggregateD1Stats(
