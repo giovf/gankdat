@@ -670,6 +670,33 @@ const crawlersNote = await statsCrawlers().catch(
   (e) => `stats crawlers: n/a (${e.message.slice(0, 100)})`,
 );
 
+// The Worker's own error-level lines of the last 24 h (gankdat `apify-companies-house-qa-repair`,
+// 2026-10-29): app.onError logs `{ level: 'error', message, stack }` and answers a bare 500, and
+// Apify's QA runner got that 500 from the company lookup for three days before anyone could read
+// the message (no sandbox reads Workers Logs). src/lib/error-lines.ts folds the lines by message;
+// a missing token or permission reads `n/a (<why>)` and the rest of the row survives.
+const { errorLogQuery, foldErrorLines, errorLinesNote } = await import('../src/lib/error-lines.ts');
+const workerErrorsNote = await (async () => {
+  const res = await fetch(
+    `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/workers/observability/telemetry/query`,
+    {
+      method: 'POST',
+      headers: { ...headers, 'content-type': 'application/json' },
+      body: JSON.stringify(errorLogQuery(Date.now())),
+    },
+  );
+  const text = await res.text();
+  if (!res.ok) {
+    throw new Error(
+      `HTTP ${res.status}${res.status === 403 ? ' (token lacks Workers Observability Read)' : ` ${text.replace(/\s+/g, ' ').slice(0, 160)}`}`,
+    );
+  }
+  const folded = foldErrorLines(JSON.parse(text));
+  console.log(`worker errors: ${JSON.stringify(folded)}`);
+  if (folded.lines === 0) console.log(`worker errors body: ${text.slice(0, 400)}`);
+  return errorLinesNote(folded);
+})().catch((e) => `worker errors 24h: n/a (${e.message.slice(0, 100)})`);
+
 // Per-dataset authed queries over 30 days (build 2026-10-04, queue `metrics-dataset-queries-30d`):
 // STRATEGY §7 retires a dataset nobody queried for 60 days, and until now nothing in the repo said
 // how many authed REST or MCP calls each dataset received. REST: `rest_data` points carry the slug
@@ -946,6 +973,7 @@ const notes = [
   afterWallText,
   cfNote,
   crawlersNote,
+  workerErrorsNote,
   datasetsNote,
   datasetsExternalNote,
   ...(silent.length
