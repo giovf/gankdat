@@ -2,6 +2,7 @@ import type { MiddlewareHandler } from 'hono';
 import { hashKey } from './keys';
 import { ACCESS_TOKEN_PREFIX, resolveAccessToken } from './oauth';
 import { failure } from '../lib/envelope';
+import { isTransientD1Error } from '../sources/store';
 import type { AppEnv, KeyContext } from '../types';
 
 interface KeyRecord {
@@ -19,6 +20,14 @@ interface KeyRecord {
 // bounded to ~this TTL rather than being truly instant. A Durable Object per
 // key is the accurate upgrade path (PRD), deliberately not built for v1.
 const KV_TTL_SECONDS = 60;
+
+// One retry of the cold-key D1 read on a transient D1 error (gankdat `apify-companies-house-qa-repair`,
+// 2026-10-29): the day's 29 `D1_ERROR: internal error; reference = …` lines fell on /mcp 25, /token 2,
+// the company lookup 1, /feedback 1 — every one a key the isolate had never seen, so the isolate-cache
+// fallback below had nothing and the handler answered a bare 500 (Apify's one-shot QA call died on it
+// for three days). The refresh waves already retry the same errors once (store.ts); auth pays one
+// short wait before giving up, well inside any caller's timeout.
+const D1_RETRY_DELAY_MS = 200;
 
 // Negative cache for unknown key hashes (task 25 item 7): a flood of invalid
 // keys would otherwise hit D1 on every request (the positive cache never
@@ -77,9 +86,8 @@ async function lookupKey(env: CloudflareBindings, hash: string): Promise<KeyReco
   // so every key under one email shares one plan + quota. INNER JOIN: a key with
   // no linked account (shouldn't exist post-migration 0005) does NOT authenticate
   // — it 401s rather than falling back to an empty, cross-key-shared scope.
-  let row: KeyRecord | null;
-  try {
-    row = await env.DB.prepare(
+  const read = (): Promise<KeyRecord | null> =>
+    env.DB.prepare(
       `SELECT k.id AS id, k.revoked_at AS revoked_at,
               a.id AS account_id, a.email AS account_email, a.plan AS plan
          FROM api_keys k
@@ -88,6 +96,15 @@ async function lookupKey(env: CloudflareBindings, hash: string): Promise<KeyReco
     )
       .bind(hash)
       .first<KeyRecord>();
+  let row: KeyRecord | null;
+  try {
+    try {
+      row = await read();
+    } catch (first) {
+      if (!isTransientD1Error(first)) throw first;
+      await new Promise((resolve) => setTimeout(resolve, D1_RETRY_DELAY_MS));
+      row = await read();
+    }
   } catch (err) {
     // D1 blip on a KV miss: serve a recently-seen key from the isolate cache so a
     // transient outage doesn't 500 cold-key auth. But never resurrect a key that
