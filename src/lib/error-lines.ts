@@ -5,7 +5,7 @@
 // repo held no reading of the message behind it (no sandbox can read Workers Logs, the Daily
 // numbers row counted refresh errors only). The row now names the day's error messages, most
 // frequent first, so a 500 on any route is diagnosable from the repo the next morning.
-import { STATS_LOG_SERVICE } from './crawler-hits';
+import { STATS_LOG_SERVICE } from './crawler-hits.ts';
 
 export const ERROR_LOG_HOURS = 24;
 export const ERROR_LOG_LIMIT = 500;
