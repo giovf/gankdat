@@ -716,6 +716,7 @@ const workerErrorsNote = await (async () => {
     const paths = m.paths.map((p) => `${p.path} ${p.n}`).join(', ');
     console.log(`worker error ×${m.n}: ${m.message}${paths ? ` — on ${paths}` : ''}`);
   }
+  for (const r of folded.routes) console.log(`worker request ×${r.n}: ${r.route}`);
   if (folded.lines === 0) console.log(`worker errors body: ${text.slice(0, 400)}`);
   return errorLinesNote(folded);
 })().catch((e) => `worker errors 24h: n/a (${e.message.slice(0, 100)})`);
