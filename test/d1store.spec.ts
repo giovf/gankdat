@@ -538,7 +538,7 @@ describe('d1store delta refresh', () => {
     expect(night1.facets).toEqual({ kind: fresh, 'kind-again': fresh });
     const realNow = facetsClock.now;
     // The budget runs out after the first facet: its pages computed, the other facet carried.
-    // Clock reads per computed facet: pass start, the budget check, the facet start, the write gap.
+    // Clock reads per computed facet: pass start, the batch check, the batch start, the write gap.
     const spendAfterOne = (): void => {
       let calls = 0;
       const base = Date.now();
@@ -692,5 +692,186 @@ describe('d1store delta refresh', () => {
       monthly: null,
       groups: [],
     });
+  });
+  /**
+   * A 1,500-row register whose list field spreads over 20 values (`facet-scan-sqlite-nomem`,
+   * 2026-10-30): the scan runs in batches of values, and the pages must not depend on the batch.
+   */
+  const CLASSES = Array.from({ length: 20 }, (_, i) => String(i + 1).padStart(2, '0'));
+  const bigRecords = (): unknown[] => {
+    let seed = 7;
+    const next = (n: number): number => {
+      seed = (seed * 48271) % 2147483647; // Park–Miller: exact in a double
+      return seed % n;
+    };
+    return Array.from({ length: 1500 }, (_, i) => {
+      const classes = new Set<string>();
+      for (let k = next(3) + 1; k > 0; k--) classes.add(CLASSES[next(CLASSES.length)]!);
+      const month = String(next(12) + 1).padStart(2, '0');
+      return {
+        mark: `MARK ${i}`,
+        classes: [...classes].join(', '),
+        country: ['GB', 'US', 'DE', 'FR', 'CN', 'JP'][next(6)],
+        applicant: `Applicant ${next(40)}`,
+        journal_number: `2026-${String(next(52) + 1).padStart(3, '0')}`,
+        published: `2026-${month}-${String(next(28) + 1).padStart(2, '0')}`,
+      };
+    });
+  };
+  const bigFacetSource = (slug: string): DataSource => ({
+    ...makeSource(slug, bigRecords()),
+    stats: {
+      date: { field: 'published', title: 'By month' },
+      groupBy: [{ field: 'country', title: 'By country' }],
+      facets: [
+        {
+          segment: 'class',
+          field: 'classes',
+          title: 'By class',
+          values: CLASSES.map((value) => ({ value, label: `Class ${value}` })),
+          date: { field: 'published', title: 'By month' },
+          groupBy: [
+            { field: 'journal_number', title: 'Per issue', limit: 52, sort: 'value' },
+            { field: 'country', title: 'By country', limit: 3 },
+            { field: 'applicant', title: 'Top applicants', limit: 5 },
+          ],
+        },
+      ],
+    },
+  });
+  type BatchSeen = { values: readonly string[]; statements: number; splits: number };
+  const batchesSeen = (): BatchSeen[] => {
+    const seen: BatchSeen[] = [];
+    facetsClock.afterBatch = ({ values, statements, splits }): void => {
+      seen.push({ values, statements, splits });
+    };
+    return seen;
+  };
+
+  it('computes a facet in batches of values — batches × statements — with the same pages as one unbatched scan', async () => {
+    const realBatch = facetsClock.batchValues;
+    try {
+      // One batch of all 20 values: the unbatched scan of 10-29.
+      facetsClock.batchValues = 20;
+      const whole = batchesSeen();
+      await refreshD1Source(env, bigFacetSource('d1-facet-whole'));
+      expect(whole).toEqual([{ values: CLASSES, statements: 5, splits: 0 }]);
+      // Batches of 9: 9 + 9 + 2 values, five statements (totals, months, three breakdowns) each.
+      facetsClock.batchValues = 9;
+      const batched = batchesSeen();
+      await refreshD1Source(env, bigFacetSource('d1-facet-batched'));
+      expect(batched.map((b) => [b.values.length, b.statements, b.splits])).toEqual([
+        [9, 5, 0],
+        [9, 5, 0],
+        [2, 5, 0],
+      ]);
+      expect(batched.flatMap((b) => b.values)).toEqual(CLASSES);
+      const wholePages = (await readSourceStats(env, 'd1-facet-whole'))!.stats.facets;
+      const batchedPages = (await readSourceStats(env, 'd1-facet-batched'))!.stats.facets;
+      expect(batchedPages).toEqual(wholePages);
+      // The pages carry real aggregates, not the empty page every value gets.
+      const page = wholePages![0]!.pages[0]!;
+      expect(page.total).toBeGreaterThan(100);
+      expect(page.monthly?.buckets.length).toBe(12);
+      // The issue table lists every issue the class appears in (up to its 52-row cap), oldest first.
+      expect(page.groups.map((g) => g.title)).toEqual([
+        'Per issue',
+        'By country',
+        'Top applicants',
+      ]);
+      const issues = page.groups[0]!.rows.map((r) => r.value);
+      expect(issues.length).toBeGreaterThan(40);
+      expect(issues.length).toBeLessThanOrEqual(52);
+      expect(issues).toEqual([...issues].sort());
+      expect(page.groups.slice(1).map((g) => g.rows.length)).toEqual([3, 5]);
+      expect(page.groups[1]!.rows[0]!.count).toBeGreaterThanOrEqual(page.groups[1]!.rows[1]!.count);
+    } finally {
+      facetsClock.batchValues = realBatch;
+      facetsClock.afterBatch = null;
+    }
+  });
+
+  it('carries the values the budget does not reach within a facet, stalest first', async () => {
+    const source = twoFacets('d1-facet-batch-budget');
+    const realBatch = facetsClock.batchValues;
+    const realNow = facetsClock.now;
+    try {
+      // One value per batch, so the budget can run out between the values of one facet.
+      facetsClock.batchValues = 1;
+      await refreshD1Source(env, source);
+      const night1 = await facetsOf('d1-facet-batch-budget');
+      expect(night1.facets).toEqual({ kind: fresh, 'kind-again': fresh });
+      // The budget is spent after the first computed batch of each night.
+      let spent = 0;
+      const base = Date.now();
+      facetsClock.now = (): number => base + spent;
+      facetsClock.afterBatch = (): void => {
+        spent = 300_000;
+      };
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      spent = 0;
+      await refreshD1Source(env, source);
+      const night2 = await facetsOf('d1-facet-batch-budget');
+      // Every page was computed on night 1, so spec order decides: Firm tonight, the rest carried.
+      expect(night2.facets).toEqual({
+        kind: [
+          ['Firm', 3, undefined],
+          ['Individual', 2, night1.at],
+          ['Vessel', 1, night1.at],
+        ],
+        'kind-again': asOf(night1.at),
+      });
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      spent = 0;
+      await refreshD1Source(env, source);
+      const night3 = await facetsOf('d1-facet-batch-budget');
+      // Stalest first within the facet: Individual (night 1) before Firm (night 2); Vessel keeps night 1.
+      expect(night3.facets).toEqual({
+        kind: [
+          ['Firm', 3, night2.at],
+          ['Individual', 2, undefined],
+          ['Vessel', 1, night1.at],
+        ],
+        'kind-again': asOf(night1.at),
+      });
+    } finally {
+      facetsClock.batchValues = realBatch;
+      facetsClock.now = realNow;
+      facetsClock.afterBatch = null;
+    }
+  });
+
+  it('splits a batch D1 cannot hold in memory and retries the halves', async () => {
+    const source = twoFacets('d1-facet-nomem');
+    const realPrepare = env.DB.prepare;
+    try {
+      // A facet statement over more than two values runs out of memory; smaller batches fit.
+      const prepare = (sql: string): D1PreparedStatement => {
+        const list = sql.match(/trim\(e\.value\) IN \(([^)]*)\)/);
+        if (list && list[1]!.split(',').length > 2) {
+          return {
+            bind: () => ({
+              all: () => Promise.reject(new Error('D1_ERROR: out of memory: SQLITE_NOMEM')),
+            }),
+          } as unknown as D1PreparedStatement;
+        }
+        return realPrepare.call(env.DB, sql);
+      };
+      env.DB.prepare = prepare as typeof env.DB.prepare;
+      const seen = batchesSeen();
+      await refreshD1Source(env, source);
+      // Each facet: the 3-value batch fails on its first statement, then 2 + 1 values × 2 statements.
+      expect(seen.map((b) => [b.values.length, b.statements, b.splits])).toEqual([
+        [3, 5, 1],
+        [3, 5, 1],
+      ]);
+      expect((await facetsOf('d1-facet-nomem')).facets).toEqual({
+        kind: fresh,
+        'kind-again': fresh,
+      });
+    } finally {
+      env.DB.prepare = realPrepare;
+      facetsClock.afterBatch = null;
+    }
   });
 });

@@ -3,7 +3,7 @@
   "info": {
     "title": "gankdat",
     "description": "UK and EU public registers as clean JSON: company lookup and monitoring, tenders and contract awards, sanctions and exclusions, charities, schools, NHS organisations, care locations, trade marks and licences. One schema across every dataset, from official open-data feeds, with a daily change feed on each register. Connect with the key from your gankdat account.",
-    "version": "0.27.0",
+    "version": "0.27.1",
     "contact": {
       "name": "gankdat",
       "url": "https://gankdat.com/feedback",
