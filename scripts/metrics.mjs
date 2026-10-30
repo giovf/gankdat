@@ -14,6 +14,9 @@ import { fileURLToPath } from 'node:url';
 import {
   STATS_LOG_HOURS,
   STATS_LOG_LIMIT,
+  claudeClientsNote,
+  claudeClientsOf,
+  claudeClientsSql,
   crawlerNote,
   foldFamilies,
   foldStatsLogEvents,
@@ -669,6 +672,21 @@ async function statsCrawlers() {
 const crawlersNote = await statsCrawlers().catch(
   (e) => `stats crawlers: n/a (${e.message.slice(0, 100)})`,
 );
+// Claude Connectors Directory proxy (claude-directory-day-30, 2026-10-30): distinct Claude-surface
+// clients that called an MCP tool, 30 d and 7 d — the repo's floor for the portal's "Used a tool"
+// card, which only the owner can read. Rationale in src/lib/crawler-hits.ts.
+const claudeCallersNote = await (async () => {
+  const read = async (days) => {
+    try {
+      return claudeClientsOf(await ae(claudeClientsSql(days)));
+    } catch (e) {
+      return { error: String(e instanceof Error ? e.message : e).slice(0, 80) };
+    }
+  };
+  const note = claudeClientsNote({ d30: await read(30), d7: await read(7) });
+  console.log(note);
+  return note;
+})();
 
 // The Worker's own error-level lines of the last 24 h (gankdat `apify-companies-house-qa-repair`,
 // 2026-10-29): app.onError logs `{ level: 'error', message, stack }` and answers a bare 500, and
@@ -978,6 +996,7 @@ const notes = [
   afterWallText,
   cfNote,
   crawlersNote,
+  claudeCallersNote,
   workerErrorsNote,
   datasetsNote,
   datasetsExternalNote,

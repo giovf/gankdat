@@ -218,3 +218,39 @@ export function crawlerNote(parts: {
       : `${parts.mcp.total} req/${parts.mcp.days}d, AI ${parts.mcp.ai} (${familiesText(parts.mcp)})`;
   return `stats crawlers: logs ${logs}; zone ${zone}; /mcp ${mcp}`;
 }
+
+// Claude Connectors Directory day-30 read (gankdat `claude-directory-day-30`, 2026-10-30): the
+// portal's "Used a tool" card (distinct Claude accounts that made a tools/call in 30 days) is
+// behind the owner's claude.ai login, and the `/mcp` crawler reading above counts every
+// `Claude-User` request in the traffic dataset — REST pages read by Claude's fetch tool included —
+// so it cannot say whether Claude users call the MCP tools. This reading can: MCP data points
+// only (blob1 mcp_authed/mcp_anon/mcp_preview), a `tools/call` in the method list (blob3), the
+// Claude surfaces' User-Agent (blob2), counted by client (blob6: the key's account id when
+// authed, else the hashed IP+UA of preview.ts). A client is not an account — one account reaches
+// us from several proxy IPs and one IP serves many accounts — so it is the repo's floor for the
+// portal number, read daily, with the tool-call total beside it.
+export interface ClaudeClients {
+  clients: number;
+  calls: number;
+}
+
+/** AE SQL: distinct Claude-surface clients that made an MCP `tools/call` in the last `days` days. */
+export function claudeClientsSql(days: number): string {
+  return `SELECT COUNT(DISTINCT blob6) AS clients, SUM(_sample_interval * double1) AS calls FROM gankdat_traffic WHERE timestamp > NOW() - INTERVAL '${days}' DAY AND blob1 IN ('mcp_authed', 'mcp_anon', 'mcp_preview') AND blob2 LIKE '%Claude-User%' AND blob3 LIKE '%tools/call%' AND blob6 != ''`;
+}
+
+/** One AE row → counts (an empty result is zero callers, not an error). */
+export function claudeClientsOf(rows: ReadonlyArray<Record<string, unknown>>): ClaudeClients {
+  const r = rows[0] ?? {};
+  return { clients: Number(r['clients'] ?? 0), calls: Math.round(Number(r['calls'] ?? 0)) };
+}
+
+/** The Daily numbers clause: `claude tool callers: 30d N clients, M calls; 7d n clients, m calls`. */
+export function claudeClientsNote(parts: {
+  d30: ClaudeClients | { error: string };
+  d7: ClaudeClients | { error: string };
+}): string {
+  const text = (p: ClaudeClients | { error: string }): string =>
+    'error' in p ? `n/a (${p.error})` : `${p.clients} clients, ${p.calls} calls`;
+  return `claude tool callers: 30d ${text(parts.d30)}; 7d ${text(parts.d7)}`;
+}

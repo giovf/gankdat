@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  claudeClientsNote,
+  claudeClientsOf,
+  claudeClientsSql,
   crawlerFamily,
   crawlerNote,
   foldFamilies,
@@ -172,6 +175,32 @@ describe('crawlerNote', () => {
     });
     expect(note).toBe(
       'stats crawlers: logs 0 fetches/7d, AI 0 (none) — 18 lines matched, none a request line; zone n/a (zone: no permission); /mcp n/a (mcp: down)',
+    );
+  });
+});
+
+describe('claude tool callers (claude-directory-day-30)', () => {
+  it('counts distinct clients of MCP tools/call requests from the Claude surfaces only', () => {
+    const sql = claudeClientsSql(30);
+    expect(sql).toContain('COUNT(DISTINCT blob6)');
+    expect(sql).toContain("INTERVAL '30' DAY");
+    expect(sql).toContain("blob1 IN ('mcp_authed', 'mcp_anon', 'mcp_preview')");
+    expect(sql).toContain("blob2 LIKE '%Claude-User%'");
+    expect(sql).toContain("blob3 LIKE '%tools/call%'");
+    expect(sql).not.toContain('rest_');
+  });
+
+  it('reads one row and treats an empty result as zero', () => {
+    expect(claudeClientsOf([{ clients: '7', calls: 123.4 }])).toEqual({ clients: 7, calls: 123 });
+    expect(claudeClientsOf([])).toEqual({ clients: 0, calls: 0 });
+  });
+
+  it('writes the clause with n/a per window', () => {
+    expect(
+      claudeClientsNote({ d30: { clients: 7, calls: 123 }, d7: { clients: 2, calls: 9 } }),
+    ).toBe('claude tool callers: 30d 7 clients, 123 calls; 7d 2 clients, 9 calls');
+    expect(claudeClientsNote({ d30: { error: 'ae: down' }, d7: { clients: 0, calls: 0 } })).toBe(
+      'claude tool callers: 30d n/a (ae: down); 7d 0 clients, 0 calls',
     );
   });
 });
