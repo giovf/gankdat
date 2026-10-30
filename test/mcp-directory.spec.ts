@@ -304,3 +304,103 @@ describe('/mcp directory conformance', () => {
     expect(keyedMeta.preview).toBeUndefined();
   });
 });
+
+// The 2026-07-28 revision (gankdat `mcp-protocol-2026-07-28`, 2026-10-30): Claude's current
+// clients send no `initialize` — every request carries the `_meta` envelope and the three
+// standard headers, discovery is `server/discover`. For a month the 1.x transport answered 404
+// before any handler; these pin the modern shape on the same endpoint as the 2025 one above.
+const MODERN_VERSION = '2026-07-28';
+const envelope = {
+  'io.modelcontextprotocol/protocolVersion': MODERN_VERSION,
+  'io.modelcontextprotocol/clientCapabilities': {},
+  'io.modelcontextprotocol/clientInfo': { name: 'claude-ai', version: '1' },
+};
+
+function modernHeaders(method: string, name?: string): Record<string, string> {
+  return {
+    'mcp-protocol-version': MODERN_VERSION,
+    'mcp-method': method,
+    ...(name === undefined ? {} : { 'mcp-name': name }),
+  };
+}
+
+async function modern(
+  method: string,
+  params: Record<string, unknown> = {},
+  headers: Record<string, string> = {},
+): Promise<{ status: number; body: RpcResponse | null; res: Response }> {
+  const name = method === 'tools/call' ? String(params.name) : undefined;
+  return post(
+    { jsonrpc: '2.0', id: 7, method, params: { ...params, _meta: envelope } },
+    { ...modernHeaders(method, name), ...headers },
+  );
+}
+
+describe('/mcp speaks protocol revision 2026-07-28 beside 2025-11-25', () => {
+  it('answers a keyless server/discover and tools/list with one JSON body', async () => {
+    const discover = await modern('server/discover');
+    expect(discover.status).toBe(200);
+    expect(discover.res.headers.get('content-type')).toContain('application/json');
+    expect(discover.body?.error).toBeUndefined();
+    expect(discover.body?.result).toBeDefined();
+
+    const list = await modern('tools/list');
+    expect(list.status).toBe(200);
+    expect(list.body?.error).toBeUndefined();
+    const names = (list.body?.result?.tools ?? []).map((t) => t.name);
+    expect(names).toEqual(expect.arrayContaining(['list_sources', 'query_uk_tenders']));
+  });
+
+  it('completes a keyless tools/call (the preview) and a keyed one', async () => {
+    await seedEmptyDatasets();
+    const preview = await modern('tools/call', { name: 'list_sources', arguments: {} });
+    expect(preview.status).toBe(200);
+    expect(preview.body?.error).toBeUndefined();
+    expect(preview.body?.result?.isError).toBeUndefined();
+    expect(preview.body?.result?.structuredContent).toMatchObject({ ok: true });
+
+    const { key } = await issueKey();
+    const keyed = await modern(
+      'tools/call',
+      { name: 'get_usage', arguments: {} },
+      bearer(key) as Record<string, string>,
+    );
+    expect(keyed.status).toBe(200);
+    expect(keyed.body?.result?.structuredContent).toMatchObject({
+      ok: true,
+      data: { plan: 'free' },
+    });
+  });
+
+  it('still gates a modern keyless protected tool with the OAuth 401', async () => {
+    const { status, res } = await modern('tools/call', { name: 'connect_account', arguments: {} });
+    expect(status).toBe(401);
+    expect(res.headers.get('WWW-Authenticate')).toContain('resource_metadata');
+  });
+
+  it('rejects a header/body mismatch the way the spec asks, not with a 404', async () => {
+    const { status, body } = await post(
+      { jsonrpc: '2.0', id: 8, method: 'tools/list', params: { _meta: envelope } },
+      modernHeaders('ping'),
+    );
+    expect(status).toBe(400);
+    expect(body?.error).toBeDefined();
+  });
+
+  it('keeps answering the 2025 handshake for registries and the probe', async () => {
+    const { status, body } = await post({
+      jsonrpc: '2.0',
+      id: 9,
+      method: 'initialize',
+      params: {
+        protocolVersion: '2025-11-25',
+        capabilities: {},
+        clientInfo: { name: 'glama-checker', version: '1' },
+      },
+    });
+    expect(status).toBe(200);
+    expect((body?.result as { protocolVersion?: string } | undefined)?.protocolVersion).toBe(
+      '2025-11-25',
+    );
+  });
+});

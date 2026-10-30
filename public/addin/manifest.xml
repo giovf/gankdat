@@ -14,7 +14,7 @@
   xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
   xsi:type="TaskPaneApp">
   <Id>5f1a0c2e-7b3d-4e8a-9c6b-2d4f8a1e0b37</Id>
-  <Version>0.26.4.0</Version>
+  <Version>0.27.0.0</Version>
   <ProviderName>gankdat</ProviderName>
   <DefaultLocale>en-GB</DefaultLocale>
   <DisplayName DefaultValue="gankdat: UK registers in Excel" />

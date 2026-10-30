@@ -1,4 +1,4 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { McpServer } from '@modelcontextprotocol/server';
 import { normalizeEmail } from '../auth/accounts';
 import { emailSendAllowed, recordEmailSend } from '../auth/emailcap';
 import { claimAgentKey, createAgentSignup, CLAIM_RETRY_SECONDS } from '../auth/signup';

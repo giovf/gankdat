@@ -1,4 +1,8 @@
-import { StreamableHTTPTransport } from '@hono/mcp';
+import {
+  createMcpHandler,
+  isLegacyRequest,
+  WebStandardStreamableHTTPServerTransport,
+} from '@modelcontextprotocol/server';
 import { Hono } from 'hono';
 import type { Context } from 'hono';
 import { requireApiKey } from '../auth/middleware';
@@ -21,6 +25,17 @@ import type { AppEnv } from '../types';
 // fresh server + transport pair (no session ids). Tool execution uses the same
 // bearer API key as REST; metering happens per tool call inside the handlers.
 //
+// Two protocol eras on one endpoint (2026-10-30, gankdat `mcp-protocol-2026-07-28`): the
+// 2026-07-28 revision is stateless by design — no `initialize`, no session id, every request
+// carries a `_meta` envelope (protocol version, client capabilities, client info) and the
+// `MCP-Protocol-Version` / `Mcp-Method` / `Mcp-Name` headers, discovery is `server/discover`.
+// Claude's current clients (claude.ai, Desktop, Cowork, Code via the directory) speak it and
+// got a 404 "Unsupported protocol version" from the 1.x transport for a month, retrying on
+// 2025-11-25 without ever calling a tool. The SDK v2 `createMcpHandler` serves the modern era;
+// its own 2025-era fallback answers over SSE, so 2025 clients (the registries, Glama, Cursor,
+// the metrics probe) are routed with `isLegacyRequest` to a stateless v2 transport in JSON
+// mode instead — one factory, one tool set, two wire shapes.
+//
 // POST only: a stateless server never pushes server-initiated notifications, so
 // GET would just open a hanging SSE stream with a live keepalive timer, and
 // DELETE (session teardown) is meaningless without sessions. Both 404 here.
@@ -33,6 +48,8 @@ const INTROSPECTION_METHODS = new Set([
   'notifications/initialized',
   'ping',
   'tools/list',
+  // 2026-07-28: what a client asks first instead of `initialize`.
+  'server/discover',
 ]);
 
 // Origin validation (MCP Streamable HTTP transport security; a Connectors
@@ -127,7 +144,11 @@ async function requestShape(c: Context<AppEnv>): Promise<{ methods: string; tool
   try {
     body = await c.req.json();
   } catch {
-    return { methods: '', tools: '' };
+    // 2026-07-28 clients name the method and the tool in headers too; a body this side
+    // could not read still leaves the shape readable.
+    const method = c.req.header('Mcp-Method') ?? '';
+    const name = method === 'tools/call' ? (c.req.header('Mcp-Name') ?? '') : '';
+    return { methods: method, tools: name.slice(0, 64) };
   }
   const messages = Array.isArray(body) ? body : [body];
   const methods = new Set<string>();
@@ -305,22 +326,46 @@ export const mcpRoute = new Hono<AppEnv>().post(
         // no execution context (unit harness): the work runs as far as the isolate lets it
       }
     };
-    const server = buildMcpServer(c.env, keyCtx, { clientId, userAgent }, undefined, keepAlive);
+    const factory = (): ReturnType<typeof buildMcpServer> =>
+      buildMcpServer(c.env, keyCtx, { clientId, userAgent }, undefined, keepAlive);
+    // The body was read (and cached) by the gates above; both legs take it parsed so neither
+    // touches the consumed stream. An unparseable body is a JSON-RPC parse error here.
+    let parsedBody: unknown;
+    try {
+      parsedBody = await c.req.json();
+    } catch {
+      return c.json(
+        { jsonrpc: '2.0', id: null, error: { code: -32700, message: 'Parse error' } },
+        400,
+      );
+    }
     // One JSON body per POST, not an SSE stream (gankdat `refresh-mcp-probe`, 2026-10-18).
-    // With the stream, @hono/mcp returns the Response at once and the tool call runs
-    // AFTER the fetch handler has returned, kept alive only by the open stream — the one
-    // shape of work a Worker may drop, and a dropped call leaves the stream open until the
-    // client gives up (the 10-18 keyless probe: 20 s, no body, while the keyed call a moment
-    // later answered). In JSON mode the transport awaits the result inside the handler, so
-    // the call runs where the runtime guarantees it, a death mid-call is an HTTP error the
-    // checker can read, and a stateless server never had a notification to stream anyway.
+    // With a stream the transport returns the Response at once and the tool call runs AFTER
+    // the fetch handler has returned, kept alive only by the open stream — the one shape of
+    // work a Worker may drop, and a dropped call leaves the stream open until the client gives
+    // up (the 10-18 keyless probe: 20 s, no body, while the keyed call a moment later answered).
+    // In JSON mode the call runs inside the awaited handler, so a death mid-call is an HTTP
+    // error the checker can read; a stateless server never had a notification to stream anyway.
     // The spec lets a server answer a POST with application/json; every client sends
-    // `Accept: application/json, text/event-stream` (the SDK client parses both).
-    const transport = new StreamableHTTPTransport({ enableJsonResponse: true });
-    await server.connect(transport);
-    const response = await transport.handleRequest(c);
-    // The per-request server/transport are unreferenced after this returns and
-    // GC'd by the isolate; no stream or timer is left open (POST only).
-    return response ?? c.body(null, 202);
+    // `Accept: application/json, text/event-stream`.
+    if (await isLegacyRequest(c.req.raw, parsedBody)) {
+      // 2025-era request (initialize handshake, or a request with no `_meta` envelope): the
+      // SDK's own stateless fallback streams SSE, so the leg is wired by hand in JSON mode.
+      const server = factory();
+      const transport = new WebStandardStreamableHTTPServerTransport({
+        sessionIdGenerator: undefined,
+        enableJsonResponse: true,
+      });
+      await server.connect(transport);
+      // The per-request server/transport are unreferenced after this returns and GC'd by
+      // the isolate; no stream or timer is left open (POST only).
+      return transport.handleRequest(c.req.raw, { parsedBody });
+    }
+    // 2026-07-28 request: the SDK's validation ladder (envelope, header cross-checks) and the
+    // per-request transport. `auto` answers one JSON body unless a tool emits a notification
+    // before its result, which none here does; `legacy: 'reject'` because the legacy leg is
+    // the hand-wired one above (`json` mode would log a warning per request).
+    const handler = createMcpHandler(factory, { legacy: 'reject', responseMode: 'auto' });
+    return handler.fetch(c.req.raw, { parsedBody });
   },
 );
