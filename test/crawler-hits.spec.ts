@@ -74,7 +74,32 @@ describe('stats-page log reading', () => {
     });
   });
 
-  it('reads path and user agent from the Worker line and ignores other lines', () => {
+  /**
+   * The line as Workers Logs keeps it (read 2026-10-29 and 2026-10-30): the Worker's JSON
+   * console.log is the parsed object under `source`, and `$metadata` carries no message.
+   */
+  const kept = (path: string, userAgent: string) => ({
+    timestamp: 1_760_000_000_000,
+    source: { level: 'info', method: 'GET', path, status: 200, userAgent, requestId: 'r1' },
+    $metadata: { level: 'info', service: 'faceless-api', requestId: 'r1', type: 'cf-worker' },
+  });
+  /** The invocation event the `/stats` needle also matches: not a Worker line, never counted. */
+  const invocation = (path: string) => ({
+    $workers: { event: { request: { method: 'GET', url: `https://gankdat.com${path}` }, path } },
+    $metadata: {
+      level: 'info',
+      message: `GET https://gankdat.com${path}`,
+      type: 'cf-worker-event',
+    },
+  });
+
+  it('reads path and user agent from the kept source object, then from a JSON text line', () => {
+    expect(statsLineOf(kept('/stats/uk-planning', 'PetalBot/1.0'))).toEqual({
+      path: '/stats/uk-planning',
+      userAgent: 'PetalBot/1.0',
+    });
+    expect(statsLineOf(kept('/mcp', 'PetalBot/1.0'))).toBeNull();
+    expect(statsLineOf(invocation('/stats/uk-planning'))).toBeNull();
     expect(statsLineOf(line('/stats/uk-planning', 'GPTBot/1.2'))).toEqual({
       path: '/stats/uk-planning',
       userAgent: 'GPTBot/1.2',
@@ -92,16 +117,20 @@ describe('stats-page log reading', () => {
             line('/stats/uk-planning', 'GPTBot/1.2'),
             line('/stats/uk-planning', 'Mozilla/5.0 Chrome/130'),
             line('/stats', 'ClaudeBot/1.0'),
+            kept('/stats/uk-trademark-journal/class/21', 'Mozilla/5.0 (compatible; PetalBot;)'),
+            kept('/stats/uk-sanctions', 'Mozilla/5.0 (compatible; bingbot/2.0;)'),
+            kept('/stats/uk-sanctions', 'Mozilla/5.0 (compatible; PetalBot;)'),
+            invocation('/stats/uk-sanctions'),
             { $metadata: { message: 'x402: Route "/v1/x" has an invalid bazaar extension' } },
           ],
         },
       },
     };
     expect(foldStatsLogEvents(body)).toEqual({
-      total: 3,
-      ai: 2,
-      byFamily: { GPTBot: 1, ClaudeBot: 1 },
-      lines: 4,
+      total: 6,
+      ai: 5,
+      byFamily: { PetalBot: 2, GPTBot: 1, ClaudeBot: 1, Bingbot: 1 },
+      lines: 8,
     });
     expect(foldStatsLogEvents({ result: { events: { events: [] } } })).toEqual({
       total: 0,

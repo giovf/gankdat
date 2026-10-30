@@ -130,23 +130,35 @@ function firstArray(v: unknown, depth = 0): unknown[] | null {
   return null;
 }
 
-/** One request line's `(path, userAgent)` from a Query Builder event, or null when it is not one. */
+/**
+ * One request line's `(path, userAgent)` from a Query Builder event, or null when it is not one.
+ * Workers Logs keeps the Worker's JSON `console.log` as the parsed object under `source`, with no
+ * `message` string anywhere (the 10-29 wave-log reading; gankdat `stats-crawlers-logs-source-object`,
+ * 2026-10-30: this read `$metadata.message` as a JSON string and so matched 29 lines a week and
+ * counted none of them while the zone reading saw 3,320 requests), so the logged object is read
+ * first; a JSON text in `message` stays as the fallback. The invocation event the same needle
+ * matches (`GET https://gankdat.com/stats/…` as its message) is not a Worker line and is dropped,
+ * so a fetch is counted once.
+ */
 export function statsLineOf(raw: unknown): { path: string; userAgent: string } | null {
   if (!isRecord(raw)) return null;
   const meta = isRecord(raw.$metadata) ? raw.$metadata : {};
-  const message = meta.message ?? raw.message;
-  if (typeof message !== 'string' || !message.startsWith('{')) return null;
-  try {
-    const parsed: unknown = JSON.parse(message);
-    if (!isRecord(parsed) || typeof parsed.path !== 'string') return null;
-    if (!parsed.path.startsWith('/stats')) return null;
-    return {
-      path: parsed.path,
-      userAgent: typeof parsed.userAgent === 'string' ? parsed.userAgent : '',
-    };
-  } catch {
-    return null;
+  let logged: Record<string, unknown> | null = isRecord(raw.source) ? raw.source : null;
+  if (!logged || typeof logged.path !== 'string') {
+    const message = meta.message ?? raw.message;
+    if (typeof message !== 'string' || !message.startsWith('{')) return null;
+    try {
+      const parsed: unknown = JSON.parse(message);
+      logged = isRecord(parsed) ? parsed : null;
+    } catch {
+      return null;
+    }
   }
+  if (!logged || typeof logged.path !== 'string' || !logged.path.startsWith('/stats')) return null;
+  return {
+    path: logged.path,
+    userAgent: typeof logged.userAgent === 'string' ? logged.userAgent : '',
+  };
 }
 
 /** The stats-page request lines in a Query Builder response, folded by crawler family. */
