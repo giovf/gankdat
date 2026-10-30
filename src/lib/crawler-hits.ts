@@ -194,8 +194,14 @@ export function zoneStatsRows(body: unknown): Array<{ userAgent: string; hits: n
 }
 
 /** Analytics Engine SQL: `/mcp` requests by user agent over `days` (sampling-corrected). */
+// 2026-10-30 (claude-directory-day-30): until today this query had no kind filter, so the "/mcp"
+// reading counted every row of the traffic dataset — REST data calls, change feeds, x402 and
+// OAuth token calls included. The MCP kinds are the four routes/mcp.ts and mcp/server.ts write.
+export const MCP_TRAFFIC_KINDS = ['mcp_authed', 'mcp_anon', 'mcp_preview', 'mcp_denied'] as const;
+
 export function mcpCrawlerSql(days = 30): string {
-  return `SELECT blob2 AS ua, SUM(_sample_interval * double1) AS n FROM gankdat_traffic WHERE timestamp > NOW() - INTERVAL '${days}' DAY GROUP BY ua ORDER BY n DESC LIMIT 500`;
+  const kinds = MCP_TRAFFIC_KINDS.map((k) => `'${k}'`).join(', ');
+  return `SELECT blob2 AS ua, SUM(_sample_interval * double1) AS n FROM gankdat_traffic WHERE timestamp > NOW() - INTERVAL '${days}' DAY AND blob1 IN (${kinds}) GROUP BY ua ORDER BY n DESC LIMIT 500`;
 }
 
 /** The Daily numbers clause: one reading per surface, `n/a (reason)` where a reading failed. */

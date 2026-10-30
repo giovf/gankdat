@@ -146,6 +146,12 @@ describe('zone and /mcp readings', () => {
     expect(mcpCrawlerSql(30)).toContain("INTERVAL '30' DAY");
     expect(mcpCrawlerSql(30)).toContain('SUM(_sample_interval * double1)');
   });
+
+  it('counts the MCP kinds only, not REST or x402 rows (2026-10-30)', () => {
+    expect(mcpCrawlerSql(30)).toContain(
+      "blob1 IN ('mcp_authed', 'mcp_anon', 'mcp_preview', 'mcp_denied')",
+    );
+  });
 });
 
 describe('crawlerNote', () => {
