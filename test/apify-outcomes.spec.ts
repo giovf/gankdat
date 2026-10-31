@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   byActorNote,
   failedCount,
+  flaggedActors,
+  flaggedNotice,
   newlyFailing,
   previousFailed,
   type ActorOutcome,
@@ -35,6 +37,39 @@ describe('byActorNote', () => {
     );
     expect(byActorNote([], false)).toBe('apify 30d by actor (all accounts): none');
   });
+
+  it('names a flagged actor inside its suffix and never hides one in the 0: list', () => {
+    const flagged: ActorOutcome[] = [
+      { name: 'uk-food-hygiene-ratings', n: 16, total: 16, failed: 0, notice: 'NONE' },
+      { name: 'uk-no-website-leads', n: 11, total: 11, failed: 2, notice: 'UNDER_MAINTENANCE' },
+      { name: 'uk-planning-applications', n: 0, total: 0, failed: 0, notice: 'UNDER_MAINTENANCE' },
+      { name: 'uk-companies-house-lookup-monitor', n: 0, total: 1, failed: 0 },
+    ];
+    expect(byActorNote(flagged, true)).toBe(
+      'apify 30d by actor: uk-food-hygiene-ratings 16, uk-no-website-leads 11 (2 failed, flagged UNDER_MAINTENANCE), uk-planning-applications 0 (flagged UNDER_MAINTENANCE); 0: uk-companies-house-lookup-monitor',
+    );
+  });
+});
+
+describe('flaggedNotice / flaggedActors', () => {
+  it('treats NONE, empty and unread as no flag, and lists a flagged actor as a refresh errors entry', () => {
+    expect(flaggedNotice({ notice: 'NONE' })).toBeUndefined();
+    expect(flaggedNotice({ notice: '' })).toBeUndefined();
+    expect(flaggedNotice({})).toBeUndefined();
+    expect(flaggedNotice({ notice: 'UNDER_MAINTENANCE' })).toBe('UNDER_MAINTENANCE');
+    expect(
+      flaggedActors([
+        { name: 'b-actor', n: 3, total: 4, failed: 1, notice: 'UNDER_MAINTENANCE' },
+        { name: 'a-actor', n: 9, total: 9, failed: 0, notice: 'NONE' },
+      ]),
+    ).toEqual([
+      {
+        source_slug: 'apify-b-actor',
+        message:
+          'flagged UNDER_MAINTENANCE on Apify (QA runs failing; the flag clears on the next green run), 1 failed of 4 in 30 d',
+      },
+    ]);
+  });
 });
 
 describe('previousFailed', () => {
@@ -44,6 +79,18 @@ describe('previousFailed', () => {
       new Map([
         ['uk-food-hygiene-ratings', 0],
         ['uk-no-website-leads', 1],
+      ]),
+    );
+  });
+
+  it('reads the failed count through a flagged suffix, so a flag day is a baseline too', () => {
+    const row =
+      '| 2026-10-30 | Daily numbers | 1 accts | — | 0 x402 paid | apify 30d by actor: a-actor 16, b-actor 11 (2 failed, flagged UNDER_MAINTENANCE), c-actor 0 (flagged UNDER_MAINTENANCE); 0: d-actor; agent sign-up: 0 |';
+    expect(previousFailed(row, '2026-10-31')).toEqual(
+      new Map([
+        ['a-actor', 0],
+        ['b-actor', 2],
+        ['c-actor', 0],
       ]),
     );
   });

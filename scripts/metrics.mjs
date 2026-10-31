@@ -350,7 +350,7 @@ if (mcpProbeError) {
 // whose F rose since the previous row is listed under `refresh errors` as `apify-<name>` — the
 // auto-filer then files `refresh-apify-<name>` a day before Apify's "under maintenance" mail.
 // Rules and parsing in src/lib/apify-outcomes.ts.
-const { byActorNote, failedCount, newlyFailing, previousFailed } =
+const { byActorNote, failedCount, flaggedActors, flaggedNotice, newlyFailing, previousFailed } =
   await import('../src/lib/apify-outcomes.ts');
 const apifyToken = process.env.APIFY_TOKEN;
 const DAY_MS = 86_400_000;
@@ -395,7 +395,12 @@ async function apifyShelf() {
   const perActor = [];
   for (const item of items) {
     let act = item;
-    if (!item.stats || item.isPublic === undefined || !item.stats.publicActorRunStats30Days) {
+    if (
+      !item.stats ||
+      item.isPublic === undefined ||
+      item.notice === undefined ||
+      !item.stats.publicActorRunStats30Days
+    ) {
       const one = await fetch(`https://api.apify.com/v2/acts/${item.id}`, { headers: H });
       if (!one.ok) throw new Error(`GET /v2/acts/${item.id}: HTTP ${one.status}`);
       act = { ...item, ...((await one.json()).data ?? {}) };
@@ -409,7 +414,14 @@ async function apifyShelf() {
       name: act.name,
       runs30: actRuns30,
       failed: failedCount(act.stats?.publicActorRunStats30Days),
+      // Apify's maintenance flag (apify-notice-in-daily-row, 2026-10-31): UNDER_MAINTENANCE while
+      // the QA runs fail, NONE otherwise; the list endpoint may omit it like isPublic, so it is
+      // read from the detail above and an unread value stays undefined (never a false flag).
+      notice: typeof act.notice === 'string' ? act.notice : undefined,
     });
+    if (flaggedNotice({ notice: typeof act.notice === 'string' ? act.notice : undefined })) {
+      console.log(`apify flagged: ${act.name} notice ${act.notice}`);
+    }
     users += Math.round(Number(act.stats?.totalUsers30Days ?? 0));
     if (act.isPublic) publicCount += 1;
   }
@@ -427,6 +439,7 @@ async function apifyShelf() {
     n: Math.max(0, a.runs30 - (own?.byActor.get(a.id) ?? 0)),
     total: a.runs30,
     failed: a.failed,
+    notice: a.notice,
   }));
   const byActor = byActorNote(outcomes, Boolean(own));
   return { runs, runs30, ours30, users, publicCount, byActor, outcomes };
@@ -871,6 +884,14 @@ const prevRuns = (() => {
 // block above); no previous reading → nothing flagged, never a failed job.
 for (const e of apify ? newlyFailing(apify.outcomes, previousFailed(md, date)) : []) {
   errors.push({ source_slug: e.source_slug, message: e.message });
+}
+// Actors Apify flags under maintenance today (notice ≠ NONE) → refresh errors every day the flag
+// stands, so the auto-filer files the repair and the row shows the day it clears; an actor already
+// listed above for a rising failed count keeps that entry and gains the notice in its message.
+for (const e of apify ? flaggedActors(apify.outcomes) : []) {
+  const same = errors.find((x) => x.source_slug === e.source_slug);
+  if (same) same.message += `; ${e.message}`;
+  else errors.push({ source_slug: e.source_slug, message: e.message });
 }
 
 /** The first failed check in a validate response, whatever shape `preflight` takes; else the outcome. */

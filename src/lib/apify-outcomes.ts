@@ -9,6 +9,12 @@
 // actor drops out the next day, the 30-day window rolling old failures off never flags, and the
 // first row after this ships (no baseline) flags nothing. scripts/refresh-errors-to-queue.ts
 // then files `refresh-apify-<name>` by its two-rows-in-four rule, a day before Apify writes.
+// Notice (2026-10-31, queue apify-notice-in-daily-row): the same actor object carries `notice` —
+// `UNDER_MAINTENANCE` while Apify's QA flag is up, `NONE` otherwise (relay reads 10-29 and 10-31 of
+// uk-companies-house-lookup-monitor). The third flag (10-29) was again learned from the mail and its
+// clearing cost a relay round, so a notice other than NONE is printed as `flagged <NOTICE>` inside
+// the actor's suffix and listed under `refresh errors` every day it stands; the suffix vanishing is
+// the proof that a repair held.
 // Pure functions; read by scripts/metrics.mjs (Node runs the .ts directly — erasable syntax only).
 
 export interface ActorRunStats30Days {
@@ -19,12 +25,19 @@ export interface ActorRunStats30Days {
   TOTAL?: number;
 }
 
-/** One actor's 30-day reading: `n` runs by other accounts, `total` by every account, `failed` of those. */
+/** One actor's 30-day reading: `n` runs by other accounts, `total` by every account, `failed` of those; `notice` as Apify reports it (`NONE` when clear). */
 export interface ActorOutcome {
   name: string;
   n: number;
   total: number;
   failed: number;
+  notice?: string;
+}
+
+/** Apify's maintenance notice on the actor, or undefined when there is none (`NONE`, empty, unread). */
+export function flaggedNotice(a: Pick<ActorOutcome, 'notice'>): string | undefined {
+  const n = (a.notice ?? '').trim();
+  return n && n !== 'NONE' ? n : undefined;
 }
 
 export interface ApifyRefreshError {
@@ -37,13 +50,22 @@ export function failedCount(stats: ActorRunStats30Days | undefined): number {
   return Math.round(Number(stats?.FAILED ?? 0)) + Math.round(Number(stats?.['TIMED-OUT'] ?? 0));
 }
 
-/** `apify 30d by actor: a 16, b 11 (2 failed); 0: c, d` — the suffix only where failures exist. */
+/**
+ * `apify 30d by actor: a 16, b 11 (2 failed), c 3 (1 failed, flagged UNDER_MAINTENANCE); 0: d` — the
+ * suffix only where failures or a notice exist; a flagged actor is never hidden in the `0:` list.
+ */
 export function byActorNote(actors: ActorOutcome[], ownRunsKnown: boolean): string {
   const sorted = [...actors].sort((a, b) => b.n - a.n || a.name.localeCompare(b.name));
-  const label = (a: ActorOutcome): string =>
-    `${a.name} ${a.n}${a.failed > 0 ? ` (${a.failed} failed)` : ''}`;
-  const used = sorted.filter((a) => a.n > 0 || a.failed > 0).map(label);
-  const zero = sorted.filter((a) => a.n === 0 && a.failed === 0).map((a) => a.name);
+  const label = (a: ActorOutcome): string => {
+    const parts = [
+      ...(a.failed > 0 ? [`${a.failed} failed`] : []),
+      ...(flaggedNotice(a) ? [`flagged ${flaggedNotice(a)}`] : []),
+    ];
+    return `${a.name} ${a.n}${parts.length ? ` (${parts.join(', ')})` : ''}`;
+  };
+  const shown = (a: ActorOutcome): boolean => a.n > 0 || a.failed > 0 || Boolean(flaggedNotice(a));
+  const used = sorted.filter(shown).map(label);
+  const zero = sorted.filter((a) => !shown(a)).map((a) => a.name);
   return `apify 30d by actor${ownRunsKnown ? '' : ' (all accounts)'}: ${used.length ? used.join(', ') : 'none'}${zero.length ? `; 0: ${zero.join(', ')}` : ''}`;
 }
 
@@ -59,8 +81,11 @@ export function previousFailed(researchMd: string, date: string): Map<string, nu
     const m = row.match(/apify 30d by actor(?: \(all accounts\))?: (.*?)(?:; 0: [^;|]*)?(?:;|\|)/);
     if (!m?.[1]) return null;
     const out = new Map<string, number>();
-    for (const part of m[1].split(', ')) {
-      const p = part.trim().match(/^([a-z0-9-]+) \d+(?: \((\d+) failed\))?$/);
+    // Split where the next `name N` begins: a suffix may hold its own comma (`2 failed, flagged …`).
+    for (const part of m[1].split(/, (?=[a-z0-9-]+ \d)/)) {
+      const p = part
+        .trim()
+        .match(/^([a-z0-9-]+) \d+(?: \((?:(\d+) failed)?(?:, )?(?:flagged [A-Z_]+)?\))?$/);
       if (p?.[1]) out.set(p[1], Number(p[2] ?? 0));
     }
     return out;
@@ -80,5 +105,16 @@ export function newlyFailing(
     .map((a) => ({
       source_slug: `apify-${a.name}`,
       message: `${a.failed - (previous.get(a.name) ?? 0)} new failed run(s) since the last row, ${a.failed} of ${a.total} in 30 d`,
+    }));
+}
+
+/** Actors Apify flags today (`notice` other than NONE), as `refresh errors` entries — every day the flag stands. */
+export function flaggedActors(today: ActorOutcome[]): ApifyRefreshError[] {
+  return today
+    .filter((a) => flaggedNotice(a))
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((a) => ({
+      source_slug: `apify-${a.name}`,
+      message: `flagged ${flaggedNotice(a)} on Apify (QA runs failing; the flag clears on the next green run), ${a.failed} failed of ${a.total} in 30 d`,
     }));
 }
