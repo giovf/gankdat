@@ -220,3 +220,26 @@ export function errorLinesNote(folded: ErrorLines, hours = ERROR_LOG_HOURS): str
   }
   return `worker errors ${hours}h: ${folded.lines}${parts.length > 0 ? ` (${parts.join('; ')})` : ''}`;
 }
+
+/**
+ * The job-log lines of a reading (foundry `metrics-probe-dispatch`, 2026-11-02): one plain line
+ * per message with its request paths, one per 5xx route, then the row clause — the same lines
+ * whether the Daily numbers job or the ≤ 1 min `probe` dispatch printed them. Plain lines, never
+ * JSON: GitHub's log masking mangles braces (2026-10-29 19:40). With no error line the raw body's
+ * head is shown so an empty reading can be told from a wrong query.
+ */
+export function errorLinesReport(
+  folded: ErrorLines,
+  rawBody = '',
+  hours = ERROR_LOG_HOURS,
+): string[] {
+  const out = [`worker errors: ${folded.lines} lines, ${folded.requests} request events`];
+  for (const m of folded.messages) {
+    const paths = m.paths.map((p) => `${p.path} ${p.n}`).join(', ');
+    out.push(`worker error ×${m.n}: ${m.message}${paths ? ` — on ${paths}` : ''}`);
+  }
+  for (const r of folded.routes) out.push(`worker request ×${r.n}: ${r.route}`);
+  if (folded.lines === 0) out.push(`worker errors body: ${rawBody.slice(0, 400)}`);
+  out.push(errorLinesNote(folded, hours));
+  return out;
+}

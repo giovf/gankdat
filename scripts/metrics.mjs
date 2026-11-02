@@ -706,7 +706,8 @@ const claudeCallersNote = await (async () => {
 // Apify's QA runner got that 500 from the company lookup for three days before anyone could read
 // the message (no sandbox reads Workers Logs). src/lib/error-lines.ts folds the lines by message;
 // a missing token or permission reads `n/a (<why>)` and the rest of the row survives.
-const { errorLogQuery, foldErrorLines, errorLinesNote } = await import('../src/lib/error-lines.ts');
+const { errorLogQuery, foldErrorLines, errorLinesNote, errorLinesReport } =
+  await import('../src/lib/error-lines.ts');
 const workerErrorsNote = await (async () => {
   const res = await fetch(
     `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/workers/observability/telemetry/query`,
@@ -723,14 +724,9 @@ const workerErrorsNote = await (async () => {
     );
   }
   const folded = foldErrorLines(JSON.parse(text));
-  // One plain line per message (GitHub's log masking mangles JSON braces, 2026-10-29 19:40).
-  console.log(`worker errors: ${folded.lines} lines, ${folded.requests} request events`);
-  for (const m of folded.messages) {
-    const paths = m.paths.map((p) => `${p.path} ${p.n}`).join(', ');
-    console.log(`worker error ×${m.n}: ${m.message}${paths ? ` — on ${paths}` : ''}`);
-  }
-  for (const r of folded.routes) console.log(`worker request ×${r.n}: ${r.route}`);
-  if (folded.lines === 0) console.log(`worker errors body: ${text.slice(0, 400)}`);
+  // One plain line per message (GitHub's log masking mangles JSON braces, 2026-10-29 19:40); the
+  // same lines the `probe` dispatch prints through scripts/error-lines.mjs (2026-11-02).
+  for (const line of errorLinesReport(folded, text)) console.log(line);
   return errorLinesNote(folded);
 })().catch((e) => `worker errors 24h: n/a (${e.message.slice(0, 100)})`);
 

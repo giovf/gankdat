@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   errorLineOf,
   errorLinesNote,
+  errorLinesReport,
   errorLogQuery,
   foldErrorLines,
   routeFamily,
@@ -162,5 +163,30 @@ describe('worker error lines', () => {
     expect(errorLinesNote(foldErrorLines({ result: { events: events.slice(0, 1) } }))).toBe(
       'worker errors 24h: 1 (requests: GET /stats/uk-trademark-journal/class/* 503 ×1)',
     );
+  });
+
+  it('prints one plain job-log line per message and route, then the clause (the probe dispatch)', () => {
+    const events = [
+      line('error', 'POST https://gankdat.com/mcp', 'source', 'p1'),
+      line('error', 'D1_ERROR: internal error; reference = abc123', 'source', 'p1'),
+      line('error', 'GET https://gankdat.com/v1/data/uk-planning', 'source', 'p2'),
+    ];
+    const folded = foldErrorLines({ result: { events } });
+    expect(errorLinesReport(folded, '{"result":{"events":[]}}')).toEqual([
+      'worker errors: 3 lines, 2 request events',
+      'worker error ×1: D1_ERROR: internal error; reference = … — on /mcp 1',
+      'worker request ×1: GET /v1/data/uk-planning ?',
+      'worker request ×1: POST /mcp ?',
+      'worker errors 24h: 3 (D1_ERROR: internal error; reference = … ×1; requests: GET /v1/data/uk-planning ? ×1, POST /mcp ? ×1)',
+    ]);
+    // No lines: the raw body's head is shown so an empty reading is told from a wrong query, and
+    // the window named in the clause is the one asked for.
+    expect(
+      errorLinesReport(foldErrorLines({ result: { events: [] } }), '{"result":[]}', 6),
+    ).toEqual([
+      'worker errors: 0 lines, 0 request events',
+      'worker errors body: {"result":[]}',
+      'worker errors 6h: 0',
+    ]);
   });
 });
