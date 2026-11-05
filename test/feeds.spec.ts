@@ -3,7 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { refreshD1Source } from '../src/sources/d1store';
 import type { ChangeRow } from '../src/sources/d1store';
 import { ukCareLocationsSource } from '../src/sources/uk-care-locations';
-import { entryTitle, feedUrl, renderAtom } from '../src/routes/feeds';
+import { entryTitle, feedUrl, listFeeds, renderAtom, renderOpml } from '../src/routes/feeds';
+import { hasChangeFeed, listSources } from '../src/sources/registry';
 import { stubOrigins } from './helpers/origin-mock';
 
 // Keyless Atom feeds of the change feeds: the register's last week of added / removed /
@@ -123,5 +124,73 @@ describe('GET /feeds', () => {
     expect(
       (await SELF.fetch('https://example.com/feeds/uk-care-locations/region/Leeds.xml')).status,
     ).toBe(404);
+  });
+
+  // gankdat change-feed-shelf-listing (2026-11-05): the day-30 read found no reader had ever added a
+  // feed (Feedly's search empty), so the feeds get a discovery page and one OPML of them all.
+  it('lists every feed — each register and each listed facet value — once', () => {
+    const pages = listFeeds();
+    const registers = listSources().filter(hasChangeFeed);
+    expect(pages.filter((p) => !p.facet).map((p) => p.source.slug)).toEqual(
+      registers.map((s) => s.slug),
+    );
+    const facetCount = registers.reduce(
+      (n, s) => n + (s.stats?.facets ?? []).reduce((m, f) => m + f.values.length, 0),
+      0,
+    );
+    expect(pages.filter((p) => p.facet)).toHaveLength(facetCount);
+    expect(facetCount).toBeGreaterThanOrEqual(45);
+    expect(new Set(pages.map((p) => feedUrl('https://gankdat.com', p))).size).toBe(pages.length);
+  });
+
+  it('serves an OPML 2.0 of every feed, facet feeds nested under their register', async () => {
+    const res = await SELF.fetch('https://example.com/feeds/opml');
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toContain('text/x-opml');
+    const xml = await res.text();
+    expect(xml).toContain('<opml version="2.0">');
+    for (const page of listFeeds()) {
+      expect(xml).toContain(`xmlUrl="${feedUrl('https://gankdat.com', page)}"`);
+    }
+    expect(xml).toContain(
+      'xmlUrl="https://gankdat.com/feeds/uk-trademark-journal.xml" htmlUrl="https://gankdat.com/stats/uk-trademark-journal">',
+    );
+    expect(xml).toMatch(
+      /uk-trademark-journal\.xml" htmlUrl="[^"]+">\n\s+<outline type="rss" [^>]*xmlUrl="https:\/\/gankdat\.com\/feeds\/uk-trademark-journal\/class\/01\.xml"/,
+    );
+    // Pure render: titles are escaped.
+    const opml = renderOpml(
+      'https://gankdat.com',
+      [{ source: { ...ukCareLocationsSource, title: 'A & <B>' } }],
+      'Thu, 05 Nov 2026 19:30:00 GMT',
+    );
+    expect(opml).toContain('text="A &amp; &lt;B&gt; — changes"');
+    expect(opml).toContain('<dateCreated>Thu, 05 Nov 2026 19:30:00 GMT</dateCreated>');
+  });
+
+  it('serves a discovery page that links every register feed, the OPML and the shelves', async () => {
+    const res = await SELF.fetch('https://example.com/feeds');
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain('<link rel="canonical" href="https://gankdat.com/feeds">');
+    expect(html).toContain('href="/feeds/opml"');
+    for (const source of listSources().filter(hasChangeFeed)) {
+      expect(html).toContain(`href="https://gankdat.com/feeds/${source.slug}.xml"`);
+      expect(html).toMatch(
+        new RegExp(
+          `<link rel="alternate" type="application/atom\\+xml" title="[^"]+ — changes" href="https://gankdat.com/feeds/${source.slug}\\.xml">`,
+        ),
+      );
+    }
+    expect(html).toContain('href="https://gankdat.com/feeds/uk-trademark-journal/class/09.xml"');
+    expect(html).toContain('/feed subscribe');
+    expect(html).toContain('n8n (RSS Feed Trigger)');
+    // The stats index and llms.txt point at it.
+    expect(await (await SELF.fetch('https://example.com/stats')).text()).toContain(
+      'href="/feeds/opml"',
+    );
+    expect(await (await SELF.fetch('https://example.com/llms.txt')).text()).toContain(
+      'https://gankdat.com/feeds/opml',
+    );
   });
 });

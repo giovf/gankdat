@@ -492,7 +492,7 @@ export const statsRoutes = new Hono<AppEnv>()
 <style>${STYLE}</style></head>
 <body><main><p class="muted"><a href="/">gankdat</a> / stats</p>
 <h1>dataset <b>statistics</b></h1>
-<p class="muted">Computed daily from official feeds. Citable with URL + date.</p>
+<p class="muted">Computed daily from official feeds. Citable with URL + date. Every register's daily diff is also a keyless <a href="/feeds">Atom feed</a> (one OPML of them all at <a href="/feeds/opml">/feeds/opml</a>).</p>
 <ul>${items}</ul></main></body></html>`);
   })
   .get('/:source', async (c) => {

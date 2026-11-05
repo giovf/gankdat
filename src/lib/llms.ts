@@ -89,6 +89,8 @@ first, 90-day history, 1 credit per page: a daily diff of every register fits
 the free tier.
 
 ${feeds.map((s) => `- GET ${baseUrl}/v1/changes/${s.slug} — ${s.title}`).join('\n')}
+- Keyless Atom feeds of the same rows (last 7 days): ${baseUrl}/feeds/<slug>.xml — every feed is listed
+  at ${baseUrl}/feeds and as one OPML file at ${baseUrl}/feeds/opml.
   Params: since (YYYY-MM-DD, default 7 days ago), change (added|removed|changed), page, per_page,
   plus the dataset's own filters and q applied to the changed record (a watch in one call, e.g.
   /v1/changes/uk-trademark-journal?classes=09&q=<mark>).
