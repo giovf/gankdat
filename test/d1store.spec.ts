@@ -8,6 +8,7 @@ import {
   DeltaIndexUnavailableError,
   backfillClock,
   facetsClock,
+  filteredCountKey,
   hash53,
   queryD1Source,
   refreshD1Source,
@@ -1022,6 +1023,76 @@ describe('d1store under the D1 throttle', () => {
     expect(await lastLog('d1-batch-throttled')).toEqual({
       status: 'ok',
       message: 'delta +0 ~1 -0',
+    });
+  });
+
+  describe('filtered page count cache (filtered-page-count-cache, 2026-11-05)', () => {
+    it('scans COUNT(*) once per filter set and generation, then serves every later page from KV', async () => {
+      const source = makeSource('d1-count-cache');
+      await refreshD1Source(env, source);
+      const schema = buildQuerySchema(source);
+      const page1 = schema.parse({ classification: 'firm', per_page: '2' });
+      const first = await queryD1Source(env, source, page1);
+      const expected = applyQuery(RECORDS, page1).total;
+      expect(first.page.total).toBe(expected);
+
+      const meta = await env.DB.prepare(
+        "SELECT generation, last_refreshed_at FROM source_meta WHERE source_slug = 'd1-count-cache'",
+      ).first<{ generation: number; last_refreshed_at: string }>();
+      const prefix = `count:d1-count-cache:${meta?.generation}:${meta?.last_refreshed_at}:`;
+      const keys = await env.CACHE.list({ prefix });
+      expect(keys.keys).toHaveLength(1);
+      const key = keys.keys[0]!.name;
+      expect(await env.CACHE.get(key)).toBe(String(expected));
+
+      // page 2 of the same filters reads the cached total (a sentinel proves the path) and still pages the rows
+      await env.CACHE.put(key, '999');
+      const page2 = schema.parse({ classification: 'firm', per_page: '2', page: '2' });
+      const second = await queryD1Source(env, source, page2);
+      expect(second.page.total).toBe(999);
+      expect(second.page.records).toEqual(applyQuery(RECORDS, page2).records);
+
+      // a different filter set has its own key and its own scan
+      const other = schema.parse({ classification: 'firm', amount_min: '200' });
+      const third = await queryD1Source(env, source, other);
+      expect(third.page.total).toBe(applyQuery(RECORDS, other).total);
+      const after = await env.CACHE.list({ prefix });
+      expect(after.keys).toHaveLength(2);
+    });
+
+    it('never serves a previous refresh’s total: the key carries the generation and the refresh stamp', async () => {
+      const source = makeSource('d1-count-gen');
+      await refreshD1Source(env, source);
+      const schema = buildQuerySchema(source);
+      const parsed = schema.parse({ classification: 'firm' });
+      const before = await queryD1Source(env, source, parsed);
+      await refreshD1Source(env, {
+        ...source,
+        fetchFresh: () => Promise.resolve(RECORDS.slice(0, 1)),
+      });
+      const after = await queryD1Source(env, source, parsed);
+      expect(after.page.total).toBe(applyQuery(RECORDS.slice(0, 1), parsed).total);
+      expect(after.page.total).not.toBe(before.page.total);
+      // a refresh that keeps the generation but restamps the meta row (the delta and windowed
+      // paths) invalidates too: the key changes with last_refreshed_at
+      await env.DB.prepare(
+        "UPDATE source_meta SET last_refreshed_at = '2099-01-01T00:00:00Z' WHERE source_slug = 'd1-count-gen'",
+      ).run();
+      await env.DB.prepare("DELETE FROM source_records WHERE source_slug = 'd1-count-gen'").run();
+      const restamped = await queryD1Source(env, source, parsed);
+      expect(restamped.page.total).toBe(0);
+    });
+
+    it('builds a key from slug, generation, refresh stamp and the whole predicate (sql and binds)', () => {
+      const t = '2026-11-05T05:00:00Z';
+      const a = filteredCountKey('s', 3, t, { sql: 'x = ?', binds: ['a'] });
+      expect(a).toMatch(/^count:s:3:2026-11-05T05:00:00Z:[0-9a-z]+$/);
+      expect(filteredCountKey('s', 3, t, { sql: 'x = ?', binds: ['b'] })).not.toBe(a);
+      expect(filteredCountKey('s', 4, t, { sql: 'x = ?', binds: ['a'] })).not.toBe(a);
+      expect(
+        filteredCountKey('s', 3, '2026-11-06T05:00:00Z', { sql: 'x = ?', binds: ['a'] }),
+      ).not.toBe(a);
+      expect(filteredCountKey('s', 3, t, { sql: 'x = ?', binds: ['a'] })).toBe(a);
     });
   });
 });

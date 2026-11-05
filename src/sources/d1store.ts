@@ -989,7 +989,7 @@ async function refreshD1Full(
   }
 }
 
-interface SqlPredicate {
+export interface SqlPredicate {
   sql: string;
   binds: (string | number)[];
 }
@@ -1112,6 +1112,38 @@ export interface D1QueryResult {
   last_refreshed_at: string;
 }
 
+/**
+ * The filtered total of a paged query is cached in KV between refreshes
+ * (gankdat `filtered-page-count-cache`, 2026-11-05): every page of a filtered read ran
+ * COUNT(*) and the page SELECT in parallel over the whole register (no index on record
+ * fields), so page 2 of a 613k-row register a few seconds after page 1 read ~2.4M wide rows
+ * and tripped D1's 10-second throttle (the 2026-11-05 Apify QA run: 6.96 s, then a 503).
+ * The key carries the generation AND `last_refreshed_at`: a delta or windowed refresh
+ * (uk-trademark-journal, the D1 delta path) adds rows inside the same generation and only
+ * stamps the meta row, so the generation alone would serve a stale total. The TTL only
+ * bounds how long a superseded refresh's keys linger.
+ */
+export const COUNT_CACHE_TTL_S = 2 * 24 * 60 * 60;
+
+export function filteredCountKey(
+  slug: string,
+  generation: number,
+  refreshedAt: string,
+  where: SqlPredicate,
+): string {
+  const predicate = hash53(`${where.sql}\u0000${JSON.stringify(where.binds)}`).toString(36);
+  return `count:${slug}:${generation}:${refreshedAt}:${predicate}`;
+}
+
+async function cachedCount(env: CloudflareBindings, key: string): Promise<number | null> {
+  try {
+    const hit = await env.CACHE.get(key);
+    return hit !== null && /^\d+$/.test(hit) ? Number(hit) : null;
+  } catch {
+    return null; // a KV hiccup costs one scan, never the request
+  }
+}
+
 export async function queryD1Source(
   env: CloudflareBindings,
   source: DataSource,
@@ -1126,23 +1158,41 @@ export async function queryD1Source(
   const page = parsed.page as number;
   const perPage = parsed.per_page as number;
 
-  const [countRow, rows] = await Promise.all([
-    env.DB.prepare(`SELECT COUNT(*) AS n FROM source_records WHERE ${where.sql}`)
-      .bind(...where.binds)
-      .first<{ n: number }>(),
-    env.DB.prepare(
-      `SELECT record FROM source_records WHERE ${where.sql} ORDER BY seq LIMIT ?${where.binds.length + 1} OFFSET ?${where.binds.length + 2}`,
-    )
-      .bind(...where.binds, perPage, (page - 1) * perPage)
-      .all<{ record: string }>(),
-  ]);
+  const countKey = filteredCountKey(source.slug, meta.generation, meta.last_refreshed_at, where);
+  const pageQuery = env.DB.prepare(
+    `SELECT record FROM source_records WHERE ${where.sql} ORDER BY seq LIMIT ?${where.binds.length + 1} OFFSET ?${where.binds.length + 2}`,
+  )
+    .bind(...where.binds, perPage, (page - 1) * perPage)
+    .all<{ record: string }>();
+
+  let total = await cachedCount(env, countKey);
+  let rows: D1Result<{ record: string }>;
+  if (total === null) {
+    // First page of this filter set since the last refresh: one COUNT scan beside the page,
+    // then every later page of the same filters reads the total from KV.
+    const [countRow, fetched] = await Promise.all([
+      env.DB.prepare(`SELECT COUNT(*) AS n FROM source_records WHERE ${where.sql}`)
+        .bind(...where.binds)
+        .first<{ n: number }>(),
+      pageQuery,
+    ]);
+    rows = fetched;
+    total = countRow?.n ?? 0;
+    try {
+      await env.CACHE.put(countKey, String(total), { expirationTtl: COUNT_CACHE_TTL_S });
+    } catch {
+      // not cached this time; the next page scans once more
+    }
+  } else {
+    rows = await pageQuery;
+  }
 
   return {
     page: {
       records: (rows.results ?? []).map((row) => JSON.parse(row.record) as unknown),
       page,
       perPage,
-      total: countRow?.n ?? 0,
+      total,
     },
     last_refreshed_at: meta.last_refreshed_at,
   };
