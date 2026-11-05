@@ -2,6 +2,7 @@ import { computeStats } from '../lib/stats';
 import type { SourceStats } from '../lib/stats';
 import { readCached, readSnapshot, readSourceStats, refreshSource, writeRefreshLog } from './cache';
 import { queryD1Source, refreshD1Source } from './d1store';
+import { D1_OVERLOAD_WAIT_MS } from './d1pace';
 import { isLookup, lookupRecord } from './lookup';
 import {
   clearRefreshProgress,
@@ -140,10 +141,15 @@ export function waveOf(source: DataSource): RefreshWave {
  * the next attempt; a KV snapshot is written last), so one retry is safe.
  */
 export const TRANSIENT_D1_ERROR =
-  /D1_ERROR: (internal error|Network connection lost)|D1 (is|was) (overloaded|reset)/i;
+  /D1_ERROR: (internal error|Network connection lost)|D1( DB)? (is|was) (overloaded|reset)/i;
 /** Only retry while the wave has ample room under the 15-minute Cron Trigger limit. */
 const RETRY_DEADLINE_MS = 6 * 60_000;
-const RETRY_DELAY_MS = 5_000;
+/**
+ * Longer than D1's 10-second throttle window (d1pace.ts): the message is "D1 DB is overloaded",
+ * which the pattern above missed until 2026-11-05 (`refresh_failed attempt 1`, no retry, three
+ * nights), and a retry 5 s later would have met the same window.
+ */
+const RETRY_DELAY_MS = D1_OVERLOAD_WAIT_MS;
 
 export function isTransientD1Error(err: unknown): boolean {
   return TRANSIENT_D1_ERROR.test(err instanceof Error ? err.message : String(err));

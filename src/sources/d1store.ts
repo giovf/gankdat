@@ -20,6 +20,20 @@ import {
 } from './cache';
 import { traceOrigin, zeroRecordsError } from './origin';
 import { markRefreshProgress } from './progress';
+import { D1_OVERLOAD_WAIT_MS, d1Pace, isD1Overloaded, withOverloadRetry } from './d1pace';
+
+/**
+ * Thrown when the stored (seq, id, hash) index cannot be read because D1 throttled the wave
+ * (d1pace.ts): the night is given up with an error row, never answered with a full reload —
+ * on 2026-11-04 and 11-05 that fallback's first statement failed the same way within the same
+ * second and would otherwise have rewritten 613k rows into the throttle.
+ */
+export class DeltaIndexUnavailableError extends Error {
+  constructor(slug: string, cause: unknown) {
+    super(`delta index unreadable: ${cause instanceof Error ? cause.message : String(cause)}`);
+    this.name = 'DeltaIndexUnavailableError';
+  }
+}
 
 /** Thrown when a D1 source is queried before cron has loaded it (routes → 503). */
 export class SourceNotLoadedError extends Error {
@@ -46,6 +60,11 @@ const PROGRESS_EVERY = 25_000;
 // …and a byte bound: wide rows (uk-charities: 23 fields + a 400-char text, stored three
 // ways) blew D1's per-bind size cap ("string or blob too big", 2026-09-20) at 2000 rows.
 const INSERT_CHUNK_BYTES = 700_000; // 400k made ~3,600 statements for uk-charities and blew the 15-min trigger
+
+/** A write the throttle refused once; it is repeated after the window (d1pace.ts). */
+function logThrottledWrite(slug: string): void {
+  console.log(JSON.stringify({ level: 'warn', event: 'refresh_write_throttled', source: slug }));
+}
 
 interface SourceMeta {
   generation: number;
@@ -319,7 +338,7 @@ export async function refreshD1Source(
     }
     await markRefreshProgress(env, source.slug, start, 'backfill', `${backfill.done} rows hashed`);
     const index = await loadStoredIndex(env, source.slug, previous.generation).catch(
-      (err: unknown) => {
+      async (err: unknown) => {
         console.log(
           JSON.stringify({
             level: 'warn',
@@ -328,7 +347,20 @@ export async function refreshD1Source(
             reason: err instanceof Error ? err.message : String(err),
           }),
         );
-        return null;
+        // Throttled (even after the paced read's own retries): the rows are intact and the
+        // index is sound, only unreadable tonight — an error row, not a 613k-row full reload
+        // into the same throttle (2026-11-05). The row's own write waits the window out.
+        if (!isD1Overloaded(err)) return null;
+        const unavailable = new DeltaIndexUnavailableError(source.slug, err);
+        await writeRefreshLog(
+          env,
+          source.slug,
+          'error',
+          0,
+          Date.now() - start,
+          unavailable.message,
+        );
+        throw unavailable;
       },
     );
     if (index) {
@@ -338,9 +370,6 @@ export async function refreshD1Source(
   }
   return traceOrigin(() => refreshD1Full(env, source, previous, start));
 }
-
-/** Rows per page when reading the stored (seq, id, hash) index back. */
-const INDEX_PAGE = 50_000;
 
 /** Rows per hash-backfill page (the record text comes back, ~1–2 KB each). */
 const BACKFILL_PAGE = 2_000;
@@ -474,16 +503,41 @@ async function loadStoredIndex(
     order: new Uint32Array(n),
     maxSeq: size?.max ?? -1,
   };
+  // Paced (d1pace.ts, 2026-11-05): the columns sit at the end of a wide row (record_id and
+  // record_hash were ADDed after search/record/record_lc), so every page reads its rows whole —
+  // 50,000 a page back to back crossed D1's 10-second throttle on the three biggest registers.
+  // Small pages with a pause between them keep a window under the line; a throttle hit waits
+  // the window out and re-reads the same page (the read is idempotent), a few times at most.
+  const pageSize = d1Pace.indexPage;
   const page = env.DB.prepare(
     `SELECT seq, record_id, record_hash FROM source_records
-     WHERE source_slug = ?1 AND generation = ?2 AND seq > ?3 ORDER BY seq LIMIT ${INDEX_PAGE}`,
+     WHERE source_slug = ?1 AND generation = ?2 AND seq > ?3 ORDER BY seq LIMIT ${pageSize}`,
   );
   let filled = 0;
   let after = -1;
+  let trips = 0;
   for (;;) {
-    const rows = await page
-      .bind(slug, generation, after)
-      .all<{ seq: number; record_id: string; record_hash: number }>();
+    let rows: D1Result<{ seq: number; record_id: string; record_hash: number }>;
+    try {
+      rows = await page
+        .bind(slug, generation, after)
+        .all<{ seq: number; record_id: string; record_hash: number }>();
+    } catch (err) {
+      if (!isD1Overloaded(err) || trips >= d1Pace.indexMaxTrips) throw err;
+      trips += 1;
+      console.log(
+        JSON.stringify({
+          level: 'warn',
+          event: 'delta_index_throttled',
+          source: slug,
+          trip: trips,
+          after,
+          filled,
+        }),
+      );
+      await d1Pace.sleep(D1_OVERLOAD_WAIT_MS);
+      continue;
+    }
     const results = rows.results ?? [];
     if (results.length === 0) break;
     for (const row of results) {
@@ -495,7 +549,8 @@ async function loadStoredIndex(
       filled += 1;
       after = row.seq;
     }
-    if (results.length < INDEX_PAGE) break;
+    if (results.length < pageSize) break;
+    await d1Pace.sleep(d1Pace.indexPauseMs);
   }
   if (filled !== n) return null;
   index.order.sort((a, b) => index.idHash[a] - index.idHash[b]);
@@ -586,7 +641,12 @@ async function refreshD1Delta(
           ),
         );
       }
-      await env.DB.batch(batch);
+      // One transaction: nothing of a throttled batch was written, so it is repeated as is.
+      await withOverloadRetry(
+        () => env.DB.batch(batch),
+        1,
+        () => logThrottledWrite(source.slug),
+      );
       chunk = [];
       addedSeqs = [];
       changedSeqs = [];
@@ -627,7 +687,7 @@ async function refreshD1Delta(
     const flushRemoved = async (): Promise<void> => {
       if (removedSeqs.length === 0) return;
       const seqs = JSON.stringify(removedSeqs);
-      await env.DB.batch([
+      const batch = [
         env.DB.prepare(CHANGES_FROM_ROWS_SQL).bind(
           source.slug,
           generation,
@@ -636,7 +696,12 @@ async function refreshD1Delta(
           seqs,
         ),
         env.DB.prepare(DELETE_ROWS_SQL).bind(source.slug, generation, seqs),
-      ]);
+      ];
+      await withOverloadRetry(
+        () => env.DB.batch(batch),
+        1,
+        () => logThrottledWrite(source.slug),
+      );
       removedSeqs = [];
     };
     for (let pos = 0; pos < index.n; pos += 1) {
@@ -836,7 +901,18 @@ async function refreshD1Full(
     let chunkBytes = 0;
     const flush = async (): Promise<void> => {
       if (chunk.length === 0) return;
-      await insert.bind(source.slug, generation, total - chunk.length, JSON.stringify(chunk)).run();
+      const statement = insert.bind(
+        source.slug,
+        generation,
+        total - chunk.length,
+        JSON.stringify(chunk),
+      );
+      // One statement, atomic: a throttled chunk wrote nothing and is repeated as is.
+      await withOverloadRetry(
+        () => statement.run(),
+        1,
+        () => logThrottledWrite(source.slug),
+      );
       chunk = [];
       chunkBytes = 0;
     };

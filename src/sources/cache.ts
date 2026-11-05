@@ -3,6 +3,7 @@ import type { SourceStats } from '../lib/stats';
 import type { DataSource } from './types';
 import { traceOrigin, zeroRecordsError } from './origin';
 import { markRefreshProgress } from './progress';
+import { withOverloadRetry } from './d1pace';
 
 export interface CachedPayload {
   records: unknown[];
@@ -260,11 +261,13 @@ export async function writeRefreshLog(
   message: string | null,
 ): Promise<void> {
   try {
-    await env.DB.prepare(
+    const statement = env.DB.prepare(
       'INSERT INTO refresh_log (source_slug, status, records, duration_ms, message) VALUES (?1, ?2, ?3, ?4, ?5)',
-    )
-      .bind(slug, status, records, durationMs, message)
-      .run();
+    ).bind(slug, status, records, durationMs, message);
+    // The row that explains a throttled night must outlive the throttle: on 2026-11-05 three
+    // registers' error rows died in the same second as their refreshes, and the Daily numbers
+    // row could only say "no successful refresh since 11-03". One wait of the window, then once more.
+    await withOverloadRetry(() => statement.run(), 1);
   } catch (err) {
     // Guarded: a missing local migration must not take the API down.
     console.error(

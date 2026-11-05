@@ -50,6 +50,17 @@ describe('refreshOne', () => {
       ),
     ).toBe(true);
     expect(isTransientD1Error(new Error('D1_ERROR: Network connection lost.'))).toBe(true);
+    // D1's own wording (2026-11-05): "D1 DB is overloaded", both variants.
+    expect(
+      isTransientD1Error(
+        new Error(
+          'D1_ERROR: D1 DB is overloaded. Too many resources consumed within a 10 second window',
+        ),
+      ),
+    ).toBe(true);
+    expect(
+      isTransientD1Error(new Error('D1 DB is overloaded. Requests queued for too long.')),
+    ).toBe(true);
     expect(isTransientD1Error(new Error('refresh returned 0 records'))).toBe(false);
     expect(isTransientD1Error(new Error('D1_ERROR: string or blob too big'))).toBe(false);
   });

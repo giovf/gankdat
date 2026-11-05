@@ -5,13 +5,15 @@ import {
   BACKFILL_BUDGET_MS,
   BACKFILL_HANDOVER_MS,
   BACKFILL_UPDATE_SQL,
+  DeltaIndexUnavailableError,
   backfillClock,
   facetsClock,
   hash53,
   queryD1Source,
   refreshD1Source,
 } from '../src/sources/d1store';
-import { readSourceStats } from '../src/sources/cache';
+import { D1_OVERLOAD_WAIT_MS, d1Pace } from '../src/sources/d1pace';
+import { readSourceStats, writeRefreshLog } from '../src/sources/cache';
 import { computeStats } from '../src/lib/stats';
 import { applyQuery, buildQuerySchema } from '../src/sources/query';
 import type { DataSource } from '../src/sources/types';
@@ -873,5 +875,153 @@ describe('d1store delta refresh', () => {
       env.DB.prepare = realPrepare;
       facetsClock.afterBatch = null;
     }
+  });
+});
+
+// D1's 10-second throttle ("D1_ERROR: D1 DB is overloaded. Too many resources consumed within a
+// 10 second window", d1pace.ts): on 2026-11-04 and 11-05 the 05:30, 05:45 and 06:05 waves each lost
+// the stored-index read of a big register, fell to a full reload whose first statement met the same
+// window, and lost the refresh_log error row the same way — three registers stale, no row to say why.
+describe('d1store under the D1 throttle', () => {
+  const OVERLOADED =
+    'D1_ERROR: D1 DB is overloaded. Too many resources consumed within a 10 second window';
+  const INDEX_SQL = 'SELECT seq, record_id, record_hash FROM source_records';
+  const LOG_SQL = 'INSERT INTO refresh_log';
+
+  /** The real database behind a façade whose matching statements reject `fail` times, and whose batches `batchFail` times. */
+  function throttled(plan: {
+    match?: (sql: string) => boolean;
+    fail?: number;
+    batchFail?: number;
+  }): { env: typeof env; tripped: () => number } {
+    let fail = plan.fail ?? 0;
+    let batchFail = plan.batchFail ?? 0;
+    let tripped = 0;
+    const trip = <T>(real: () => Promise<T>, counter: 'stmt' | 'batch'): Promise<T> => {
+      const left = counter === 'stmt' ? fail : batchFail;
+      if (left > 0) {
+        if (counter === 'stmt') fail -= 1;
+        else batchFail -= 1;
+        tripped += 1;
+        return Promise.reject(new Error(OVERLOADED));
+      }
+      return real();
+    };
+    const db = {
+      prepare(sql: string) {
+        const stmt = env.DB.prepare(sql);
+        if (!plan.match?.(sql)) return stmt;
+        return {
+          bind(...values: unknown[]) {
+            const bound = stmt.bind(...values);
+            return {
+              all: <T>() => trip(() => bound.all<T>(), 'stmt'),
+              first: <T>(col?: string) =>
+                trip(() => (col ? bound.first<T>(col) : bound.first<T>()), 'stmt'),
+              run: () => trip(() => bound.run(), 'stmt'),
+            };
+          },
+        };
+      },
+      batch: <T>(statements: D1PreparedStatement[]) =>
+        trip(() => env.DB.batch<T>(statements), 'batch'),
+      exec: (query: string) => env.DB.exec(query),
+    };
+    return { env: { ...env, DB: db as unknown as D1Database }, tripped: () => tripped };
+  }
+
+  /** Runs `fn` with tiny index pages and recorded, instant waits; restores the knobs after. */
+  async function paced<T>(fn: () => Promise<T>): Promise<{ result: T; waits: number[] }> {
+    const saved = { ...d1Pace };
+    const waits: number[] = [];
+    d1Pace.indexPage = 4;
+    d1Pace.sleep = (ms: number): Promise<void> => {
+      waits.push(ms);
+      return Promise.resolve();
+    };
+    try {
+      return { result: await fn(), waits };
+    } finally {
+      Object.assign(d1Pace, saved);
+    }
+  }
+
+  const lastLog = (slug: string) =>
+    env.DB.prepare(
+      'SELECT status, message FROM refresh_log WHERE source_slug = ?1 ORDER BY id DESC LIMIT 1',
+    )
+      .bind(slug)
+      .first<{ status: string; message: string }>();
+
+  it('reads the stored index in small pages with a pause between them', async () => {
+    const source = makeIdSource('d1-paced', RECORDS); // 6 rows: a full page of 4, then 2
+    await refreshD1Source(env, source);
+    const { waits } = await paced(() => refreshD1Source(env, source));
+    expect(waits).toEqual([d1Pace.indexPauseMs]);
+    expect(await lastLog('d1-paced')).toEqual({ status: 'ok', message: 'delta +0 ~0 -0' });
+    expect((await metaOf('d1-paced'))?.generation).toBe(1);
+  });
+
+  it('waits the window out and re-reads a throttled page, then runs the delta as usual', async () => {
+    const source = makeIdSource('d1-throttled-once', RECORDS);
+    await refreshD1Source(env, source);
+    const flaky = throttled({ match: (sql) => sql.includes(INDEX_SQL), fail: 1 });
+    const day2 = RECORDS.slice(1);
+    const { waits } = await paced(() =>
+      refreshD1Source(flaky.env, { ...source, fetchFresh: () => Promise.resolve(day2) }),
+    );
+    expect(flaky.tripped()).toBe(1);
+    expect(waits[0]).toBe(D1_OVERLOAD_WAIT_MS);
+    expect(await lastLog('d1-throttled-once')).toEqual({ status: 'ok', message: 'delta +0 ~0 -1' });
+    expect(await metaOf('d1-throttled-once')).toEqual({ generation: 1, total: day2.length });
+    expect(await countRows('d1-throttled-once')).toBe(day2.length);
+  });
+
+  it('gives the night up with an error row when the throttle persists — rows kept, no full reload', async () => {
+    const source = makeIdSource('d1-throttled-night', RECORDS);
+    await refreshD1Source(env, source);
+    const flaky = throttled({ match: (sql) => sql.includes(INDEX_SQL), fail: 99 });
+    const { result } = await paced(() =>
+      refreshD1Source(flaky.env, source).then(
+        () => 'resolved',
+        (err: unknown) => (err instanceof Error ? err : new Error(String(err))),
+      ),
+    );
+    expect(result).toBeInstanceOf(DeltaIndexUnavailableError);
+    expect((result as Error).message).toBe(`delta index unreadable: ${OVERLOADED}`);
+    expect(flaky.tripped()).toBe(d1Pace.indexMaxTrips + 1);
+    // The rows and the generation stand; the full reload (generation 2) never began.
+    expect(await metaOf('d1-throttled-night')).toEqual({ generation: 1, total: RECORDS.length });
+    expect(await countRows('d1-throttled-night')).toBe(RECORDS.length);
+    expect(await lastLog('d1-throttled-night')).toEqual({
+      status: 'error',
+      message: `delta index unreadable: ${OVERLOADED}`,
+    });
+  });
+
+  it('writes the refresh_log row after the window when its first write is throttled', async () => {
+    const flaky = throttled({ match: (sql) => sql.includes(LOG_SQL), fail: 1 });
+    const { waits } = await paced(() =>
+      writeRefreshLog(flaky.env, 'd1-log-throttled', 'error', 0, 10, 'the night'),
+    );
+    expect(flaky.tripped()).toBe(1);
+    expect(waits).toEqual([D1_OVERLOAD_WAIT_MS]);
+    expect(await lastLog('d1-log-throttled')).toEqual({ status: 'error', message: 'the night' });
+  });
+
+  it('repeats a throttled delta batch once after the window', async () => {
+    const source = makeIdSource('d1-batch-throttled', RECORDS);
+    await refreshD1Source(env, source);
+    const flaky = throttled({ batchFail: 1 });
+    const day2 = [...RECORDS.slice(0, 5), { ...RECORDS[5]!, amount: 1 }];
+    const { waits } = await paced(() =>
+      refreshD1Source(flaky.env, { ...source, fetchFresh: () => Promise.resolve(day2) }),
+    );
+    expect(flaky.tripped()).toBe(1);
+    expect(waits).toContain(D1_OVERLOAD_WAIT_MS);
+    expect(await lastLog('d1-batch-throttled')).toEqual({
+      status: 'ok',
+      message: 'delta +0 ~1 -0',
+    });
   });
 });

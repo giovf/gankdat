@@ -5,6 +5,7 @@ import { missingLookupKey } from '../sources/lookup';
 import { getSource, hasChangeFeed, listSources } from '../sources/registry';
 import { buildQuerySchema, omitEmptyParams } from '../sources/query';
 import { querySource, unavailableMessage } from '../sources/store';
+import { D1_OVERLOAD_RETRY_AFTER_S, isD1Overloaded } from '../sources/d1pace';
 import type { AppEnv } from '../types';
 
 /**
@@ -43,7 +44,21 @@ export async function handleSourceQuery(c: Context<AppEnv>): Promise<Response> {
   let queried;
   try {
     queried = await querySource(c.env, source, parsed.data);
-  } catch {
+  } catch (err) {
+    // A read D1 throttled (d1pace.ts) is a busy register, not an unavailable one: say how long
+    // to wait — the Apify client honours Retry-After, and on 2026-11-04 the QA run's second
+    // page of uk-food-hygiene (7 s, a full-register scan) was refused and its 2 s / 4 s retries
+    // landed inside the same 10-second window.
+    if (isD1Overloaded(err)) {
+      c.header('Retry-After', String(D1_OVERLOAD_RETRY_AFTER_S));
+      return c.json(
+        failure(
+          'unavailable',
+          `Source '${source.slug}' is busy, retry in ${D1_OVERLOAD_RETRY_AFTER_S} s`,
+        ),
+        503,
+      );
+    }
     // Failure detail is in refresh_log / logs; clients get a clean 503.
     return c.json(failure('unavailable', unavailableMessage(source)), 503);
   }

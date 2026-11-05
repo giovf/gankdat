@@ -7,11 +7,14 @@ const API = 'https://gankdat.com/v1';
 const PER_PAGE = 100;
 const USER_AGENT = 'gankdat-apify-actor/1.2';
 
-// A 5xx is retried twice (2 s, 4 s): Apify's daily QA run is one call on a cold key, and on
-// 2026-10-27..29 that one call met a transient D1 error in the API's auth read (`D1_ERROR:
-// internal error`, 29 such lines on 10-29, one on this route) and the actor was flagged
-// "under maintenance" — a retry a moment later answers.
-const SERVER_ERROR_RETRIES = 2;
+// A 5xx is retried three times, after the API's own Retry-After when it sends one, else 3 s,
+// 6 s, 12 s: Apify's daily QA run is one call on a cold key, and on 2026-10-27..29 that one
+// call met a transient D1 error in the API's auth read (`D1_ERROR: internal error`, 29 such
+// lines on 10-29, one on this route) and the actor was flagged "under maintenance" — a retry a
+// moment later answers. On 2026-11-04 the QA run's second page was refused by D1's 10-second
+// throttle (503 after a 7 s scan) and the old 2 s / 4 s retries both landed inside that window;
+// the API now answers such a refusal with `Retry-After: 11`, and the waits span the window.
+const SERVER_ERROR_RETRIES = 3;
 
 async function apiGet(key, url, params) {
   let serverErrors = 0;
@@ -28,7 +31,8 @@ async function apiGet(key, url, params) {
     }
     if (res.status >= 500 && serverErrors < SERVER_ERROR_RETRIES) {
       serverErrors += 1;
-      const wait = 2000 * serverErrors;
+      const retryAfter = Number(res.headers.get('retry-after') ?? '');
+      const wait = (retryAfter > 0 ? retryAfter : 1.5 * 2 ** serverErrors) * 1000;
       log.warning(`API answered ${res.status}; retry ${serverErrors} in ${wait} ms`);
       await new Promise((r) => setTimeout(r, wait));
       continue;
