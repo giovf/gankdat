@@ -345,8 +345,12 @@ describe('GET /v1/data/uk-trademark-journal', () => {
     const res = await SELF.fetch('https://example.com/stats/uk-trademark-journal/class/09');
     expect(res.status).toBe(200);
     const html = await res.text();
-    expect(html).toContain('class 09: Computers, software and electronics');
-    expect(html).toContain('<tr><td>records in class 09</td><td>2</td></tr>');
+    // The title leads with the class since 2026-11-05 (stats-page-content-depth).
+    expect(html).toContain(
+      '<title>Class 09 trade mark applications: Computers, software and electronics — ',
+    );
+    expect(html).toContain('<tr><td>trade mark applications in class 09</td><td>2</td></tr>');
+    expect(html).toContain('<section class="summary"><p>As of ');
     expect(html).toContain('<tr><td>share of the dataset</td><td>33.3%</td></tr>');
     expect(html).toContain('Applications published per weekly journal issue');
     expect(html).toContain(
@@ -367,7 +371,7 @@ describe('GET /v1/data/uk-trademark-journal', () => {
     const empty = await (
       await SELF.fetch('https://example.com/stats/uk-trademark-journal/class/13')
     ).text();
-    expect(empty).toContain('<tr><td>records in class 13</td><td>0</td></tr>');
+    expect(empty).toContain('<tr><td>trade mark applications in class 13</td><td>0</td></tr>');
     expect(
       (await SELF.fetch('https://example.com/stats/uk-trademark-journal/class/99')).status,
     ).toBe(404);

@@ -219,6 +219,125 @@ describe('GET /stats', () => {
     expect(missing.status).toBe(503);
   });
 
+  it('names the class first, writes a 150-word dated summary and links the neighbouring pages', async () => {
+    // gankdat stats-page-content-depth (2026-11-05): the day-30 IndexNow read put 3 of 62 /stats URLs
+    // in Bing's index after 330 Bingbot fetches — crawled, declined as thin. Every facet page now
+    // carries prose computed from its own numbers, a class-first title and cross-links.
+    const source = getSource('uk-trademark-journal')!;
+    const page = (value: string, label: string, total: number) => ({
+      value,
+      label,
+      total,
+      monthly: null,
+      groups: [],
+    });
+    await putSourceStats(
+      env,
+      source,
+      {
+        total: 1_000,
+        monthly: {
+          title: 'Applications published by month',
+          buckets: [
+            { month: '2026-10', count: 600 },
+            { month: '2026-11', count: 400 },
+          ],
+        },
+        groups: [
+          {
+            title: 'By applicant country',
+            rows: [
+              { value: 'GB', count: 700 },
+              { value: 'US', count: 300 },
+            ],
+          },
+        ],
+        facets: [
+          {
+            segment: 'class',
+            field: 'classes',
+            title: 'By Nice class',
+            pages: [
+              page('01', 'Chemicals', 20),
+              {
+                ...page('09', 'Scientific and electrical apparatus', 250),
+                monthly: {
+                  title: 'Applications published by month',
+                  buckets: [
+                    { month: '2026-10', count: 150 },
+                    { month: '2026-11', count: 100 },
+                  ],
+                },
+                groups: [
+                  {
+                    title: 'By applicant country',
+                    rows: [
+                      { value: 'GB', count: 200 },
+                      { value: 'US', count: 50 },
+                    ],
+                  },
+                  {
+                    title: 'Organisations with most applications',
+                    rows: [{ value: 'Acme <Ltd>', count: 9 }],
+                  },
+                ],
+              },
+              page('10', 'Medical apparatus', 30),
+              page('35', 'Advertising and business services', 700),
+            ],
+          },
+        ],
+      },
+      '2026-11-05T06:05:00.000Z',
+    );
+    const res = await SELF.fetch('https://example.com/stats/uk-trademark-journal/class/09');
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain(
+      '<title>Class 09 trade mark applications: Scientific and electrical apparatus — ',
+    );
+    expect(html).toContain(
+      '<h1>Class 09 trade mark applications: <b>Scientific and electrical apparatus</b></h1>',
+    );
+    const summary = /<section class="summary">([\s\S]*?)<\/section>/.exec(html)?.[1] ?? '';
+    const words = summary
+      .replace(/<[^>]+>/g, ' ')
+      .split(/\s+/)
+      .filter((w) => /[\p{L}\p{N}]/u.test(w));
+    expect(words.length).toBeGreaterThanOrEqual(150);
+    expect(summary).toContain('As of 5 November 2026');
+    expect(summary).toContain('In November 2026 so far, 100 trade mark applications in class 09');
+    expect(summary).toContain('25.0% of the 1,000 trade mark applications');
+    // Origin-controlled names are escaped in the prose too.
+    expect(summary).toContain('Acme &lt;Ltd&gt; leads with 9');
+    expect(html).not.toContain('Acme <Ltd>');
+    // Cross-links: the neighbours by value and the largest class, never the page itself twice.
+    expect(html).toContain('href="/stats/uk-trademark-journal/class/01">Class 01: Chemicals</a>');
+    expect(html).toContain(
+      'href="/stats/uk-trademark-journal/class/10">Class 10: Medical apparatus</a>',
+    );
+    expect(html).toContain(
+      'href="/stats/uk-trademark-journal/class/35">Class 35: Advertising and business services</a>',
+    );
+    expect(html).not.toContain('href="/stats/uk-trademark-journal/class/09"');
+    // The parent page carries its own dated summary and names the largest classes.
+    const parent = await (
+      await SELF.fetch('https://example.com/stats/uk-trademark-journal')
+    ).text();
+    expect(parent).toContain('<section class="summary"><p>As of 5 November 2026, ');
+    expect(parent).toContain(
+      'By class, the largest of the 4 pages are class 35 (Advertising and business services) with 700',
+    );
+    // A sibling's summary is its own: no paragraph shared with class 09.
+    const other = await (
+      await SELF.fetch('https://example.com/stats/uk-trademark-journal/class/10')
+    ).text();
+    const otherSummary = /<section class="summary">([\s\S]*?)<\/section>/.exec(other)?.[1] ?? '';
+    for (const p of summary.split('</p>')) {
+      if (p.trim()) expect(otherSummary).not.toContain(p);
+    }
+  });
+
   it('returns 503 (never refreshes) for a source whose stats are not yet computed', async () => {
     // Public page must not drive a refresh; before any cron/refresh it warms.
     const res = await SELF.fetch('https://example.com/stats/uk-tenders');

@@ -63,6 +63,12 @@ export interface StatsFacet {
   values: readonly { value: string; label: string }[];
   date?: { field: string; title: string };
   groupBy: StatsGroupSpec[];
+  /**
+   * What one record is, plural, for the sub-page's title and written summary — e.g.
+   * 'trade mark applications' gives "Class 09 trade mark applications: …". Defaults to
+   * the StatsSpec's `noun`, then 'records' (2026-11-05, `stats-page-content-depth`).
+   */
+  noun?: string;
 }
 
 export interface StatsSpec {
@@ -71,6 +77,8 @@ export interface StatsSpec {
   /** Categorical record fields rendered as top-N breakdown tables. */
   groupBy: StatsGroupSpec[];
   facets?: StatsFacet[];
+  /** What one record is, plural, for the page's written summary ('records' when unset). */
+  noun?: string;
 }
 
 /**

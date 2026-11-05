@@ -988,6 +988,7 @@ export const ukTrademarkJournalSource: DataSource<UkTrademarkJournalRecord> = {
   storage: 'd1',
   stats: {
     date: { field: 'publication_date', title: 'Applications published by month' },
+    noun: 'trade mark applications',
     groupBy: [
       { field: 'classes', title: 'Most-filed class combinations', limit: 12 },
       { field: 'applicant_type', title: 'By applicant type', limit: 2 },

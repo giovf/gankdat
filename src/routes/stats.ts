@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { publicBaseUrl } from '../lib/constants';
 import { failure } from '../lib/envelope';
+import { facetNarrative, siblingLinks, sourceNarrative } from '../lib/narrative';
 import type { FacetPage, FacetStats, MonthlyTrend, SourceStats, StatsGroup } from '../lib/stats';
 import { isolateRateLimit } from '../metering/ratelimit';
 import { isLookup } from '../sources/lookup';
@@ -32,7 +33,22 @@ h1 b,a{color:var(--green)}h2{font-size:.8rem;text-transform:uppercase;letter-spa
 h2::before{content:"// ";color:var(--green)}table{border-collapse:collapse;width:100%;margin-top:10px;background:var(--panel)}
 td,th{border:1px solid var(--border);padding:6px 12px;text-align:left;font-size:.85rem}th{color:var(--muted);font-weight:600}
 td:last-child,th:last-child{text-align:right}.muted{color:var(--muted);font-size:.85rem}
-.cta{border:1px solid var(--green);padding:14px 18px;margin-top:38px}.cta a{margin-right:18px}`;
+.cta{border:1px solid var(--green);padding:14px 18px;margin-top:38px}.cta a{margin-right:18px}
+.summary p{margin:10px 0}.siblings{list-style:none;padding:0;margin:10px 0}.siblings li{margin:4px 0}`;
+
+/** Capitalised first letter for a sentence or title opener. */
+const cap = (value: string): string => value.charAt(0).toUpperCase() + value.slice(1);
+
+/**
+ * The dated written summary of a page (2026-11-05, `stats-page-content-depth`): ≥ 150 words
+ * computed from the page's own numbers, so a crawler that found a title, one sentence and two
+ * tables (the day-30 IndexNow read: 3 of 62 /stats URLs indexed after 330 Bingbot fetches) reads
+ * prose unique to the page. Plain text from `lib/narrative.ts`, escaped here.
+ */
+function summaryHtml(paragraphs: string[]): string {
+  return `<h2>summary</h2>
+<section class="summary">${paragraphs.map((p) => `<p>${esc(p)}</p>`).join('\n')}</section>`;
+}
 
 function tableHtml(header: [string, string], rows: [string, number][]): string {
   const body = rows
@@ -183,10 +199,35 @@ function facetPageHtml(
   const pageRefreshedAt = page.as_of ?? refreshedAt;
   const updated = pageRefreshedAt ? pageRefreshedAt.slice(0, 10) : 'daily';
   const query = filterQuery(facet.field, page.value);
-  const title = `${source.title} — ${facet.segment} ${page.value}: ${page.label}`;
+  const spec = source.stats?.facets?.find((f) => f.segment === facet.segment);
+  const noun = spec?.noun ?? source.stats?.noun ?? 'records';
+  // The title names the class first — what a "class 9 trade mark applications" search types.
+  const title = `${cap(facet.segment)} ${page.value} ${noun}: ${page.label} — ${source.title}`;
   const share = parentTotal > 0 ? `${((100 * page.total) / parentTotal).toFixed(1)}%` : '—';
-  const description = `${page.label} (${facet.segment} ${page.value}): ${page.total.toLocaleString('en-GB')} of ${parentTotal.toLocaleString('en-GB')} records in ${source.title}, updated ${updated}. Weekly and monthly statistics computed from the official feed. Free JSON API and change feed.`;
+  const description = `${cap(facet.segment)} ${page.value} ${noun} (${page.label}): ${page.total.toLocaleString('en-GB')} of ${parentTotal.toLocaleString('en-GB')} in ${source.title}, updated ${updated}. What moved this month, the top movers and the share of the register, with the filtered JSON API and change feed.`;
   const pageUrl = `${baseUrl}/stats/${source.slug}/${facet.segment}/${page.value}`;
+  const summary = summaryHtml(
+    facetNarrative({
+      sourceTitle: source.title,
+      noun,
+      refreshedAt: pageRefreshedAt,
+      parentTotal,
+      facet,
+      page,
+    }),
+  );
+  const siblings = siblingLinks(facet, page);
+  const siblingsHtml =
+    siblings.length > 0
+      ? `<h2>other ${esc(facet.segment)} pages</h2>
+<ul class="siblings">${siblings
+          .map(
+            (s) =>
+              `<li><a href="/stats/${esc(source.slug)}/${esc(facet.segment)}/${esc(s.value)}">${esc(cap(facet.segment))} ${esc(s.value)}: ${esc(s.label)}</a> <span class="muted">— ${s.total.toLocaleString('en-GB')} ${esc(noun)}${s.reason === 'largest' ? '' : `, ${s.reason === 'previous' ? 'the page before' : 'the page after'}`}</span></li>`,
+          )
+          .join('')}</ul>
+<p class="muted">Every ${esc(facet.segment)} on the register has a page like this one; the <a href="/stats/${esc(source.slug)}">${esc(source.title)}</a> page lists them all with their counts.</p>`
+      : '';
   const feed = hasChangeFeed(source)
     ? `<h2>watch this ${esc(facet.segment)}</h2>
 <p class="muted">The register diffs itself every morning. Poll only this ${esc(facet.segment)}'s new,
@@ -216,16 +257,18 @@ ${hasChangeFeed(source) ? `<link rel="alternate" type="application/atom+xml" tit
 </head>
 <body><main>
 <p class="muted"><a href="/">gankdat</a> / <a href="/stats">stats</a> / <a href="/stats/${esc(source.slug)}">${esc(source.slug)}</a> / ${esc(facet.segment)} ${esc(page.value)}</p>
-<h1>${esc(source.title)} — <b>${esc(facet.segment)} ${esc(page.value)}: ${esc(page.label)}</b></h1>
-<p class="muted">${esc(source.description)}</p>
+<h1>${esc(cap(facet.segment))} ${esc(page.value)} ${esc(noun)}: <b>${esc(page.label)}</b></h1>
+<p class="muted">${esc(source.title)} — ${esc(source.description)}</p>
 ${source.notice ? `<p><b>origin notice:</b> ${esc(source.notice)}</p>` : ''}
 <h2>headline</h2>
 <table><tbody>
-<tr><td>records in ${esc(facet.segment)} ${esc(page.value)}</td><td>${page.total.toLocaleString('en-GB')}</td></tr>
+<tr><td>${esc(noun)} in ${esc(facet.segment)} ${esc(page.value)}</td><td>${page.total.toLocaleString('en-GB')}</td></tr>
 <tr><td>share of the dataset</td><td>${esc(share)}</td></tr>
 <tr><td>last refreshed</td><td>${esc(updated)}</td></tr>
 </tbody></table>
+${summary}
 ${breakdownSections(page.monthly, page.groups).join('\n')}
+${siblingsHtml}
 ${feed}
 <h2>methodology</h2>
 <p class="muted">Computed from the same records the gankdat API serves — official
@@ -368,10 +411,14 @@ function pageHtml(
   baseUrl: string,
 ): string {
   const updated = refreshedAt ? refreshedAt.slice(0, 10) : 'daily';
-  const sections = breakdownSections(stats.monthly, stats.groups);
+  const noun = source.stats?.noun ?? 'records';
+  const sections = [
+    summaryHtml(sourceNarrative({ sourceTitle: source.title, noun, refreshedAt, stats })),
+    ...breakdownSections(stats.monthly, stats.groups),
+  ];
   if (stats.facets) sections.push(facetIndexHtml(source, stats.facets));
 
-  const description = `${source.title}: ${stats.total.toLocaleString('en-GB')} records, updated ${updated}. Monthly statistics computed from the official feed. Free JSON API.`;
+  const description = `${source.title}: ${stats.total.toLocaleString('en-GB')} ${noun}, updated ${updated}. What moved this month and the top movers, computed from the official feed. Free JSON API.`;
 
   return `<!doctype html>
 <html lang="en">
