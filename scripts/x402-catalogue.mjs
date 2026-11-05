@@ -6,6 +6,7 @@ import {
   exampleQueryFromPaymentRequired,
   merchantResources,
   payToFromPaymentRequired,
+  x402Route,
 } from './x402-bazaar-read.ts';
 
 export const CDP = 'https://api.cdp.coinbase.com/platform/v2/x402';
@@ -15,6 +16,13 @@ export async function readLiveSlugs(base) {
   const listing = await fetch(`${base}/v1/data`, { signal: AbortSignal.timeout(15_000) });
   if (!listing.ok) throw new Error(`/v1/data ${listing.status}`);
   return (await listing.json()).data.map((s) => s.slug);
+}
+
+/** The slugs whose change feed is sold on the lane (`/x402/changes/<slug>`, 2026-11-05): the listing's `change_feed`. */
+export async function readLiveChangeSlugs(base) {
+  const listing = await fetch(`${base}/v1/data`, { signal: AbortSignal.timeout(15_000) });
+  if (!listing.ok) throw new Error(`/v1/data ${listing.status}`);
+  return (await listing.json()).data.filter((s) => s.change_feed).map((s) => s.slug);
 }
 
 /**
@@ -59,7 +67,7 @@ export async function readMerchantCatalogue(payTo) {
  * no 402 (paused, 503) or declares no query.
  */
 export async function readExampleQuery(base, slug, userAgent) {
-  const unpaid = await fetch(`${base}/x402/data/${slug}`, {
+  const unpaid = await fetch(`${base}/x402/${x402Route(slug)}`, {
     headers: { 'User-Agent': userAgent },
     signal: AbortSignal.timeout(15_000),
   });

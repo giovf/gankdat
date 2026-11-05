@@ -27,6 +27,7 @@ import {
 } from './x402-bazaar-read.ts';
 import {
   readExampleQuery,
+  readLiveChangeSlugs,
   readLiveSlugs,
   readMerchantCatalogue,
   readPayTo,
@@ -49,13 +50,14 @@ console.log(
 if (!decision.pay) process.exit(0);
 
 const slugs = await readLiveSlugs(base);
+const changeSlugs = await readLiveChangeSlugs(base).catch(() => []);
 const payTo = await readPayTo(base, slugs[0], 'gankdat-x402-probe/2 (+https://gankdat.com)');
 const resources = await readMerchantCatalogue(payTo);
-const due = probeTargets({ slugs, resources, base, today, forced });
+const due = probeTargets({ slugs, changeSlugs, resources, base, today, forced });
 const budget = Math.max(0, PROBE_MONTHLY_CAP - ownProbePayments(research, today));
 const targets = due.slice(0, budget);
 console.log(
-  `x402 probe: ${resources.length} of ${slugs.length} routes listed; ${due.length} due` +
+  `x402 probe: ${resources.length} of ${slugs.length + changeSlugs.length} routes listed; ${due.length} due` +
     (targets.length < due.length
       ? ` (${targets.length} within the 30-day cap of ${PROBE_MONTHLY_CAP})`
       : '') +

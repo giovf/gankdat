@@ -1,6 +1,8 @@
-export const APP_VERSION = '0.27.2';
+export const APP_VERSION = '0.28.0';
 /** x402 pay-per-call price per request unless X402_PRICE_USD or a source's x402PriceUsd says otherwise. */
 export const X402_DEFAULT_PRICE_USD = '$0.005';
+/** x402 price of a change-feed call (`/x402/changes/<source>`, 2026-11-05): above the query price because a delta is the product no rival sells. */
+export const X402_CHANGES_PRICE_USD = '$0.01';
 
 // Placeholder free-tier size (PRD open question #5 — pricing is launch config).
 export const FREE_TIER_CREDITS = 250;

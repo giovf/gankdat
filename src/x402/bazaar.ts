@@ -1,9 +1,11 @@
 import { z } from 'zod';
 import type { RouteConfig } from '@x402/core/server';
 import type { DeclareDiscoveryExtensionInput } from '@x402/extensions/bazaar';
+import { X402_CHANGES_PRICE_USD } from '../lib/constants';
 import { failure } from '../lib/envelope';
+import { changesSchemaFor } from '../routes/changes';
 import { buildQuerySchema } from '../sources/query';
-import { listSources } from '../sources/registry';
+import { hasChangeFeed, listSources } from '../sources/registry';
 import type { DataSource } from '../sources/types';
 
 // x402 v2 route configuration for the pay-per-call lane, with the Bazaar discovery
@@ -57,6 +59,15 @@ export function x402Path(slug: string): string {
 /** Route key the x402 middleware matches: method + absolute path. */
 export function x402RouteKey(slug: string): string {
   return `GET ${x402Path(slug)}`;
+}
+
+/** The paid change feed of a register (gankdat `x402-change-feed-route`, 2026-11-05). */
+export function x402ChangesPath(slug: string): string {
+  return `/x402/changes/${slug}`;
+}
+
+export function x402ChangesRouteKey(slug: string): string {
+  return `GET ${x402ChangesPath(slug)}`;
 }
 
 const DESCRIPTION_BUDGET = 420;
@@ -294,12 +305,117 @@ export function bazaarRoute(
   };
 }
 
-/** Every registered source as `GET /x402/data/<slug>` → route config. */
+const changeRow = z.object({
+  change: z.enum(['added', 'removed', 'changed']),
+  changed_at: z.string(),
+  record_id: z.string(),
+  record: z.unknown(),
+});
+
+const changesMeta = z.object({
+  source: z.string(),
+  since: z.string(),
+  page: z.int(),
+  per_page: z.int(),
+  total: z.int(),
+  last_refreshed_at: z.string().nullable(),
+});
+
+/** The change feed's description: the register's first sentences plus what one call returns. */
+export function bazaarChangesDescription(source: DataSource): string {
+  const shape =
+    'One call returns one page of the records added, removed or changed since a date (newest first, 25 by default, per_page up to 100) with the total count; the same filters as the register narrow the watch.';
+  const head = `${source.title} — changes.`;
+  const budget = Math.min(DESCRIPTION_BUDGET, DESCRIPTION_MAX - head.length - shape.length - 2);
+  const summary = leadingSentences(source.description, budget);
+  const full = `${head} ${summary} ${shape}`;
+  if (full.length <= DESCRIPTION_MAX) return full;
+  return `${head} ${shape}`.slice(0, DESCRIPTION_MAX);
+}
+
+/** JSON Schema of the change feed's query (feed params plus the source's filters). */
+export function bazaarChangesInputSchema(source: DataSource): JsonObject {
+  const generated = z.toJSONSchema(changesSchemaFor(source), { io: 'input' }) as JsonObject;
+  return { properties: generated.properties ?? {} };
+}
+
+/** Example success envelope of a change feed: one schema-derived record under a change row. */
+export function bazaarChangesOutputExample(source: DataSource): JsonObject {
+  const record = exampleFromSchema(
+    z.toJSONSchema(source.recordSchema, { io: 'output', unrepresentable: 'any' }),
+  );
+  return {
+    ok: true,
+    data: [{ change: 'added', changed_at: '2026-01-15T05:15:00.000Z', record_id: 'id', record }],
+    meta: {
+      source: source.slug,
+      since: '2026-01-08T00:00:00.000Z',
+      page: 1,
+      per_page: 25,
+      total: 1,
+      last_refreshed_at: '2026-01-15T05:15:00.000Z',
+    },
+  };
+}
+
+export function bazaarChangesOutputSchema(): JsonObject {
+  const generated = z.toJSONSchema(
+    z.object({ ok: z.literal(true), data: z.array(changeRow), meta: changesMeta }),
+    { io: 'output', unrepresentable: 'any' },
+  ) as JsonObject;
+  delete generated.$schema;
+  return generated;
+}
+
+/**
+ * The paid change feed of a register as an x402 route (gankdat `x402-change-feed-route`,
+ * 2026-11-05): `GET /x402/changes/<slug>`, the `since` cursor of /v1/changes behind the same
+ * lane, priced at X402_CHANGES_PRICE_USD — a delta no rival sells, and the tool agents asked for
+ * at the MCP wall 14 times in a day (`wanted: get_changes 14`, 2026-11-03).
+ */
+export function bazaarChangesRoute(
+  source: DataSource,
+  lane: X402Lane,
+  declare: DeclareDiscovery,
+): RouteConfig {
+  return {
+    accepts: {
+      scheme: 'exact',
+      payTo: lane.payTo,
+      price: X402_CHANGES_PRICE_USD,
+      network: X402_NETWORKS[lane.network],
+      maxTimeoutSeconds: 300,
+    },
+    resource: `${lane.baseUrl}${x402ChangesPath(source.slug)}`,
+    description: bazaarChangesDescription(source),
+    mimeType: 'application/json',
+    serviceName: X402_SERVICE_NAME,
+    tags: bazaarTags({ ...source, slug: `changes-${source.slug}` }),
+    unpaidResponseBody: () => unpaidBody(),
+    extensions: declare({
+      input: { since: '2026-01-08', per_page: 5 },
+      inputSchema: bazaarChangesInputSchema(source),
+      output: { example: bazaarChangesOutputExample(source), schema: bazaarChangesOutputSchema() },
+    }),
+  };
+}
+
+/**
+ * Every registered source as `GET /x402/data/<slug>` → route config, plus `GET /x402/changes/<slug>`
+ * for each register with a change feed (a stable record id in D1).
+ */
 export function bazaarRoutes(
   lane: X402Lane,
   declare: DeclareDiscovery,
 ): Record<string, RouteConfig> {
-  return Object.fromEntries(
-    listSources().map((source) => [x402RouteKey(source.slug), bazaarRoute(source, lane, declare)]),
-  );
+  const sources = listSources();
+  return Object.fromEntries([
+    ...sources.map((source) => [x402RouteKey(source.slug), bazaarRoute(source, lane, declare)]),
+    ...sources
+      .filter(hasChangeFeed)
+      .map((source) => [
+        x402ChangesRouteKey(source.slug),
+        bazaarChangesRoute(source, lane, declare),
+      ]),
+  ]);
 }

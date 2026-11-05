@@ -220,7 +220,7 @@ async function oauthChallenge(
   const headline =
     reason === 'protected_tool'
       ? description
-      : 'Preview limit reached: pay per call at /x402/data/<source>, call request_api_key for a free key, or sign in';
+      : 'Preview limit reached: pay per call at /x402/data/<source> (changes at /x402/changes/<source>), call request_api_key for a free key, or sign in';
   return c.json({ error: 'invalid_token', error_description: description }, 401, {
     'WWW-Authenticate': bearerChallenge(c.env, headline),
   });

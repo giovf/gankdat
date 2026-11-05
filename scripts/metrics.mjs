@@ -801,12 +801,19 @@ async function datasetQueries30d(label = '', restWhere = '', mcpWhere = '', extr
 const x402Base = (process.env.PUBLIC_BASE_URL || 'https://gankdat.com').replace(/\/+$/, '');
 // The live source list, shared by the sales clauses here and the validate and Bazaar clauses
 // below (one read; a failure makes each clause `n/a` with the same reason).
-const x402Slugs = (async () => {
+const x402Listing = (async () => {
   const listing = await fetch(`${x402Base}/v1/data`, { signal: AbortSignal.timeout(15_000) });
   if (!listing.ok) throw new Error(`/v1/data ${listing.status}`);
-  return (await listing.json()).data.map((s) => s.slug);
+  return (await listing.json()).data;
 })();
+const x402Slugs = x402Listing.then((data) => data.map((s) => s.slug));
+// Registers whose change feed is sold on the lane too (`/x402/changes/<slug>`, gankdat
+// `x402-change-feed-route`, 2026-11-05): the validate clause checks those resources as well.
+const x402ChangeSlugs = x402Listing.then((data) =>
+  data.filter((s) => s.change_feed).map((s) => s.slug),
+);
 x402Slugs.catch(() => {}); // each clause reports the rejection itself
+x402ChangeSlugs.catch(() => {});
 // The route count is the buyer-vs-prober split's sweep threshold (one client paying every route
 // once in a day is the Bazaar indexer, not a customer); unread, only the UA rule applies.
 const x402RouteCount = await x402Slugs.then((slugs) => slugs.length).catch(() => null);
@@ -917,17 +924,19 @@ function firstPreflightFailure(body) {
 // the discovery API (`metrics-bazaar-merchant-read`), never from this line.
 const x402ValidateNote = await (async () => {
   const base = x402Base;
-  const slugs = await x402Slugs;
+  // data routes by slug, change feeds as `changes/<slug>` (the row names a failing one that way)
+  const slugs = [...(await x402Slugs), ...(await x402ChangeSlugs).map((slug) => `changes/${slug}`)];
   const results = [];
   for (let i = 0; i < slugs.length; i += 4) {
     results.push(
       ...(await Promise.all(
         slugs.slice(i, i + 4).map(async (slug) => {
           try {
+            const resource = `${base}/x402/${slug.includes('/') ? slug : `data/${slug}`}`;
             const res = await fetch('https://api.cdp.coinbase.com/platform/v2/x402/validate', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ resource: `${base}/x402/data/${slug}`, method: 'GET' }),
+              body: JSON.stringify({ resource, method: 'GET' }),
               signal: AbortSignal.timeout(20_000),
             });
             const body = await res.json().catch(() => ({}));

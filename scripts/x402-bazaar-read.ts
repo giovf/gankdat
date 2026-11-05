@@ -102,8 +102,13 @@ export function exampleQueryFromPaymentRequired(header: string | null): ExampleQ
 }
 
 /** The route URL with the query — the declared example, else one record. */
+/** `data/<slug>` for a bare slug; a route already naming its lane (`changes/<slug>`) stays. */
+export function x402Route(slugOrRoute: string): string {
+  return slugOrRoute.includes('/') ? slugOrRoute : `data/${slugOrRoute}`;
+}
+
 export function routeUrl(base: string, slug: string, query: ExampleQuery | null): string {
-  const url = new URL(`${base.replace(/\/+$/, '')}/x402/data/${slug}`);
+  const url = new URL(`${base.replace(/\/+$/, '')}/x402/${x402Route(slug)}`);
   for (const [key, value] of Object.entries(query ?? { per_page: 1 }))
     url.searchParams.set(key, String(value));
   return url.toString();
@@ -251,6 +256,8 @@ export interface ProbeTarget {
 export interface ProbeTargetsInput {
   /** Live x402 route slugs (`/v1/data`). */
   slugs: string[];
+  /** Slugs with a paid change feed (`/x402/changes/<slug>`, 2026-11-05); their targets read `changes/<slug>`. */
+  changeSlugs?: string[];
   /** The catalogue's resources under our payTo (`merchantResources`). */
   resources: BazaarResource[];
   base: string;
@@ -269,26 +276,28 @@ export interface ProbeTargetsInput {
  */
 export function probeTargets(input: ProbeTargetsInput): ProbeTarget[] {
   const base = input.base.replace(/\/+$/, '');
-  const prefix = base.toLowerCase() + '/x402/data/';
+  const prefix = base.toLowerCase() + '/x402/';
   const staleDays = input.staleDays ?? 23;
+  // keyed by route (`data/<slug>`, `changes/<slug>`)
   const listed = new Map<string, BazaarResource>();
   for (const r of input.resources) {
     const resource = typeof r.resource === 'string' ? r.resource.toLowerCase() : '';
     if (!resource.startsWith(prefix)) continue;
-    const slug = resource
+    const route = resource
       .slice(prefix.length)
       .replace(/[?#].*$/, '')
       .replace(/\/+$/, '');
-    if (slug && !listed.has(slug)) listed.set(slug, r);
+    if (route && !listed.has(route)) listed.set(route, r);
   }
   const targets: ProbeTarget[] = [];
-  for (const slug of input.slugs) {
-    const url = `${base}/x402/data/${slug}?per_page=1`;
+  const routes = [...input.slugs, ...(input.changeSlugs ?? []).map((s) => `changes/${s}`)];
+  for (const slug of routes) {
+    const url = `${base}/x402/${x402Route(slug)}?per_page=1`;
     if (input.forced) {
       targets.push({ slug, url, reason: 'forced' });
       continue;
     }
-    const entry = listed.get(slug.toLowerCase());
+    const entry = listed.get(x402Route(slug).toLowerCase());
     if (!entry) {
       targets.push({ slug, url, reason: 'unlisted' });
       continue;

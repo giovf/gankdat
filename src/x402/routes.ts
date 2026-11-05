@@ -1,8 +1,9 @@
 import { Hono } from 'hono';
 import type { MiddlewareHandler } from 'hono';
-import { X402_DEFAULT_PRICE_USD, publicBaseUrl } from '../lib/constants';
+import { X402_CHANGES_PRICE_USD, X402_DEFAULT_PRICE_USD, publicBaseUrl } from '../lib/constants';
 import { failure } from '../lib/envelope';
 import { previewClientId } from '../mcp/preview';
+import { handleChangesQuery } from '../routes/changes';
 import { handleSourceQuery } from '../routes/data';
 import { getSource } from '../sources/registry';
 import type { AppEnv } from '../types';
@@ -107,68 +108,74 @@ async function buildLane(env: CloudflareBindings, lane: X402Lane): Promise<Middl
   return paymentMiddleware(bazaarRoutes(lane, declareDiscoveryExtension), server);
 }
 
+// The paid lane, shared by the data routes and the change feeds (`/x402/changes/:source`,
+// gankdat `x402-change-feed-route`, 2026-11-05: the same middleware, one route table).
+const paidLane: MiddlewareHandler<AppEnv> = async (c, next) => {
+  const wallet = c.env.X402_WALLET_ADDRESS;
+  if (!wallet) {
+    return c.json(failure('not_found', `No route for ${c.req.method} ${c.req.path}`), 404);
+  }
+
+  const price = c.env.X402_PRICE_USD || DEFAULT_PRICE_USD;
+  const network = c.env.X402_NETWORK || DEFAULT_NETWORK;
+  // Validate the operator-supplied overrides up front: the route builder THROWS
+  // on a bad price/network, which would 500 every request (paid and unpaid).
+  // A clean 503 + log names the misconfiguration instead.
+  if (!/^\$\d+(\.\d+)?$/.test(price) || !isX402Network(network)) {
+    console.error(JSON.stringify({ level: 'error', event: 'x402_misconfigured', price, network }));
+    return c.json(failure('unavailable', 'x402 is misconfigured; retry later'), 503);
+  }
+
+  const lane: X402Lane = { baseUrl: publicBaseUrl(c.env), payTo: wallet, price, network };
+  const facilitatorKey = c.env.CDP_API_KEY_ID ? 'cdp' : (c.env.X402_FACILITATOR_URL ?? '');
+  const key = [lane.baseUrl, wallet, price, network, facilitatorKey].join('|');
+  let middleware = lanes.get(key);
+  if (!middleware) {
+    middleware = buildLane(c.env, lane).catch((error: unknown) => {
+      lanes.delete(key); // a failed build is retried by the next request, not cached
+      throw error;
+    });
+    lanes.set(key, middleware);
+  }
+
+  const response = await (await middleware)(c, next);
+  // The middleware returns its own 402/5xx; on a settled payment it sets c.res (the
+  // data response plus the PAYMENT-RESPONSE receipt). Only that receipt marks a sale.
+  const outcome = response ?? c.res;
+  if (outcome.ok && outcome.headers.has('PAYMENT-RESPONSE')) {
+    const slug = c.req.param('source') ?? '';
+    const paidPrice = c.req.path.startsWith('/x402/changes/')
+      ? X402_CHANGES_PRICE_USD
+      : getSource(slug)?.x402PriceUsd || price;
+    console.log(
+      JSON.stringify({ level: 'info', event: 'x402_paid', path: c.req.path, price: paidPrice }),
+    );
+    // Revenue analytics (90-day history via `npm run traffic`) — Workers
+    // Logs alone rotates out in days. UA names the paying agent; blob6 is the
+    // same hashed IP+UA client id the preview wall writes, so the Daily numbers
+    // row can tell whether a wall-hitter came back here (`after wall 1h`,
+    // gankdat preview-wall-next-steps, 2026-10-11). No raw IP. The owner's own
+    // indexing payment and the runner's probe send `gankdat-x402-probe/…` as
+    // the UA; the metrics runner counts those as internal, never as sales.
+    const userAgent = c.req.header('User-Agent') ?? '';
+    c.env.TRAFFIC.writeDataPoint({
+      blobs: [
+        'x402_paid',
+        userAgent,
+        c.req.path,
+        '',
+        slug,
+        await previewClientId(c.req.header('CF-Connecting-IP') ?? 'unknown', userAgent),
+      ],
+      doubles: [1],
+      indexes: ['x402_paid'],
+    });
+  }
+  return response;
+};
+
 export const x402Routes = new Hono<AppEnv>()
-  .use('/data/:source', async (c, next) => {
-    const wallet = c.env.X402_WALLET_ADDRESS;
-    if (!wallet) {
-      return c.json(failure('not_found', `No route for ${c.req.method} ${c.req.path}`), 404);
-    }
-
-    const price = c.env.X402_PRICE_USD || DEFAULT_PRICE_USD;
-    const network = c.env.X402_NETWORK || DEFAULT_NETWORK;
-    // Validate the operator-supplied overrides up front: the route builder THROWS
-    // on a bad price/network, which would 500 every request (paid and unpaid).
-    // A clean 503 + log names the misconfiguration instead.
-    if (!/^\$\d+(\.\d+)?$/.test(price) || !isX402Network(network)) {
-      console.error(
-        JSON.stringify({ level: 'error', event: 'x402_misconfigured', price, network }),
-      );
-      return c.json(failure('unavailable', 'x402 is misconfigured; retry later'), 503);
-    }
-
-    const lane: X402Lane = { baseUrl: publicBaseUrl(c.env), payTo: wallet, price, network };
-    const facilitatorKey = c.env.CDP_API_KEY_ID ? 'cdp' : (c.env.X402_FACILITATOR_URL ?? '');
-    const key = [lane.baseUrl, wallet, price, network, facilitatorKey].join('|');
-    let middleware = lanes.get(key);
-    if (!middleware) {
-      middleware = buildLane(c.env, lane).catch((error: unknown) => {
-        lanes.delete(key); // a failed build is retried by the next request, not cached
-        throw error;
-      });
-      lanes.set(key, middleware);
-    }
-
-    const response = await (await middleware)(c, next);
-    // The middleware returns its own 402/5xx; on a settled payment it sets c.res (the
-    // data response plus the PAYMENT-RESPONSE receipt). Only that receipt marks a sale.
-    const outcome = response ?? c.res;
-    if (outcome.ok && outcome.headers.has('PAYMENT-RESPONSE')) {
-      const slug = c.req.param('source') ?? '';
-      const paidPrice = getSource(slug)?.x402PriceUsd || price;
-      console.log(
-        JSON.stringify({ level: 'info', event: 'x402_paid', path: c.req.path, price: paidPrice }),
-      );
-      // Revenue analytics (90-day history via `npm run traffic`) — Workers
-      // Logs alone rotates out in days. UA names the paying agent; blob6 is the
-      // same hashed IP+UA client id the preview wall writes, so the Daily numbers
-      // row can tell whether a wall-hitter came back here (`after wall 1h`,
-      // gankdat preview-wall-next-steps, 2026-10-11). No raw IP. The owner's own
-      // indexing payment and the runner's probe send `gankdat-x402-probe/…` as
-      // the UA; the metrics runner counts those as internal, never as sales.
-      const userAgent = c.req.header('User-Agent') ?? '';
-      c.env.TRAFFIC.writeDataPoint({
-        blobs: [
-          'x402_paid',
-          userAgent,
-          c.req.path,
-          '',
-          slug,
-          await previewClientId(c.req.header('CF-Connecting-IP') ?? 'unknown', userAgent),
-        ],
-        doubles: [1],
-        indexes: ['x402_paid'],
-      });
-    }
-    return response;
-  })
-  .get('/data/:source', handleSourceQuery);
+  .use('/data/:source', paidLane)
+  .use('/changes/:source', paidLane)
+  .get('/data/:source', handleSourceQuery)
+  .get('/changes/:source', handleChangesQuery);

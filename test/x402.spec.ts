@@ -1,6 +1,7 @@
 import { createExecutionContext, env, SELF, waitOnExecutionContext } from 'cloudflare:test';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import worker from '../src/index';
+import { hasChangeFeed, listSources } from '../src/sources/registry';
 import { withoutCodegenError, withoutCodegenWarning } from '../src/x402/routes';
 import type { ErrorEnvelope } from '../src/lib/envelope';
 
@@ -336,5 +337,70 @@ describe('withoutCodegenError', () => {
       ['Error compiling schema, function code:'],
       ['refresh_failed', { source: 'uk-planning' }],
     ]);
+  });
+});
+
+// The paid change feed (gankdat `x402-change-feed-route`, 2026-11-05): the same lane on
+// `/x402/changes/:source`, priced at $0.01, the register's `since` cursor behind it.
+describe('/x402/changes/:source', () => {
+  const feed = listSources().find(hasChangeFeed)!;
+  const CHANGES_URL = `https://example.com/x402/changes/${feed.slug}`;
+
+  it('is dark (404) while X402_WALLET_ADDRESS is unset', async () => {
+    const res = await SELF.fetch(CHANGES_URL);
+    expect(res.status).toBe(404);
+  });
+
+  it('answers 402 at the change-feed price with the feed query in its Bazaar metadata', async () => {
+    stubFacilitator({});
+    const required = await paymentRequired(CHANGES_URL);
+    expect(required.resource.url).toBe(`https://gankdat.com/x402/changes/${feed.slug}`);
+    expect(required.accepts[0]).toMatchObject({
+      payTo: TEST_WALLET,
+      network: NETWORK,
+      amount: '10000',
+    });
+    const input = required.extensions?.bazaar?.info.input;
+    expect(input?.queryParams).toMatchObject({ since: '2026-01-08' });
+    expect(
+      required.extensions?.bazaar?.schema.properties.input.properties.queryParams.properties,
+    ).toHaveProperty('since');
+  });
+
+  it('serves the change page with a real cursor for a verified payment', async () => {
+    const TX_HASH = `0x${'cd'.repeat(32)}`;
+    stubFacilitator({});
+    const required = await paymentRequired(`${CHANGES_URL}?since=2026-01-01`);
+    vi.unstubAllGlobals();
+    stubFacilitator({
+      verify: () => Response.json({ isValid: true, payer: PAYER }),
+      settle: () =>
+        Response.json({ success: true, transaction: TX_HASH, network: NETWORK, payer: PAYER }),
+    });
+    const res = await litFetch(`${CHANGES_URL}?since=2026-01-01`, {
+      headers: { 'PAYMENT-SIGNATURE': paymentFor(required) },
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      ok: boolean;
+      data: unknown[];
+      meta: { since: string; source: string };
+    };
+    expect(body.ok).toBe(true);
+    expect(body.meta).toMatchObject({ source: feed.slug, since: '2026-01-01' });
+    expect(fromBase64Json<{ success: boolean }>(res.headers.get('PAYMENT-RESPONSE')).success).toBe(
+      true,
+    );
+  });
+
+  it('answers 404 (not a paid 402) for a source without a change feed', async () => {
+    const noFeed = listSources().find((s) => !hasChangeFeed(s));
+    if (!noFeed) return;
+    stubFacilitator({});
+    const required = await paymentRequired(`https://example.com/x402/changes/${noFeed.slug}`).catch(
+      () => null,
+    );
+    // the lane has no route for it, so the middleware passes through to the handler's 404
+    expect(required).toBeNull();
   });
 });

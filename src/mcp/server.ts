@@ -636,7 +636,7 @@ export function buildMcpServer(
     {
       title: 'Sign in so this chat uses your gankdat plan',
       description:
-        "Connect the user's gankdat account (OAuth sign-in prompt in clients that support it, such as Claude): afterwards every tool answers with full pages and the account's credits instead of the preview. Returns the plan and usage once connected. Free to call. No person to sign in? Call request_api_key with the user's email for a free key instead, or pay per call with no account at GET https://gankdat.com/x402/data/<source> (x402, USDC on Base).",
+        "Connect the user's gankdat account (OAuth sign-in prompt in clients that support it, such as Claude): afterwards every tool answers with full pages and the account's credits instead of the preview. Returns the plan and usage once connected. Free to call. No person to sign in? Call request_api_key with the user's email for a free key instead, or pay per call with no account at GET https://gankdat.com/x402/data/<source> or /x402/changes/<source> (x402, USDC on Base).",
       inputSchema: {},
       annotations: { ...READ_ONLY, title: 'Sign in so this chat uses your gankdat plan' },
     },

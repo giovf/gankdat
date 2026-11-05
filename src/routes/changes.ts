@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import type { Context } from 'hono';
 import { z } from 'zod';
 import { failure, success } from '../lib/envelope';
 import { queryD1Changes } from '../sources/d1store';
@@ -53,8 +54,8 @@ export function splitChangesQuery(parsed: Record<string, unknown>): {
  * first, filterable with the source's own params. Metered like a data query.
  * Task 51.
  */
-export const changesRoutes = new Hono<AppEnv>().get('/:source', async (c) => {
-  const slug = c.req.param('source');
+export async function handleChangesQuery(c: Context<AppEnv>): Promise<Response> {
+  const slug = c.req.param('source') ?? '';
   const source = getSource(slug);
   if (!source) return c.json(failure('not_found', `Unknown source '${slug}'`), 404);
   if (!hasChangeFeed(source)) {
@@ -86,4 +87,6 @@ export const changesRoutes = new Hono<AppEnv>().get('/:source', async (c) => {
       last_refreshed_at: result.last_refreshed_at,
     }),
   );
-});
+}
+
+export const changesRoutes = new Hono<AppEnv>().get('/:source', handleChangesQuery);

@@ -1,8 +1,9 @@
 import { declareDiscoveryExtension, validateBazaarRouteExtensions } from '@x402/extensions/bazaar';
 import { describe, expect, it } from 'vitest';
-import { listSources } from '../src/sources/registry';
+import { hasChangeFeed, listSources } from '../src/sources/registry';
 import {
   DESCRIPTION_MAX,
+  bazaarChangesDescription,
   bazaarDescription,
   bazaarExampleInput,
   bazaarInputSchema,
@@ -28,9 +29,31 @@ const LANE: X402Lane = {
 describe('x402 Bazaar declarations', () => {
   const routes = bazaarRoutes(LANE, declareDiscoveryExtension);
 
-  it('declares one GET route per registered source under the public base URL', () => {
+  it('declares one GET route per registered source under the public base URL, plus a change feed per register', () => {
     const sources = listSources();
-    expect(Object.keys(routes)).toHaveLength(sources.length);
+    const feeds = sources.filter(hasChangeFeed);
+    expect(feeds.length).toBeGreaterThan(0);
+    expect(Object.keys(routes)).toHaveLength(sources.length + feeds.length);
+    for (const source of feeds) {
+      const route = routes[`GET /x402/changes/${source.slug}`];
+      expect(route, source.slug).toBeDefined();
+      expect(route!.resource).toBe(`https://gankdat.com/x402/changes/${source.slug}`);
+      expect(route!.accepts).toMatchObject({ price: '$0.01', scheme: 'exact' });
+      expect(route!.tags).toContain('changes');
+      const description = bazaarChangesDescription(source);
+      expect(description.startsWith(`${source.title} — changes.`), source.slug).toBe(true);
+      expect(description, source.slug).not.toMatch(/\b(you|your|please|must|ignore|always)\b/i);
+      expect(description.length, source.slug).toBeLessThanOrEqual(DESCRIPTION_MAX);
+      const info = (
+        route!.extensions as {
+          bazaar: { info: { input: { queryParams: Record<string, unknown> } } };
+        }
+      ).bazaar.info;
+      expect(info.input.queryParams).toMatchObject({ since: '2026-01-08', per_page: 5 });
+    }
+    for (const source of sources.filter((s) => !hasChangeFeed(s))) {
+      expect(routes[`GET /x402/changes/${source.slug}`], source.slug).toBeUndefined();
+    }
     for (const source of sources) {
       const route = routes[`GET /x402/data/${source.slug}`];
       expect(route, source.slug).toBeDefined();

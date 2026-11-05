@@ -103,7 +103,8 @@ ${feeds.map((s) => `- GET ${baseUrl}/v1/changes/${s.slug} — ${s.title}`).join(
 - x402 v2 pay-per-request (no account, USDC on Base; discovery metadata for the
   x402 Bazaar): GET /x402/data/{source} → HTTP 402 whose PAYMENT-REQUIRED header
   carries the price, the query schema and an output example → pay → retry with
-  PAYMENT-SIGNATURE. ~$0.005/request.
+  PAYMENT-SIGNATURE. ~$0.005/request. GET /x402/changes/{source} is the same
+  lane for what changed since a date (registers with a change feed; $0.01/request).
 
 ## Docs
 

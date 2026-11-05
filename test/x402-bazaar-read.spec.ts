@@ -225,6 +225,38 @@ describe('probeTargets', () => {
     ).toEqual([]);
   });
 
+  it('pays an unlisted change feed as `changes/<slug>` and leaves a listed one alone (2026-11-05)', () => {
+    const targets = probeTargets({
+      slugs: ['uk-tenders'],
+      changeSlugs: ['uk-tenders', 'uk-sanctions'],
+      resources: [
+        listed('uk-tenders', '2026-10-22T00:00:00Z'),
+        {
+          resource: `${BASE}/x402/changes/uk-tenders`,
+          quality: {
+            l30DaysTotalCalls: 1,
+            l30DaysUniquePayers: 1,
+            lastCalledAt: '2026-10-22T00:00:00Z',
+          },
+        },
+      ],
+      base: BASE,
+      today: '2026-10-23',
+      forced: false,
+    });
+    expect(targets).toEqual([
+      {
+        slug: 'changes/uk-sanctions',
+        url: `${BASE}/x402/changes/uk-sanctions?per_page=1`,
+        reason: 'unlisted',
+      },
+    ]);
+    expect(routeUrl(BASE, 'changes/uk-sanctions', null)).toBe(
+      `${BASE}/x402/changes/uk-sanctions?per_page=1`,
+    );
+    expect(routeUrl(BASE, 'uk-sanctions', null)).toBe(`${BASE}/x402/data/uk-sanctions?per_page=1`);
+  });
+
   it('pays every route on a forced run', () => {
     const targets = probeTargets({
       slugs,
