@@ -985,6 +985,31 @@ const payhipNote = await fetch('https://apps.gankdat.com/hooks/payhip/summary', 
   })
   .catch((e) => `payhip 30d: n/a (${String(e instanceof Error ? e.message : e).slice(0, 80)})`);
 
+// Own checkout of the tax workbook (tax-workbook `own-checkout-sale-reading`, 2026-11-05): the licence
+// Worker counts each download-product order per day (paid orders, pence from the session's amount,
+// a count per referrer token such as `guide` from the Kindle guide's link; £0 coupon tests apart) and
+// serves the 30-day summary keyless at /v1/downloads/summary — no buyer data. The row carries it so
+// the own shelf is read like Payhip, and the cross-sell proof (`guide N`) is measured. `n/a (<reason>)`
+// when the summary cannot be read.
+const ownCheckoutNote = await fetch(
+  'https://foundry-licenses.faceless-api.workers.dev/v1/downloads/summary?venture=tax-workbook',
+  {
+    headers: { 'user-agent': 'gankdat-metrics/1 (+https://gankdat.com)' },
+    signal: AbortSignal.timeout(15_000),
+  },
+)
+  .then(async (res) => {
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const s = await res.json();
+    const net = (Number(s.net_pence ?? 0) / 100).toFixed(2);
+    const guide = Number(s.refs?.guide ?? 0);
+    const tests = Number(s.test_orders ?? 0);
+    return `own checkout 30d: ${s.sales ?? 0} sales (guide ${guide}), ${s.refunds ?? 0} refunds, net ${s.currency === 'GBP' ? '£' : `${s.currency} `}${net}${tests ? ` (${tests} test)` : ''}`;
+  })
+  .catch(
+    (e) => `own checkout 30d: n/a (${String(e instanceof Error ? e.message : e).slice(0, 80)})`,
+  );
+
 const notes = [
   // preview = keyless data-tool calls (5 rows, 20/day per client, since 2026-09-30 for the
   // Claude Connectors Directory); paywall hits = the plan text shown when that budget is spent
@@ -1011,6 +1036,7 @@ const notes = [
   connectCallersText,
   funnelNote,
   payhipNote,
+  ownCheckoutNote,
   afterWallText,
   cfNote,
   crawlersNote,
