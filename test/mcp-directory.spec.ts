@@ -351,6 +351,41 @@ describe('/mcp speaks protocol revision 2026-07-28 beside 2025-11-25', () => {
     expect(names).toEqual(expect.arrayContaining(['list_sources', 'query_uk_tenders']));
   });
 
+  it('acknowledges and closes a subscriptions/listen in one response (no listChanged bits)', async () => {
+    // gankdat `mcp-listen-graceful-close` (2026-11-07): the owner's Cowork connector asked for
+    // toolsListChanged and the stream stayed open 177 s. With no listChanged advertised the
+    // honoured filter is empty, so the SDK writes the acknowledgement and the complete frame and
+    // closes — `res.text()` resolves instead of hanging on keepalives.
+    const discover = await modern('server/discover');
+    const capabilities = (
+      discover.body?.result as { capabilities?: { tools?: { listChanged?: boolean } } }
+    ).capabilities;
+    expect(capabilities?.tools?.listChanged).not.toBe(true);
+
+    const res = await SELF.fetch(MCP_URL, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        accept: 'application/json, text/event-stream',
+        'CF-Connecting-IP': '203.0.113.9',
+        'User-Agent': 'Claude-User',
+        ...modernHeaders('subscriptions/listen'),
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 9,
+        method: 'subscriptions/listen',
+        params: { notifications: { toolsListChanged: true }, _meta: envelope },
+      }),
+    });
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toContain('text/event-stream');
+    const text = await res.text();
+    expect(text).toContain('notifications/subscriptions/acknowledged');
+    expect(text).toContain('"resultType":"complete"');
+    expect(text).not.toContain('"toolsListChanged":true');
+  });
+
   it('completes a keyless tools/call (the preview) and a keyed one', async () => {
     await seedEmptyDatasets();
     const preview = await modern('tools/call', { name: 'list_sources', arguments: {} });

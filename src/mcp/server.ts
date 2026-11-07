@@ -581,7 +581,15 @@ export function buildMcpServer(
   budgetMs = TOOL_CALL_BUDGET_MS,
   keepAlive?: KeepAlive,
 ): McpServer {
-  const server = new McpServer({ name: 'gankdat', version: APP_VERSION });
+  // No `listChanged` bits (gankdat `mcp-listen-graceful-close`, 2026-11-07): a stateless Worker
+  // never emits a server-initiated notification, and the SDK's listenRouter holds a 2026-07-28
+  // `subscriptions/listen` stream open with keepalives while any requested bit is honoured — the
+  // owner's Cowork connector waited 177 s on one and never reached tools/list. With every bit
+  // false the honoured filter is empty and listen is acknowledged and closed in one response.
+  const server = new McpServer(
+    { name: 'gankdat', version: APP_VERSION },
+    { capabilities: { tools: { listChanged: false } } },
+  );
 
   server.registerTool(
     'list_sources',

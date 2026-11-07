@@ -50,6 +50,11 @@ const INTROSPECTION_METHODS = new Set([
   'tools/list',
   // 2026-07-28: what a client asks first instead of `initialize`.
   'server/discover',
+  // 2026-07-28: the notification subscription a client opens right after discover. Metadata
+  // only — with no `listChanged` advertised it is acknowledged and closed in one response
+  // (gankdat `mcp-listen-graceful-close`, 2026-11-07); a keyless 401 here would put the OAuth
+  // wall in front of the tool list instead of the first tool call.
+  'subscriptions/listen',
 ]);
 
 // Origin validation (MCP Streamable HTTP transport security; a Connectors
