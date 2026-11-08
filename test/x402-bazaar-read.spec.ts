@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   PROBE_MONTHLY_CAP,
+  PROBE_RESCREENS,
   bazaarClause,
   bazaarResourceLines,
   bazaarSummary,
@@ -11,6 +12,7 @@ import {
   merchantResources,
   ownProbePayments,
   payToFromPaymentRequired,
+  probeMonthlyCap,
   probeTargets,
   routeUrl,
   shouldProbe,
@@ -140,10 +142,25 @@ describe('shouldProbe + ownProbePayments', () => {
     expect(shouldProbe({ hasKey: false, forced: true, today: '2026-10-17', research }).pay).toBe(
       false,
     );
-    expect(shouldProbe({ hasKey: true, forced: true, today: '2026-10-17', research })).toEqual({
-      pay: true,
-      reason: 'forced by the workflow_dispatch input',
-    });
+    const forced = shouldProbe({ hasKey: true, forced: true, today: '2026-10-17', research });
+    expect(forced.pay).toBe(true);
+    expect(forced.reason).toContain('forced by the workflow_dispatch input');
+  });
+
+  it('sizes the 30-day cap from the live route count: one payment per route plus three re-screens', () => {
+    expect(PROBE_RESCREENS).toBe(3);
+    expect(probeMonthlyCap(17)).toBe(20);
+    expect(PROBE_MONTHLY_CAP).toBe(20);
+    // 16 data routes + 9 change feeds (2026-11-08): at most US$0.08 + 0.09 + three one-cent re-screens
+    expect(probeMonthlyCap(25)).toBe(28);
+    const reason = shouldProbe({
+      hasKey: true,
+      forced: false,
+      today: '2026-10-23',
+      research,
+      routes: 25,
+    }).reason;
+    expect(reason).toContain('1 of 28 payments');
   });
 
   it('waits 7 days after a probe or owner payment, then reads the catalogue', () => {
@@ -156,7 +173,7 @@ describe('shouldProbe + ownProbePayments', () => {
     expect(later.reason).toContain(`1 of ${PROBE_MONTHLY_CAP}`);
   });
 
-  it('stops at the 30-day cap, forced or not', () => {
+  it('stops the weekly probe at the 30-day cap; a forced dispatch pays what is due regardless (2026-11-08)', () => {
     const capped =
       research +
       '\n' +
@@ -166,10 +183,40 @@ describe('shouldProbe + ownProbePayments', () => {
     expect(ownProbePayments(capped, '2026-11-08')).toBe(PROBE_MONTHLY_CAP);
     expect(
       shouldProbe({ hasKey: true, forced: false, today: '2026-11-08', research: capped }).reason,
-    ).toContain('cap spent');
+    ).toContain('cap spent (20 of 20 payments)');
+    // the 11-05 change feeds raised the shelf to 25 routes: the same rows no longer spend the cap
     expect(
-      shouldProbe({ hasKey: true, forced: true, today: '2026-11-08', research: capped }).pay,
+      shouldProbe({
+        hasKey: true,
+        forced: false,
+        today: '2026-11-08',
+        research: capped,
+        routes: 25,
+      }).pay,
+    ).toBe(true);
+    // the 10-23 survey's 29 payments spent even that cap, and the nine change feeds stayed unlisted
+    // for three days: a forced dispatch pays the due routes whatever the cap says
+    const survey =
+      capped + '\n' + row('2026-11-01', '0 x402 paid (+9 own probe)', 'bazaar: 16 listed');
+    expect(ownProbePayments(survey, '2026-11-08')).toBe(29);
+    expect(
+      shouldProbe({
+        hasKey: true,
+        forced: false,
+        today: '2026-11-08',
+        research: survey,
+        routes: 25,
+      }).pay,
     ).toBe(false);
+    const forced = shouldProbe({
+      hasKey: true,
+      forced: true,
+      today: '2026-11-08',
+      research: survey,
+      routes: 25,
+    });
+    expect(forced.pay).toBe(true);
+    expect(forced.reason).toContain('whatever the spacing and the cap say');
     // the 10-15 payment leaves the window on 11-15; the 10-24 one on 11-24
     expect(
       shouldProbe({ hasKey: true, forced: false, today: '2026-11-25', research: capped }).pay,
@@ -194,7 +241,6 @@ describe('probeTargets', () => {
       ],
       base: `${BASE}/`,
       today: '2026-10-23',
-      forced: false,
     });
     expect(targets).toEqual([
       {
@@ -209,7 +255,6 @@ describe('probeTargets', () => {
       resources: [listed('uk-tenders', '2026-10-18T09:00:00Z')],
       base: BASE,
       today: '2026-11-10',
-      forced: false,
     });
     expect(stale).toEqual([
       { slug: 'uk-tenders', url: `${BASE}/x402/data/uk-tenders?per_page=1`, reason: 'stale 23 d' },
@@ -220,7 +265,6 @@ describe('probeTargets', () => {
         resources: [listed('UK-Tenders', '2026-11-01T00:00:00Z')],
         base: BASE,
         today: '2026-11-10',
-        forced: false,
       }),
     ).toEqual([]);
   });
@@ -242,7 +286,6 @@ describe('probeTargets', () => {
       ],
       base: BASE,
       today: '2026-10-23',
-      forced: false,
     });
     expect(targets).toEqual([
       {
@@ -257,18 +300,31 @@ describe('probeTargets', () => {
     expect(routeUrl(BASE, 'uk-sanctions', null)).toBe(`${BASE}/x402/data/uk-sanctions?per_page=1`);
   });
 
-  it('pays every route on a forced run', () => {
+  it('pays every route on an `all` run (a re-screen); a forced dispatch alone changes nothing here', () => {
     const targets = probeTargets({
       slugs,
       resources: [listed('uk-tenders', '2026-10-22T00:00:00Z')],
       base: BASE,
       today: '2026-10-23',
-      forced: true,
+      all: true,
     });
     expect(targets.map((t) => `${t.slug}:${t.reason}`)).toEqual([
-      'uk-tenders:forced',
-      'uk-sanctions:forced',
-      'eu-ted:forced',
+      'uk-tenders:re-screen',
+      'uk-sanctions:re-screen',
+      'eu-ted:re-screen',
+    ]);
+    // the due routes only — what `x402_probe: true` pays since 2026-11-08
+    const due = probeTargets({
+      slugs,
+      changeSlugs: ['uk-tenders'],
+      resources: [listed('uk-tenders', '2026-10-22T00:00:00Z')],
+      base: BASE,
+      today: '2026-10-23',
+    });
+    expect(due.map((t) => `${t.slug}:${t.reason}`)).toEqual([
+      'uk-sanctions:unlisted',
+      'eu-ted:unlisted',
+      'changes/uk-tenders:unlisted',
     ]);
   });
 });

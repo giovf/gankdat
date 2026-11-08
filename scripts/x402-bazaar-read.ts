@@ -166,12 +166,17 @@ export interface ProbeDecision {
 export interface ProbeInput {
   /** Whether the `X402_PROBE_KEY` secret is present (its value is never read here). */
   hasKey: boolean;
-  /** `workflow_dispatch` input `x402_probe` — a re-screen after a metadata change. */
+  /**
+   * `workflow_dispatch` input `x402_probe`: pay every route due today (unlisted, never called or
+   * stale) whatever the 7-day spacing and the 30-day cap say — the route count bounds the spend.
+   */
   forced: boolean;
   /** Today, YYYY-MM-DD (UTC). */
   today: string;
   /** `ventures/gankdat/RESEARCH.md` as checked out (its Daily numbers rows). */
   research: string;
+  /** Live x402 routes (data + change feeds) the cap is sized for; the 10-23 shelf of 17 when unread. */
+  routes?: number;
 }
 
 const DAILY_ROW = /^\| (\d{4}-\d{2}-\d{2}) \| Daily numbers \|(.*)$/gm;
@@ -187,8 +192,9 @@ const daysBetween = (a: string, b: string): number =>
   Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) / 86_400_000);
 
 /**
- * Half-cent probe payments the rows of the last `days` days record (`(+N own probe)` in the sales
- * cell — each payment reaches exactly one row, the next morning's).
+ * Probe payments the rows of the last `days` days record (`(+N own probe)` in the sales cell —
+ * each payment reaches exactly one row, the next morning's). Payments, not cents: a data route is
+ * half a cent, a change feed one cent (2026-11-05).
  */
 export function ownProbePayments(research: string, today: string, days = 30): number {
   let n = 0;
@@ -201,31 +207,46 @@ export function ownProbePayments(research: string, today: string, days = 30): nu
   return n;
 }
 
+/** Re-screens the 30-day cap allows beyond one payment per route. */
+export const PROBE_RESCREENS = 3;
+
 /**
- * The most half-cent calls the probe wallet pays in any 30 days: every route once (the catalogue
- * drops a resource 30 days after its last settlement, CDP docs 2026-10-23) plus three re-screens
- * — US$0.10 a month at most, whatever the catalogue does.
+ * The most calls the weekly probe pays in any 30 days: every live route once (the catalogue drops
+ * a resource 30 days after its last settlement, CDP docs 2026-10-23) plus three re-screens — sized
+ * from the live route count since 2026-11-08 (`x402-change-routes-bazaar-index`: the nine change
+ * feeds priced on 11-05 took the shelf to 25 routes, and the fixed cap of 20, already spent by
+ * the 10-23 survey, kept the weekly probe from indexing them for three days). At 16 half-cent
+ * data routes, 9 one-cent change feeds and three re-screens that is at most US$0.20 a month,
+ * whatever the catalogue does.
  */
-export const PROBE_MONTHLY_CAP = 20;
+export function probeMonthlyCap(routes: number): number {
+  return Math.max(routes, 0) + PROBE_RESCREENS;
+}
+
+/** The cap before the live route count is read: the 17 routes of the 2026-10-23 shelf. */
+export const PROBE_MONTHLY_CAP = probeMonthlyCap(17);
 
 /**
  * Whether the runner reads the catalogue and pays what is due today (action 026 option B): never
- * without the key; always on a forced dispatch; otherwise only when no probe or owner call
- * (`own probe` on a row) landed in the last 7 days and the 30-day cap is not spent. Which routes
- * get a payment is `probeTargets` on the live catalogue: the 10-23 reading showed CDP indexes
- * one resource per settled payment (uk-tenders, the only route ever paid, was the only one of 17
- * listed after a week), so `0 listed` and the old monthly liveness call are both covered by it.
+ * without the key; always on a forced dispatch (the spacing and the cap are the weekly probe's
+ * rules; a dispatch is a decision taken in a run log, bounded by the route count); otherwise only
+ * when no probe or owner call (`own probe` on a row) landed in the last 7 days and the 30-day cap
+ * is not spent. Which routes get a payment is `probeTargets` on the live catalogue: the 10-23
+ * reading showed CDP indexes one resource per settled payment (uk-tenders, the only route ever
+ * paid, was the only one of 17 listed after a week), so `0 listed` and the old monthly liveness
+ * call are both covered by it.
  */
 export function shouldProbe(input: ProbeInput): ProbeDecision {
   if (!input.hasKey)
     return { pay: false, reason: 'X402_PROBE_KEY is not set (action 026 option B)' };
-  const spent = ownProbePayments(input.research, input.today);
-  if (input.forced && spent >= PROBE_MONTHLY_CAP)
+  if (input.forced)
     return {
-      pay: false,
-      reason: `forced, but the 30-day cap is spent (${spent} of ${PROBE_MONTHLY_CAP} half-cents)`,
+      pay: true,
+      reason:
+        'forced by the workflow_dispatch input: every route due today, whatever the spacing and the cap say',
     };
-  if (input.forced) return { pay: true, reason: 'forced by the workflow_dispatch input' };
+  const cap = probeMonthlyCap(input.routes ?? 17);
+  const spent = ownProbePayments(input.research, input.today);
   const rows = dailyRows(input.research);
   const recent = rows.find(
     (r) =>
@@ -235,21 +256,21 @@ export function shouldProbe(input: ProbeInput): ProbeDecision {
   );
   if (recent)
     return { pay: false, reason: `a probe payment landed on ${recent.date} (7-day spacing)` };
-  if (spent >= PROBE_MONTHLY_CAP)
+  if (spent >= cap)
     return {
       pay: false,
-      reason: `30-day cap spent (${spent} of ${PROBE_MONTHLY_CAP} half-cents)`,
+      reason: `30-day cap spent (${spent} of ${cap} payments)`,
     };
   return {
     pay: true,
-    reason: `no probe payment in 7 days (${spent} of ${PROBE_MONTHLY_CAP} half-cents in 30 d): reading the catalogue`,
+    reason: `no probe payment in 7 days (${spent} of ${cap} payments in 30 d): reading the catalogue`,
   };
 }
 
 export interface ProbeTarget {
   slug: string;
   url: string;
-  /** `unlisted`, `stale 25 d`, `never called` or `forced`. */
+  /** `unlisted`, `stale 25 d`, `never called` or `re-screen` (an `all` run). */
   reason: string;
 }
 
@@ -262,7 +283,11 @@ export interface ProbeTargetsInput {
   resources: BazaarResource[];
   base: string;
   today: string;
-  forced: boolean;
+  /**
+   * Pay every route, listed or not (`X402_PROBE_FORCE=all`: a re-screen after a metadata change
+   * is per resource too). A forced dispatch (`x402_probe: true`) pays the due routes only.
+   */
+  all?: boolean;
   /** Days since the last settlement after which a listed route is paid again (default 23). */
   staleDays?: number;
 }
@@ -271,8 +296,8 @@ export interface ProbeTargetsInput {
  * The routes that need a settled payment today, each with why: every route the catalogue does
  * not list (CDP indexes per resource), and every listed route whose last settlement is `staleDays`
  * old or unknown (a resource leaves the catalogue 30 days after its last settlement; 23 leaves
- * the weekly probe one more chance). A forced run pays every route (a re-screen after a
- * metadata change is per resource too). The URL asks for one record, the cheapest paid call.
+ * the weekly probe one more chance). An `all` run pays every route. The URL asks for one record,
+ * the cheapest paid call.
  */
 export function probeTargets(input: ProbeTargetsInput): ProbeTarget[] {
   const base = input.base.replace(/\/+$/, '');
@@ -293,8 +318,8 @@ export function probeTargets(input: ProbeTargetsInput): ProbeTarget[] {
   const routes = [...input.slugs, ...(input.changeSlugs ?? []).map((s) => `changes/${s}`)];
   for (const slug of routes) {
     const url = `${base}/x402/${x402Route(slug)}?per_page=1`;
-    if (input.forced) {
-      targets.push({ slug, url, reason: 'forced' });
+    if (input.all) {
+      targets.push({ slug, url, reason: 're-screen' });
       continue;
     }
     const entry = listed.get(x402Route(slug).toLowerCase());

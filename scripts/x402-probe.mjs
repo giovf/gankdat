@@ -7,8 +7,13 @@
 // after its last settlement (docs.cdp.coinbase.com/x402/seller/get-discovered, read 2026-10-23;
 // a week after the first half-cent call only uk-tenders, the route it paid, was listed of 17), so
 // `shouldProbe` says whether today reads the catalogue at all (never twice in 7 days, a 30-day cap
-// of 20 half-cents) and `probeTargets` names the routes due: every unlisted route, every listed
-// route whose last settlement is 23 days old, or all of them on the `x402_probe` dispatch input.
+// of one payment per live route plus three re-screens — `probeMonthlyCap`, 2026-11-08) and
+// `probeTargets` names the routes due: every unlisted route and every listed route whose last
+// settlement is 23 days old. The `x402_probe` dispatch input (`X402_PROBE_FORCE=true`) pays those
+// due routes today whatever the spacing and the cap say — the shape `x402-change-routes-bazaar-index`
+// needed on 2026-11-08, when the nine change feeds priced on 11-05 sat unlisted behind a cap the
+// 10-23 survey had spent; `X402_PROBE_FORCE=all` pays every route (a re-screen after a metadata
+// change is per resource too).
 // Each payment is the test client (`scripts/x402-test-client.mjs`, UA `gankdat-x402-probe/…`,
 // counted as internal by metrics.mjs) with X402_TARGET set to the route; the client prints the
 // facilitator's Bazaar verdict (`success`, `processing`, `rejected`) from the settle response.
@@ -19,8 +24,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
-  PROBE_MONTHLY_CAP,
   ownProbePayments,
+  probeMonthlyCap,
   probeTargets,
   routeUrl,
   shouldProbe,
@@ -37,30 +42,40 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const base = (process.env.PUBLIC_BASE_URL || 'https://gankdat.com').replace(/\/+$/, '');
 const today = new Date().toISOString().slice(0, 10);
 const research = readFileSync(path.join(here, '..', 'RESEARCH.md'), 'utf8');
-const forced = /^(true|1|yes)$/i.test((process.env.X402_PROBE_FORCE ?? '').trim());
-const decision = shouldProbe({
-  hasKey: (process.env.PRIVATE_KEY ?? '').trim().length > 0,
-  forced,
-  today,
-  research,
-});
+const force = (process.env.X402_PROBE_FORCE ?? '').trim().toLowerCase();
+const forced = /^(true|1|yes|all)$/.test(force);
+const all = force === 'all';
+const hasKey = (process.env.PRIVATE_KEY ?? '').trim().length > 0;
+if (!hasKey) {
+  console.log(`x402 probe: skipped — ${shouldProbe({ hasKey, forced, today, research }).reason}`);
+  process.exit(0);
+}
+
+// The live routes first (keyless): the cap is one payment per route plus three re-screens.
+const slugs = await readLiveSlugs(base);
+const changeSlugs = await readLiveChangeSlugs(base).catch(() => []);
+const routes = slugs.length + changeSlugs.length;
+const decision = shouldProbe({ hasKey, forced, today, research, routes });
 console.log(
   `x402 probe: ${decision.pay ? 'reading the catalogue' : 'skipped'} — ${decision.reason}`,
 );
 if (!decision.pay) process.exit(0);
 
-const slugs = await readLiveSlugs(base);
-const changeSlugs = await readLiveChangeSlugs(base).catch(() => []);
 const payTo = await readPayTo(base, slugs[0], 'gankdat-x402-probe/2 (+https://gankdat.com)');
 const resources = await readMerchantCatalogue(payTo);
-const due = probeTargets({ slugs, changeSlugs, resources, base, today, forced });
-const budget = Math.max(0, PROBE_MONTHLY_CAP - ownProbePayments(research, today));
+const due = probeTargets({ slugs, changeSlugs, resources, base, today, all });
+// A forced dispatch pays every due route (bounded by the route count, ≤ US$0.20 at 25 routes);
+// the weekly probe stays inside the 30-day cap.
+const cap = probeMonthlyCap(routes);
+const budget = forced ? due.length : Math.max(0, cap - ownProbePayments(research, today));
 const targets = due.slice(0, budget);
+// A data route is half a cent, a change feed one cent (X402_CHANGES_PRICE_USD, 2026-11-05).
+const usd = (list) =>
+  list.reduce((sum, t) => sum + (t.slug.startsWith('changes/') ? 0.01 : 0.005), 0).toFixed(3);
 console.log(
-  `x402 probe: ${resources.length} of ${slugs.length + changeSlugs.length} routes listed; ${due.length} due` +
-    (targets.length < due.length
-      ? ` (${targets.length} within the 30-day cap of ${PROBE_MONTHLY_CAP})`
-      : '') +
+  `x402 probe: ${resources.length} of ${routes} routes listed; ${due.length} due` +
+    (targets.length < due.length ? ` (${targets.length} within the 30-day cap of ${cap})` : '') +
+    (targets.length ? ` ≈ US$${usd(targets)}` : '') +
     (due.length ? ': ' + due.map((t) => `${t.slug} (${t.reason})`).join(', ') : ''),
 );
 if (!targets.length) {
@@ -85,7 +100,7 @@ for (const target of targets) {
   await new Promise((resolve) => setTimeout(resolve, 1500));
 }
 console.log(
-  `\nx402 probe: paid ${paid.length} of ${targets.length} route(s)` +
+  `\nx402 probe: paid ${paid.length} of ${targets.length} route(s) ≈ US$${usd(targets.filter((t) => paid.includes(t.slug)))}` +
     (failed.length ? `; failed: ${failed.join(', ')}` : '') +
     ` — the catalogue indexes within 15 minutes; tomorrow's \`bazaar:\` clause is the proof`,
 );
