@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Use gankdat in Clay — UK register checks as an HTTP API enrichment</title>
+    <meta
+      name="description"
+      content="Clay HTTP API configs for gankdat's UK register lookups: Companies House status and filings, Charity Commission, insolvency notices, the UK sanctions list and licensed visa sponsors — one gankdat credit a row on your own key, no Clay Data Credit. Endpoints, field paths, rate limits, a conditional-run rule and a CRM qualification walkthrough."
+    />
+    <link rel="canonical" href="https://gankdat.com/clay" />
+    <link rel="icon" href="/favicon.png" />
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      body {
+        font:
+          16px/1.55 system-ui,
+          -apple-system,
+          'Segoe UI',
+          sans-serif;
+        margin: 0;
+        color: #1b1b1b;
+        background: #fff;
+      }
+      @media (prefers-color-scheme: dark) {
+        body {
+          color: #e6e6e6;
+          background: #141414;
+        }
+        code,
+        pre,
+        th {
+          background: #242424;
+        }
+      }
+      main {
+        max-width: 860px;
+        margin: 0 auto;
+        padding: 32px 20px 64px;
+      }
+      h1 {
+        font-size: 30px;
+        margin: 0 0 8px;
+      }
+      h2 {
+        font-size: 20px;
+        margin: 32px 0 8px;
+      }
+      h3 {
+        font-size: 17px;
+        margin: 24px 0 6px;
+      }
+      code,
+      pre {
+        font-family: Consolas, ui-monospace, monospace;
+        font-size: 14px;
+        background: #f3f3f3;
+        border-radius: 3px;
+      }
+      code {
+        padding: 1px 5px;
+      }
+      pre {
+        padding: 10px 12px;
+        overflow-x: auto;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 15px;
+      }
+      th,
+      td {
+        border: 1px solid #ccc;
+        padding: 6px 8px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #f3f3f3;
+      }
+      a {
+        color: #0f6cbd;
+      }
+      .muted {
+        opacity: 0.8;
+        font-size: 15px;
+      }
+      nav a {
+        margin-right: 14px;
+      }
+      dl.config {
+        display: grid;
+        grid-template-columns: max-content 1fr;
+        gap: 4px 14px;
+        margin: 8px 0 0;
+      }
+      dl.config dt {
+        font-weight: 600;
+      }
+      dl.config dd {
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <nav class="muted">
+        <a href="/">gankdat</a><a href="/docs">API docs</a><a href="/addin">Excel add-in</a
+        ><a href="/account">account</a><a href="/privacy">privacy</a><a href="/terms">terms</a
+        ><a href="/feedback">support</a>
+      </nav>
+      <h1>Use gankdat in Clay</h1>
+      <p>
+        Five official UK registers as <strong>HTTP API</strong> enrichment columns in a Clay table:
+        the Companies House record of a company (status, incorporation date, SIC codes, overdue
+        accounts, charges, insolvency history), whether it is a registered charity, its Gazette
+        insolvency notices, any UK sanctions designation under its name and its licensed visa
+        sponsor entry. Each column is one GET to the <a href="/docs">gankdat API</a> with your own
+        key, so a row costs one gankdat credit (free for 250 a month, then from £5 per 1,000) plus
+        Clay's own action — no Clay Data Credit is spent. The result is a qualification and
+        compliance row for an account list: route, flag or disqualify before anyone writes an email.
+      </p>
+      <p class="muted">
+        What it is not: a contact finder. gankdat drops personal data at ingest (officers,
+        individual controllers and contact details are never stored), so these columns say what a
+        company is, not who runs it.
+      </p>
+
+      <h2 id="setup">Before you start (3 minutes)</h2>
+      <ol>
+        <li>
+          Create a free key at <a href="/account">gankdat.com/account</a> (email sign-in). Name the
+          key <code>clay</code> — the name shows in your key list and tells us which rows came from
+          Clay.
+        </li>
+        <li>
+          In any Clay table:
+          <strong>Add enrichment → HTTP API → Select header account → + Add account</strong>. Add
+          one header, <code>Authorization</code> with the value <code>Bearer YOUR_KEY</code>, name
+          the account <em>gankdat</em> and save. Clay encrypts it at workspace level and the key
+          never sits in a column.
+        </li>
+        <li>
+          Make sure the table has a <strong>Company Number</strong> column (Companies House number,
+          8 characters, leading zeros kept — Clay's docs: a number with leading zeros goes in
+          quotes). Only a name? Step 1 of the walkthrough below resolves it.
+        </li>
+      </ol>
+
+      <h2 id="columns">The five columns</h2>
+      <p>
+        Every column is <strong>Method GET</strong>, the <em>gankdat</em> header account, no body.
+        The response is always
+        <code>{ "ok": true, "data": [ …records ], "meta": { "total": N, … } }</code>, so
+        <code>meta.total</code> is the hit count and <code>data.0.&lt;field&gt;</code> the first
+        record's field. Paste the <strong>Field paths to return</strong> you want; every field of a
+        record is in the <a href="/docs">API docs</a>. Clay's <em>Generate</em> tab writes the same
+        configuration from a sentence plus this page's URL if you would rather not type it.
+      </p>
+
+      <h3 id="lookup-uk-company-profiles">1. Company record (Companies House)</h3>
+      <dl
+        class="config"
+        data-source="uk-company-profiles"
+        data-params="company_number,company"
+        data-fields="company,status,incorporated_on,sic_codes,accounts_overdue,confirmation_overdue,has_charges,has_insolvency_history,has_been_liquidated,postal_code,company_url"
+        data-rate="30"
+      >
+        <dt>Endpoint URL</dt>
+        <dd><code>https://gankdat.com/v1/data/uk-company-profiles</code></dd>
+        <dt>Query string</dt>
+        <dd>
+          <code>company_number</code> → <code>/Company Number</code> (or <code>company</code> →
+          <code>/Company Name</code>: the search's top hit, so confirm the returned
+          <code>company_number</code> before trusting it)
+        </dd>
+        <dt>Field paths</dt>
+        <dd>
+          <code>data.0.company</code> <code>data.0.status</code> <code>data.0.incorporated_on</code>
+          <code>data.0.sic_codes</code> <code>data.0.accounts_overdue</code>
+          <code>data.0.confirmation_overdue</code> <code>data.0.has_charges</code>
+          <code>data.0.has_insolvency_history</code> <code>data.0.has_been_liquidated</code>
+          <code>data.0.postal_code</code> <code>data.0.company_url</code>
+        </dd>
+        <dt>Rate limiting</dt>
+        <dd>
+          Request limit <code>30</code>, duration <code>60000</code> ms (30 a minute per account)
+        </dd>
+        <dt>Reads</dt>
+        <dd>
+          One record: profile, charges, filing history and corporate controllers from the official
+          Companies House API, cached 24 h.
+          <a href="/stats/uk-company-profiles">About this lookup</a>.
+        </dd>
+      </dl>
+
+      <h3 id="lookup-uk-charities">2. Registered charity? (Charity Commission)</h3>
+      <dl
+        class="config"
+        data-source="uk-charities"
+        data-params="company_number"
+        data-fields="registered_charity_number,name,registration_status,latest_income,insolvent,in_administration"
+        data-rate="60"
+      >
+        <dt>Endpoint URL</dt>
+        <dd><code>https://gankdat.com/v1/data/uk-charities</code></dd>
+        <dt>Query string</dt>
+        <dd><code>company_number</code> → <code>/Company Number</code></dd>
+        <dt>Field paths</dt>
+        <dd>
+          <code>meta.total</code> (0 = not a registered charity)
+          <code>data.0.registered_charity_number</code> <code>data.0.name</code>
+          <code>data.0.registration_status</code> <code>data.0.latest_income</code>
+          <code>data.0.insolvent</code> <code>data.0.in_administration</code>
+        </dd>
+        <dt>Rate limiting</dt>
+        <dd>Request limit <code>60</code>, duration <code>60000</code> ms</dd>
+        <dt>Reads</dt>
+        <dd>
+          The register of charities in England and Wales (~185k rows, refreshed daily), matched on
+          the charity's own company number. <a href="/stats/uk-charities">Register statistics</a>.
+        </dd>
+      </dl>
+
+      <h3 id="lookup-uk-insolvency">3. Insolvency notices (The Gazette)</h3>
+      <dl
+        class="config"
+        data-source="uk-insolvency"
+        data-params="company"
+        data-fields="company,notice_type,published_at,notice_url"
+        data-rate="60"
+      >
+        <dt>Endpoint URL</dt>
+        <dd><code>https://gankdat.com/v1/data/uk-insolvency</code></dd>
+        <dt>Query string</dt>
+        <dd>
+          <code>company</code> → <code>/Company Name</code> — use the registered name from column 1
+          (<code>data.0.company</code>), not the trading name
+        </dd>
+        <dt>Field paths</dt>
+        <dd>
+          <code>meta.total</code> (0 = no notice in the window) <code>data.0.company</code>
+          <code>data.0.notice_type</code> <code>data.0.published_at</code>
+          <code>data.0.notice_url</code>
+        </dd>
+        <dt>Rate limiting</dt>
+        <dd>Request limit <code>60</code>, duration <code>60000</code> ms</dd>
+        <dt>Reads</dt>
+        <dd>
+          Corporate insolvency notices (winding-up petitions and orders, administrations,
+          liquidations) as the Gazette publishes them; name match is a case-insensitive substring,
+          so read the hits on a short name. <a href="/stats/uk-insolvency">Register statistics</a>.
+        </dd>
+      </dl>
+
+      <h3 id="lookup-uk-sanctions">4. UK sanctions list (FCDO / OFSI)</h3>
+      <dl
+        class="config"
+        data-source="uk-sanctions"
+        data-params="name"
+        data-fields="name,regime,designation_type,date_designated"
+        data-rate="60"
+      >
+        <dt>Endpoint URL</dt>
+        <dd><code>https://gankdat.com/v1/data/uk-sanctions</code></dd>
+        <dt>Query string</dt>
+        <dd><code>name</code> → <code>/Company Name</code></dd>
+        <dt>Field paths</dt>
+        <dd>
+          <code>meta.total</code> (0 = no designation under that name) <code>data.0.name</code>
+          <code>data.0.regime</code> <code>data.0.designation_type</code>
+          <code>data.0.date_designated</code>
+        </dd>
+        <dt>Rate limiting</dt>
+        <dd>Request limit <code>60</code>, duration <code>60000</code> ms</dd>
+        <dt>Reads</dt>
+        <dd>
+          The UK Sanctions List, refreshed daily. A screening aid for a first pass — a substring
+          match on a common word over-matches and a transliterated alias under-matches — not legal
+          advice and not a substitute for a screening provider where your obligations need one.
+          <a href="/stats/uk-sanctions">Register statistics</a>.
+        </dd>
+      </dl>
+
+      <h3 id="lookup-uk-sponsors">5. Licensed visa sponsor? (Home Office)</h3>
+      <dl
+        class="config"
+        data-source="uk-sponsors"
+        data-params="organisation"
+        data-fields="organisation,town,route,rating"
+        data-rate="60"
+      >
+        <dt>Endpoint URL</dt>
+        <dd><code>https://gankdat.com/v1/data/uk-sponsors</code></dd>
+        <dt>Query string</dt>
+        <dd><code>organisation</code> → <code>/Company Name</code></dd>
+        <dt>Field paths</dt>
+        <dd>
+          <code>meta.total</code> (0 = no licence) <code>data.0.organisation</code>
+          <code>data.0.town</code> <code>data.0.route</code> <code>data.0.rating</code>
+        </dd>
+        <dt>Rate limiting</dt>
+        <dd>Request limit <code>60</code>, duration <code>60000</code> ms</dd>
+        <dt>Reads</dt>
+        <dd>
+          The register of licensed sponsors (Worker and Temporary Worker routes, ~143k rows,
+          refreshed daily). One row per organisation × town × route, so a national employer returns
+          several. <a href="/stats/uk-sponsors">Register statistics</a>.
+        </dd>
+      </dl>
+
+      <h2 id="conditional">Spend nothing on blank rows</h2>
+      <p>
+        Set each column's <strong>conditional run</strong> so it runs only when its input column has
+        a value. A blank input on column 1 answers HTTP 400 and spends no gankdat credit (it still
+        spends a Clay action); on columns 2–5 a blank filter is no filter at all — the call returns
+        the first page of the whole register and spends one credit on nothing. Describe the rule to
+        Clay's formula generator as <em>run only when Company Number is not empty</em>; written by
+        hand it is a formula that returns true when <code>{{Company Number}}</code> is non-empty.
+        Run columns 3–5 only when column 1's <code>status</code> came back (the company exists), so
+        a mistyped number costs one call, not five.
+      </p>
+
+      <h2 id="walkthrough">Walkthrough: qualify a CRM account list against the UK registers</h2>
+      <p class="muted">
+        The shape of a Clay template, written out — every step is a column above plus one Clay
+        formula; copy it into your own table or ask Clay's <em>Generate</em> tab for each column by
+        name. A shared-table template link will be added here once Clay lists the integration.
+      </p>
+      <ol>
+        <li>
+          <strong>Pull in accounts.</strong> Import from HubSpot, Salesforce or a CSV: company name,
+          website, owner, and the Companies House number where you have it. For rows with a name
+          only, add column 1 with <code>company</code> → <code>/Company Name</code> and return
+          <code>data.0.company_number</code> and <code>data.0.company</code>; it is the register's
+          top search hit, so keep both and let a formula flag rows where the returned name is far
+          from the CRM name. Rows that resolve feed every later column from the number.
+        </li>
+        <li>
+          <strong>Company record.</strong> Column 1 by <code>company_number</code>: status,
+          incorporated_on, sic_codes, accounts_overdue, has_charges, has_insolvency_history. A
+          formula turns <code>status</code> into
+          <em>Active / Dissolved / In liquidation / Administration</em> and
+          <code>incorporated_on</code> into company age in years.
+        </li>
+        <li>
+          <strong>Flags.</strong> Columns 3 and 4 by the registered name from step 2:
+          <code>meta.total</code> of insolvency notices and of sanctions designations. Column 2 by
+          number: charity yes/no (a charity is a different buyer — different budget cycle, often a
+          different decision maker).
+        </li>
+        <li>
+          <strong>Signals.</strong> Column 5 by registered name: a sponsor licence means the company
+          hires from abroad (a signal for HR, relocation, payroll and immigration-law sellers, and a
+          compliance fact for everyone else); <code>sic_codes</code> from step 2 segments by
+          industry without a paid firmographic call.
+        </li>
+        <li>
+          <strong>Route or disqualify.</strong> One formula column: <em>Disqualify</em> when status
+          is not active, or sanctions total &gt; 0, or insolvency total &gt; 0; <em>Review</em> when
+          accounts or confirmation statement are overdue or has_insolvency_history is true;
+          otherwise <em>Qualified</em>, with the sponsor and charity flags as tags. Write the
+          verdict, the company number and the Companies House URL (<code>company_url</code>) back to
+          the CRM with an Update action, on whatever schedule you set.
+        </li>
+      </ol>
+
+      <h2 id="cost">What a row costs</h2>
+      <table>
+        <tr>
+          <th>Meter</th>
+          <th>Per row</th>
+          <th>Who bills it</th>
+        </tr>
+        <tr>
+          <td>gankdat credit (one per column that runs)</td>
+          <td>
+            free for the first 250 a month; then £5 per 1,000 (≈ £0.005), larger plans cheaper
+          </td>
+          <td>gankdat, on your key — <a href="/#pricing">plans</a></td>
+        </tr>
+        <tr>
+          <td>Clay action (one per column per row)</td>
+          <td>Clay's own price for an HTTP API run; no Data Credit, because the key is yours</td>
+          <td>Clay</td>
+        </tr>
+      </table>
+      <p class="muted">
+        Five columns over 1,000 accounts is at most 5,000 gankdat credits — one £23 month of the 5k
+        plan, or 250 rows a month free. Every call is metered, a re-run included, so set each column
+        to run once per row and not again on unchanged input.
+      </p>
+
+      <h2 id="errors">Errors and limits</h2>
+      <p>
+        <code>400</code> names the invalid or missing parameter (every valid name is listed in the
+        message); <code>401</code> an unknown or revoked key; <code>402</code> the month's credits
+        spent (top up or upgrade at <a href="/account">/account</a>); <code>429</code> the
+        per-minute limit with a <code>Retry-After</code> header, which Clay honours when you set the
+        rate limiting above; <code>503</code> a busy register, retry in a few seconds. The response
+        envelope on an error is <code>{ "ok": false, "error": { "code", "message" } }</code>, so
+        <code>error.message</code> as a field path shows the cause in the cell.
+      </p>
+
+      <h2 id="agents">For coding agents: the <em>uk-company-register-check</em> Skill</h2>
+      <p>
+        The same checks as a Skill for Claude Code, Codex or Cursor — paste a list of company names
+        or numbers, approve the credits it will spend, get the register digest and a coverage line,
+        and optionally push the rows into a Clay table. The <code>SKILL.md</code> is in gankdat's
+        public repository (<a
+          href="https://github.com/giovf/gankdat/tree/main/skills/uk-company-register-check"
+          >skills/uk-company-register-check</a
+        >), and submitted to Clay's community skills marketplace; once listed there, it installs
+        with <code>npx skills add …</code> like the other GTM Skills.
+      </p>
+
+      <h2 id="data">Data and privacy</h2>
+      <p>
+        Records come from the publishers' own open feeds under their licences (per-dataset table in
+        the <a href="/terms#licences">terms</a>); personal data is dropped at ingest. A column sends
+        gankdat.com only the parameter you map and your key; nothing else in your table is read.
+        Details: <a href="/privacy">privacy policy</a>. Support:
+        <a href="/feedback">gankdat.com/feedback</a>.
+      </p>
+    </main>
+  </body>
+</html>
