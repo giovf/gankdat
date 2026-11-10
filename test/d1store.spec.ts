@@ -1,5 +1,5 @@
 import { env } from 'cloudflare:test';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import {
   BACKFILL_BUDGET_MS,
@@ -1023,6 +1023,133 @@ describe('d1store under the D1 throttle', () => {
     expect(await lastLog('d1-batch-throttled')).toEqual({
       status: 'ok',
       message: 'delta +0 ~1 -0',
+    });
+  });
+
+  // The stats pass (gankdat `stats-precompute-overload-wait`, 2026-11-10): from the 11-05 pacing
+  // fix to 11-10 the parent aggregation of uk-food-hygiene (05:45) and uk-trademark-journal (06:05)
+  // followed the paced delta writes into the same window and logged `stats_precompute_failed …
+  // D1 DB is overloaded` every night, so the blob stayed the carried one.
+  describe('stats pass under the throttle (stats-precompute-overload-wait, 2026-11-10)', () => {
+    const MONTHLY_SQL = 'GROUP BY month';
+    const FACET_SQL = 'FROM source_records, json_each(';
+    const statsSource = (slug: string, facets = false): DataSource => ({
+      ...makeSource(slug),
+      stats: {
+        date: { field: 'listed_on', title: 'Listed by month' },
+        groupBy: [{ field: 'country', title: 'By country' }],
+        ...(facets
+          ? {
+              facets: [
+                {
+                  segment: 'kind',
+                  field: 'classification',
+                  title: 'By kind',
+                  values: [
+                    { value: 'Firm', label: 'Firms' },
+                    { value: 'Individual', label: 'People' },
+                    { value: 'Vessel', label: 'Vessels' },
+                  ],
+                  groupBy: [{ field: 'country', title: 'By country' }],
+                },
+              ],
+            }
+          : {}),
+      },
+    });
+    /** The JSON events the Worker logged while `fn` ran, by event name. */
+    async function logged<T>(fn: () => Promise<T>): Promise<{ result: T; events: string[] }> {
+      const spy = vi.spyOn(console, 'log');
+      try {
+        const result = await fn();
+        const events = spy.mock.calls.flatMap(([line]) => {
+          try {
+            const parsed = JSON.parse(String(line)) as {
+              event?: string;
+              phase?: string;
+              retained?: unknown;
+            };
+            if (!parsed.event) return [];
+            return [
+              [parsed.event, parsed.phase, parsed.retained]
+                .filter((v) => v !== undefined)
+                .join(' '),
+            ];
+          } catch {
+            return [];
+          }
+        });
+        return { result, events };
+      } finally {
+        spy.mockRestore();
+      }
+    }
+
+    it('repeats the parent aggregation after the window and writes a fresh blob', async () => {
+      const source = statsSource('d1-stats-throttled');
+      const flaky = throttled({ match: (sql) => sql.includes(MONTHLY_SQL), fail: 1 });
+      const { result, waits } = await paced(() => logged(() => refreshD1Source(flaky.env, source)));
+      expect(waits).toContain(D1_OVERLOAD_WAIT_MS);
+      expect(flaky.tripped()).toBe(1);
+      expect(result.events).toContain('stats_throttled parent');
+      expect(result.events.some((e) => e.startsWith('stats_precompute_failed'))).toBe(false);
+      const cached = await readSourceStats(env, 'd1-stats-throttled');
+      expect(cached?.stats.total).toBe(RECORDS.length);
+      expect(cached?.stats.monthly?.buckets.length).toBeGreaterThan(0);
+      expect((await lastLog('d1-stats-throttled'))?.status).toBe('ok');
+    });
+
+    it('keeps the carried blob when the window refuses the parent aggregation again', async () => {
+      const source = statsSource('d1-stats-refused');
+      await refreshD1Source(env, source);
+      const first = await readSourceStats(env, 'd1-stats-refused');
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      const flaky = throttled({ match: (sql) => sql.includes(MONTHLY_SQL), fail: 99 });
+      const { result, waits } = await paced(() => logged(() => refreshD1Source(flaky.env, source)));
+      expect(waits).toEqual([D1_OVERLOAD_WAIT_MS]); // one wait, one retry, then the carried blob
+      expect(flaky.tripped()).toBe(2);
+      expect(result.events).toContain('stats_throttled parent');
+      expect(result.events).toContain('stats_precompute_failed true');
+      const cached = await readSourceStats(env, 'd1-stats-refused');
+      expect(cached?.last_refreshed_at).toBe(first?.last_refreshed_at);
+      expect(cached?.stats.total).toBe(RECORDS.length);
+      expect((await lastLog('d1-stats-refused'))?.status).toBe('ok'); // the row is never the stats'
+    });
+
+    it('repeats a throttled facet batch after the window; a batch refused again is carried', async () => {
+      const source = statsSource('d1-facet-throttled', true);
+      const pagesOf = async (): Promise<[string, number, string | undefined][]> =>
+        ((await readSourceStats(env, 'd1-facet-throttled'))?.stats.facets ?? []).flatMap((f) =>
+          f.pages.map((p): [string, number, string | undefined] => [p.value, p.total, p.as_of]),
+        );
+      // Night 1: the batch's first statement is refused once, the batch runs again after the window.
+      const once = throttled({ match: (sql) => sql.includes(FACET_SQL), fail: 1 });
+      const night1 = await paced(() => logged(() => refreshD1Source(once.env, source)));
+      expect(night1.waits).toContain(D1_OVERLOAD_WAIT_MS);
+      expect(once.tripped()).toBe(1);
+      expect(night1.result.events).toContain('stats_throttled facet kind');
+      expect(night1.result.events.some((e) => e.startsWith('stats_facet_failed'))).toBe(false);
+      expect(await pagesOf()).toEqual([
+        ['Firm', 3, undefined],
+        ['Individual', 2, undefined],
+        ['Vessel', 1, undefined],
+      ]);
+      const at1 = (await readSourceStats(env, 'd1-facet-throttled'))!.last_refreshed_at;
+      // Night 2: refused again after the wait — the facet is failed once and its pages carried.
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      const always = throttled({ match: (sql) => sql.includes(FACET_SQL), fail: 99 });
+      const night2 = await paced(() => logged(() => refreshD1Source(always.env, source)));
+      expect(night2.waits).toEqual([D1_OVERLOAD_WAIT_MS]);
+      expect(always.tripped()).toBe(2);
+      expect(night2.result.events.filter((e) => e === 'stats_facet_failed')).toHaveLength(1);
+      expect(night2.result.events.some((e) => e.startsWith('stats_precompute_failed'))).toBe(false);
+      const cached = await readSourceStats(env, 'd1-facet-throttled');
+      expect(cached!.last_refreshed_at > at1).toBe(true);
+      expect(await pagesOf()).toEqual([
+        ['Firm', 3, at1],
+        ['Individual', 2, at1],
+        ['Vessel', 1, at1],
+      ]);
     });
   });
 

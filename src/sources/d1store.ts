@@ -66,6 +66,20 @@ function logThrottledWrite(slug: string): void {
   console.log(JSON.stringify({ level: 'warn', event: 'refresh_write_throttled', source: slug }));
 }
 
+/**
+ * A stats statement the throttle refused; the phase (`parent`, or `facet <segment>`) is repeated
+ * after the window (gankdat `stats-precompute-overload-wait`, 2026-11-10): the stats pass runs
+ * its full-register GROUP BY scans in the seconds after the paced delta writes, and from the
+ * 11-05 pacing fix to 11-10 uk-food-hygiene (05:45) and uk-trademark-journal (06:05) logged
+ * `stats_precompute_failed … D1 DB is overloaded` every night — the ok row landed, the blob
+ * stayed the carried one and no stats page's `dateModified` moved.
+ */
+function logStatsThrottled(slug: string, phase: string, attempt: number): void {
+  console.log(
+    JSON.stringify({ level: 'warn', event: 'stats_throttled', source: slug, phase, attempt }),
+  );
+}
+
 interface SourceMeta {
   generation: number;
   last_refreshed_at: string;
@@ -797,6 +811,10 @@ function carriedFacets(previous: CachedStats | null, facets: StatsFacet[]): Face
  * so a page once computed never disappears while the register is served. The facet pass gets
  * its own progress marker, started after the ok row so the stale-marker rule does not hide it:
  * a wave killed there is the next night's `silent nights:` reading, phase `stats facets`.
+ * The parent aggregation and each facet batch wait D1's throttle window out once and run again
+ * (`withOverloadRetry`, logged `stats_throttled` with the phase; 2026-11-10): the pass follows
+ * the paced delta writes into the same 10-second window, and a refusal used to cost the night's
+ * every page.
  */
 async function precomputeStats(
   env: CloudflareBindings,
@@ -811,7 +829,13 @@ async function precomputeStats(
   let interim = false;
   try {
     const facets = source.stats?.facets;
-    const stats = await aggregateD1Stats(env, source, generation, meta.total);
+    // Reads only, so the whole parent aggregation is repeated once after the throttle window;
+    // a window that still refuses falls through to the carried blob below.
+    const stats = await withOverloadRetry(
+      () => aggregateD1Stats(env, source, generation, meta.total),
+      1,
+      (attempt) => logStatsThrottled(source.slug, 'parent', attempt),
+    );
     if (facets) {
       stats.facets = carriedFacets(previous, facets);
       await putSourceStats(env, source, stats, meta.last_refreshed_at);
@@ -1615,14 +1639,14 @@ async function aggregateFacets(
       const spent = tally.statements;
       try {
         facetsClock.beforeFacet?.(facet.segment);
-        for (const [value, page] of await scanFacetBatch(
-          env,
-          source.slug,
-          generation,
-          facet,
-          batch,
-          tally,
-        )) {
+        // A batch the throttle refuses is run again after the window (reads only); one that
+        // is refused again is the facet's failure below, its values carried.
+        const scanned = await withOverloadRetry(
+          () => scanFacetBatch(env, source.slug, generation, facet, batch, tally),
+          1,
+          (attempt) => logStatsThrottled(source.slug, `facet ${facet.segment}`, attempt),
+        );
+        for (const [value, page] of scanned) {
           pages.set(value, page);
         }
       } catch (facetErr) {
