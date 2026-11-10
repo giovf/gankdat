@@ -18,12 +18,27 @@ import { originFetch } from './origin';
 // endpoints are never called, and registered-office address LINES are
 // dropped at ingest (they can be residential) — locality/region/postcode
 // serve the lead-gen and KYB jobs. Requires COMPANIES_HOUSE_API_KEY
-// (HTTP Basic, key as username; 600 requests / 5 min — refresh uses ~14).
+// (HTTP Basic, key as username; 600 requests / 5 min — a refresh uses at most
+// WINDOW_DAYS × MAX_PAGES_PER_DAY = 35, ~15 on a normal week).
 const ORIGIN_URL = 'https://api.company-information.service.gov.uk/advanced-search/companies';
 const PAGE_SIZE = 1000;
 const WINDOW_DAYS = 7;
-// Snapshot cap, same rationale as the other KV sources.
-const MAX_RECORDS = 2000;
+/**
+ * Snapshot cap — the window, not a page or two of it (gankdat `uk-companies-snapshot-window-cap`,
+ * 2026-11-10): at 2,000 the walk stopped inside the second day (`snapshot_truncated fetched=2357 /
+ * 2774 / 2032` on 11-08..11-10) and the "newest incorporations" snapshot held ~1.2 days of a register
+ * that adds ~2,000–2,800 companies a weekday, so an Apify run asking for the week got a day. Seven
+ * days is ≤ ~14,000 rows (weekends near zero) — ~6 MB of KV at ~400 bytes a record, well under the
+ * 25 MB value limit — and the snapshot's request-path cost is one KV read and one JSON parse.
+ */
+const MAX_RECORDS = 15_000;
+/**
+ * Pages one day may take: 5,000 rows, near double the busiest day seen. It bounds the loop when
+ * the origin returns full pages whose items all fail to parse (schema drift) — without it
+ * `records` never grows and the loop would run to the Worker subrequest cap — and a day past it
+ * is logged `snapshot_day_truncated` rather than silently cut.
+ */
+const MAX_PAGES_PER_DAY = 5;
 
 const rawItemSchema = z.object({
   company_name: z.string(),
@@ -96,16 +111,17 @@ function isoDaysAgo(days: number): string {
 async function fetchFromOrigin(key: string): Promise<UkCompaniesRecord[]> {
   const auth = `Basic ${btoa(`${key}:`)}`;
   const records: UkCompaniesRecord[] = [];
-  // Hard page cap per day: reaching MAX_RECORDS needs only a couple of pages,
-  // and this bounds the loop even if the origin returns full pages whose items
-  // all fail to parse (schema drift) — without it, `records` never grows and
-  // the loop would run to the Worker subrequest cap.
-  const maxPagesPerDay = Math.ceil(MAX_RECORDS / PAGE_SIZE) + 1;
+  // One count per day of the window, newest first — the log line that replaced the nightly
+  // `snapshot_truncated` warning, so the Daily numbers reading shows the register's pace.
+  const days: { date: string; n: number }[] = [];
   for (let day = 0; day < WINDOW_DAYS && records.length < MAX_RECORDS; day += 1) {
     const date = isoDaysAgo(day);
+    let n = 0;
+    let hits: number | null = null;
+    let pageNum = 0;
     for (
-      let startIndex = 0, pageNum = 0;
-      records.length < MAX_RECORDS && pageNum < maxPagesPerDay;
+      let startIndex = 0;
+      records.length < MAX_RECORDS && pageNum < MAX_PAGES_PER_DAY;
       startIndex += PAGE_SIZE, pageNum += 1
     ) {
       const url = `${ORIGIN_URL}?incorporated_from=${date}&incorporated_to=${date}&size=${PAGE_SIZE}&start_index=${startIndex}`;
@@ -115,10 +131,37 @@ async function fetchFromOrigin(key: string): Promise<UkCompaniesRecord[]> {
       if (!res.ok) throw new Error(`company-information.service.gov.uk responded ${res.status}`);
       const page = searchSchema.parse(await res.json());
       const items = page.items ?? [];
-      records.push(...mapItems(items));
+      hits = page.hits ?? null;
+      const mapped = mapItems(items);
+      n += mapped.length;
+      records.push(...mapped);
+      // A short page is the day's last; so is the page that reaches the day's own count.
       if (items.length < PAGE_SIZE) break;
+      if (hits !== null && startIndex + items.length >= hits) break;
+    }
+    days.push({ date, n });
+    if (pageNum >= MAX_PAGES_PER_DAY && hits !== null && hits > pageNum * PAGE_SIZE) {
+      console.log(
+        JSON.stringify({
+          level: 'warn',
+          event: 'snapshot_day_truncated',
+          source: 'uk-companies',
+          date,
+          hits,
+          fetched: n,
+        }),
+      );
     }
   }
+  console.log(
+    JSON.stringify({
+      level: 'info',
+      event: 'snapshot_window',
+      source: 'uk-companies',
+      days: days.map((d) => `${d.date}:${d.n}`).join(','),
+      total: Math.min(records.length, MAX_RECORDS),
+    }),
+  );
   if (records.length >= MAX_RECORDS) {
     console.log(
       JSON.stringify({
@@ -126,6 +169,7 @@ async function fetchFromOrigin(key: string): Promise<UkCompaniesRecord[]> {
         event: 'snapshot_truncated',
         source: 'uk-companies',
         fetched: records.length,
+        cap: MAX_RECORDS,
       }),
     );
   }
