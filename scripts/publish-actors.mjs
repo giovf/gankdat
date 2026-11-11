@@ -6,7 +6,7 @@
 // is hit — so at most MAX_PUBLISH_PER_RUN actors are made public per run, the run stops at the
 // first refusal, and the workflow also runs daily. Needs APIFY_TOKEN and GANKDAT_INTERNAL_API_KEY.
 import { execSync } from 'node:child_process';
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 
 const token = process.env.APIFY_TOKEN;
 const serviceKey = process.env.GANKDAT_INTERNAL_API_KEY;
@@ -65,6 +65,19 @@ for (const dir of changed) {
 }
 // Pricing + publication for every actor on the account.
 const H = { Authorization: `Bearer ${token}`, 'content-type': 'application/json' };
+// Store SEO fields follow the repo's actor.json (2026-11-11, gankdat `trademark-actor-store-keywords`):
+// `seoTitle` / `seoDescription` were set once, at first pricing, from the title and description of
+// that day, and `apify-cli push` never touches them — so a retitled actor kept its old Store
+// keywords. Every actor whose folder is in the repo is synced to its current title (≤ 60) and
+// description (≤ 160) whenever the live values differ.
+const localMeta = new Map(
+  readdirSync(root, { withFileTypes: true })
+    .filter((d) => d.isDirectory() && existsSync(`${root}/${d.name}/.actor/actor.json`))
+    .map((d) => {
+      const a = JSON.parse(readFileSync(`${root}/${d.name}/.actor/actor.json`, 'utf8'));
+      return [a.name, { title: a.title ?? '', description: a.description ?? '' }];
+    }),
+);
 const acts = (
   await (await fetch('https://api.apify.com/v2/acts?my=true&limit=100', { headers: H })).json()
 ).data.items;
@@ -90,6 +103,13 @@ for (const a of acts) {
     body.categories = ['LEAD_GENERATION', 'BUSINESS'];
     body.seoTitle = (g.seoTitle ?? g.title ?? '').slice(0, 60);
     body.seoDescription = (g.seoDescription ?? g.description ?? '').slice(0, 160);
+  }
+  const local = localMeta.get(g.name);
+  if (local) {
+    const seoTitle = local.title.slice(0, 60);
+    const seoDescription = local.description.slice(0, 160);
+    if (seoTitle && seoTitle !== g.seoTitle) body.seoTitle = seoTitle;
+    if (seoDescription && seoDescription !== g.seoDescription) body.seoDescription = seoDescription;
   }
   if (!g.isPublic && !rateLimited && published < MAX_PUBLISH_PER_RUN) body.isPublic = true;
   if (Object.keys(body).length === 0) {

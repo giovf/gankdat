@@ -1,5 +1,5 @@
 {
-  "title": "UK Trade Mark Applications Weekly (IPO Journal Watch) — filters",
+  "title": "UK Trademark Search & Watch — filters",
   "type": "object",
   "schemaVersion": 1,
   "properties": {
@@ -61,7 +61,7 @@
       "type": "string",
       "editor": "textfield",
       "title": "Representative contains",
-      "description": "Trade mark attorney firm name contains."
+      "description": "Trademark attorney (representative) firm name contains."
     },
     "journal_number": {
       "type": "string",
