@@ -97,6 +97,16 @@ export function isOriginUnavailable(err: unknown): err is OriginUnavailableError
   );
 }
 
+/**
+ * The refresh_log status a failed refresh writes: `skipped` when the origin was unavailable
+ * (the day is the origin's, the last snapshot stays served), else `error`. Shared by the Worker's
+ * KV and D1 refresh paths and the runner (refresh-uk-gambling-operators, 2026-11-11: the Worker
+ * paths wrote `error` for every failure, so the typed error only ever reached the runner's row).
+ */
+export function failedRefreshStatus(err: unknown): 'skipped' | 'error' {
+  return isOriginUnavailable(err) ? 'skipped' : 'error';
+}
+
 /** The zero-record error, carrying the pages the current trace saw. */
 export function zeroRecordsError(): Error {
   return new Error(`refresh returned 0 records: ${describeTrace(traces.getStore())}`);

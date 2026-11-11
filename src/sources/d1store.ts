@@ -18,7 +18,7 @@ import {
   statsKey,
   writeRefreshLog,
 } from './cache';
-import { traceOrigin, zeroRecordsError } from './origin';
+import { failedRefreshStatus, traceOrigin, zeroRecordsError } from './origin';
 import { markRefreshProgress } from './progress';
 import { D1_OVERLOAD_WAIT_MS, d1Pace, isD1Overloaded, withOverloadRetry } from './d1pace';
 
@@ -774,7 +774,14 @@ async function refreshD1Delta(
     return meta;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    await writeRefreshLog(env, source.slug, 'error', 0, Date.now() - start, message);
+    await writeRefreshLog(
+      env,
+      source.slug,
+      failedRefreshStatus(err),
+      0,
+      Date.now() - start,
+      message,
+    );
     throw err;
   }
 }
@@ -1008,7 +1015,14 @@ async function refreshD1Full(
     return meta;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    await writeRefreshLog(env, source.slug, 'error', 0, Date.now() - start, message);
+    await writeRefreshLog(
+      env,
+      source.slug,
+      failedRefreshStatus(err),
+      0,
+      Date.now() - start,
+      message,
+    );
     throw err;
   }
 }

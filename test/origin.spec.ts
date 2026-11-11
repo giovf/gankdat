@@ -3,7 +3,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { refreshSource } from '../src/sources/cache';
 import { refreshD1Source } from '../src/sources/d1store';
-import { describeBody, originFetch, traceOrigin, zeroRecordsError } from '../src/sources/origin';
+import {
+  OriginUnavailableError,
+  describeBody,
+  originFetch,
+  traceOrigin,
+  zeroRecordsError,
+} from '../src/sources/origin';
 import type { DataSource } from '../src/sources/types';
 
 // refresh-zero-records-evidence (2026-10-11): a refresh that yields nothing fails with the
@@ -145,6 +151,20 @@ describe('KV store', () => {
     expect(log.status).toBe('error');
     expect(log.message).toContain('keys entities,links,count');
   });
+
+  // refresh-uk-gambling-operators (2026-11-11): the Worker paths wrote `error` for every failure,
+  // so a source throwing OriginUnavailableError only ever got its `skipped` row from the runner.
+  it('refreshSource logs an unavailable origin as skipped, not error', async () => {
+    const src = source('origin-kv-down');
+    src.fetchFresh = (): Promise<Rec[]> =>
+      Promise.reject(new OriginUnavailableError('example.gov.uk', 526, 3));
+    await expect(refreshSource(env, src)).rejects.toThrow(
+      'example.gov.uk responded 526 after 3 reads',
+    );
+    const log = await lastLog('origin-kv-down');
+    expect(log.status).toBe('skipped');
+    expect(log.message).toBe('example.gov.uk responded 526 after 3 reads');
+  });
 });
 
 describe('D1 store', () => {
@@ -168,6 +188,30 @@ describe('D1 store', () => {
     );
     const kept = await env.DB.prepare('SELECT total FROM source_meta WHERE source_slug = ?1')
       .bind('origin-d1')
+      .first<{ total: number }>();
+    expect(kept?.total).toBe(2);
+  });
+
+  it('full and delta refreshes log an unavailable origin as skipped and keep the generation', async () => {
+    const src = source('origin-d1-down', 'd1');
+    const down = (): Promise<Rec[]> =>
+      Promise.reject(new OriginUnavailableError('example.gov.uk', 503, 3));
+    const up = src.fetchFresh;
+    // First load (no previous generation): the full path.
+    src.fetchFresh = down;
+    await expect(refreshD1Source(env, src)).rejects.toThrow('example.gov.uk responded 503');
+    expect((await lastLog('origin-d1-down')).status).toBe('skipped');
+
+    src.fetchFresh = up;
+    stubOrigin(FULL_PAGE);
+    expect((await refreshD1Source(env, src)).total).toBe(2);
+
+    // With an index to compare against: the delta path.
+    src.fetchFresh = down;
+    await expect(refreshD1Source(env, src)).rejects.toThrow('example.gov.uk responded 503');
+    expect((await lastLog('origin-d1-down')).status).toBe('skipped');
+    const kept = await env.DB.prepare('SELECT total FROM source_meta WHERE source_slug = ?1')
+      .bind('origin-d1-down')
       .first<{ total: number }>();
     expect(kept?.total).toBe(2);
   });

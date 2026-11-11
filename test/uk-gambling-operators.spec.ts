@@ -2,10 +2,13 @@ import { env } from 'cloudflare:test';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { SuccessEnvelope } from '../src/lib/envelope';
 import { refreshD1Source } from '../src/sources/d1store';
+import { OriginUnavailableError } from '../src/sources/origin';
+import { cronOfSource, waveOf } from '../src/sources/store';
 import {
   FILE_ORDER,
   REGISTER_FILES,
   isoDate,
+  originRetry,
   ukGamblingOperatorsSource,
 } from '../src/sources/uk-gambling-operators';
 import type { UkGamblingOperatorsRecord } from '../src/sources/uk-gambling-operators';
@@ -317,6 +320,51 @@ describe('GET /v1/data/uk-gambling-operators', () => {
       UkGamblingOperatorsRecord[]
     >;
     expect(body.meta?.total).toBe(10);
+  });
+
+  it('a 5xx on every read is the origin being unavailable: a skipped row, the generation kept', async () => {
+    // 2026-11-10 and 11-11 the 05:15 wave read 526 on the businesses file and wrote an error row
+    // each day (the auto-filer queued it) while a 17:11 read served all five files.
+    serveFiles();
+    await load();
+    vi.unstubAllGlobals();
+
+    const pause = originRetry.pauseMs;
+    originRetry.pauseMs = 0;
+    try {
+      serveFiles({
+        [REGISTER_FILES.businesses]: () => new Response('<html>526</html>', { status: 526 }),
+      });
+      // What prod sees (FIXTURE_FALLBACK "false"): the test env falls back to fixtures.
+      const prod = { ...env, FIXTURE_FALLBACK: 'false' } as CloudflareBindings;
+      const failure = await refreshD1Source(prod, ukGamblingOperatorsSource).then(
+        () => null,
+        (err: unknown) => err,
+      );
+      expect(failure).toBeInstanceOf(OriginUnavailableError);
+      expect((failure as Error).message).toBe(
+        'gamblingcommission.gov.uk responded 526 after 3 reads',
+      );
+      expect(globalThis.fetch).toHaveBeenCalledTimes(3);
+    } finally {
+      originRetry.pauseMs = pause;
+    }
+    const row = await env.DB.prepare(
+      "SELECT status, message FROM refresh_log WHERE source_slug = 'uk-gambling-operators' ORDER BY id DESC LIMIT 1",
+    ).first<{ status: string; message: string }>();
+    expect(row).toEqual({
+      status: 'skipped',
+      message: 'gamblingcommission.gov.uk responded 526 after 3 reads',
+    });
+    const body = (await (await authedFetch(URL_)).json()) as SuccessEnvelope<
+      UkGamblingOperatorsRecord[]
+    >;
+    expect(body.meta?.total).toBe(10);
+  });
+
+  it('reads in wave 6, after the Commission rewrites the files at ~05:30 UTC', () => {
+    expect(waveOf(ukGamblingOperatorsSource)).toBe(6);
+    expect(cronOfSource(ukGamblingOperatorsSource)).toBe('55 5 * * *');
   });
 
   it('falls back to bundled fixtures when the register cannot be read at all', async () => {

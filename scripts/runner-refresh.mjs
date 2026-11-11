@@ -29,7 +29,7 @@ import {
   waveWindowQuery,
 } from '../src/lib/wave-logs.ts';
 import { snapshotWrites, statsKey } from '../src/sources/cache.ts';
-import { isOriginUnavailable } from '../src/sources/origin.ts';
+import { failedRefreshStatus } from '../src/sources/origin.ts';
 import { listSources } from '../src/sources/registry.ts';
 import { cronOfSource, isRunnerFed } from '../src/sources/store.ts';
 
@@ -120,7 +120,7 @@ for (const source of listSources().filter(isRunnerFed)) {
     // refresh-uk-insolvency-2026-10-11) is the origin's day off, not a failed refresh: a
     // `skipped` row keeps the fact without listing the source under `refresh errors` (the last
     // snapshot is served as before; two such days surface through the stale reading).
-    const status = isOriginUnavailable(err) ? 'skipped' : 'error';
+    const status = failedRefreshStatus(err);
     if (status === 'error') failed += 1;
     console.error(`${source.slug}: ${status}: ${message}`);
     await refreshLog(source.slug, status, 0, Date.now() - start, message).catch((e) =>

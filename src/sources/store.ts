@@ -4,6 +4,7 @@ import { readCached, readSnapshot, readSourceStats, refreshSource, writeRefreshL
 import { queryD1Source, refreshD1Source } from './d1store';
 import { D1_OVERLOAD_WAIT_MS } from './d1pace';
 import { isLookup, lookupRecord } from './lookup';
+import { isOriginUnavailable } from './origin';
 import {
   clearRefreshProgress,
   markRefreshProgress,
@@ -232,11 +233,13 @@ export async function refreshOne(
     } catch (err) {
       const retry =
         attempt === 1 && isTransientD1Error(err) && Date.now() - waveStartedAt < RETRY_DEADLINE_MS;
-      // Already recorded in refresh_log; keep the loop alive for other sources.
+      // Already recorded in refresh_log; keep the loop alive for other sources. An origin that
+      // stayed 5xx is the origin's day off (a `skipped` row): a warn line, not the day's error.
+      const skipped = isOriginUnavailable(err);
       console.error(
         JSON.stringify({
-          level: retry ? 'warn' : 'error',
-          event: retry ? 'refresh_retry' : 'refresh_failed',
+          level: retry || skipped ? 'warn' : 'error',
+          event: retry ? 'refresh_retry' : skipped ? 'refresh_skipped' : 'refresh_failed',
           source: source.slug,
           attempt,
           message: err instanceof Error ? err.message : String(err),

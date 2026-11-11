@@ -1,7 +1,7 @@
 import { computeStats } from '../lib/stats';
 import type { SourceStats } from '../lib/stats';
 import type { DataSource } from './types';
-import { traceOrigin, zeroRecordsError } from './origin';
+import { failedRefreshStatus, traceOrigin, zeroRecordsError } from './origin';
 import { markRefreshProgress } from './progress';
 import { withOverloadRetry } from './d1pace';
 
@@ -203,7 +203,14 @@ export async function refreshSource(
     return payload;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    await writeRefreshLog(env, source.slug, 'error', 0, Date.now() - start, message);
+    await writeRefreshLog(
+      env,
+      source.slug,
+      failedRefreshStatus(err),
+      0,
+      Date.now() - start,
+      message,
+    );
     await retainSnapshot(env, source);
     throw err;
   }

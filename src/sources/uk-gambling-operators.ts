@@ -3,7 +3,7 @@ import { csvRows } from './csv';
 import fixtureRecords from './fixtures/uk-gambling-operators.json';
 import type { DataSource } from './types';
 import { byteCapTransform } from './zip';
-import { originFetch } from './origin';
+import { OriginUnavailableError, originFetch } from './origin';
 
 // Gambling Commission licence register — every operating licence held by a
 // gambling business in Great Britain (remote and non-remote betting, casino,
@@ -16,7 +16,15 @@ import { originFetch } from './origin';
 // key, no account.
 //
 // Ingest: five daily CSVs under gamblingcommission.gov.uk/downloads/ (headers
-// recorded 2026-09-24, values double-quoted, blank dates empty). Three record
+// recorded 2026-09-24, values double-quoted, blank dates empty; the businesses
+// file's BOM was gone on 2026-11-11, so it is optional). The Commission rewrites
+// the files at ~05:30 UTC (Last-Modified 05:30:14–05:30:23 on 2026-11-10/11),
+// so the read sits in wave 6 (05:55 UTC) since 2026-11-11 — the 05:15 wave-2
+// read answered 526 on 11-10 and 11-11 while a 17:11 read served all five
+// files (relay gambling-register-2026-11-11), and it read the previous day's
+// files on a good night. A 5xx that outlasts the reads is thrown as
+// OriginUnavailableError so the refresh logs `skipped`, not `error`
+// (refresh-uk-gambling-operators). Three record
 // kinds share one table, told apart by `record_type`:
 //   licence  — one row per licence number (the licences file lists one row per
 //              licence × activity; activities are joined "|"), enriched with the
@@ -39,6 +47,11 @@ const USER_AGENT = 'Mozilla/5.0 (compatible; gankdat.com data refresh)';
 const MAX_BYTES = 32 * 1024 * 1024;
 /** Per-file fetch timeout — these files are small; a hang must not eat the wave. */
 const FETCH_TIMEOUT_MS = 90_000;
+/** Reads of a file answering 5xx before the day is given up: the first plus this many retries. */
+const SERVER_ERROR_RETRIES = 2;
+/** Pause before retry n is n × this (tests set it to 0). */
+export const originRetry = { pauseMs: 15_000 };
+const ORIGIN_HOST = 'gamblingcommission.gov.uk';
 /** Trading names joined onto a licence row are capped so one operator cannot bloat a row. */
 const MAX_TRADING_NAMES = 50;
 
@@ -218,10 +231,15 @@ async function fetchFile(file: keyof typeof REGISTER_FILES): Promise<Response> {
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
   let res = await get();
-  for (let attempt = 1; res.status >= 500 && attempt <= 2; attempt += 1) {
-    await new Promise((r) => setTimeout(r, 15_000 * attempt));
+  let reads = 1;
+  for (let attempt = 1; res.status >= 500 && attempt <= SERVER_ERROR_RETRIES; attempt += 1) {
+    await new Promise((r) => setTimeout(r, originRetry.pauseMs * attempt));
     res = await get();
+    reads += 1;
   }
+  // A 5xx on every read (the 526s of 2026-11-10/11) is the origin's, not the parser's: the typed
+  // error makes the refresh a `skipped` row and the last generation keeps serving.
+  if (res.status >= 500) throw new OriginUnavailableError(ORIGIN_HOST, res.status, reads);
   if (!res.ok || !res.body) {
     throw new Error(`Gambling Commission ${REGISTER_FILES[file]} download failed: ${res.status}`);
   }
@@ -475,7 +493,7 @@ export const ukGamblingOperatorsSource: DataSource<UkGamblingOperatorsRecord> = 
     end_date_after: z.iso.date().optional(),
     end_date_before: z.iso.date().optional(),
   }),
-  refresh: { cron: '15 5 * * *', cacheTtlSeconds: 86_400, wave: 2 },
+  refresh: { cron: '55 5 * * *', cacheTtlSeconds: 86_400, wave: 6 },
   idOf: (r) => r.id,
   fetchStream,
   async fetchFresh(env: CloudflareBindings): Promise<UkGamblingOperatorsRecord[]> {
