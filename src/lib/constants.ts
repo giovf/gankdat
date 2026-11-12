@@ -1,4 +1,4 @@
-export const APP_VERSION = '0.28.7';
+export const APP_VERSION = '0.29.0';
 /** x402 pay-per-call price per request unless X402_PRICE_USD or a source's x402PriceUsd says otherwise. */
 export const X402_DEFAULT_PRICE_USD = '$0.005';
 /** x402 price of a change-feed call (`/x402/changes/<source>`, 2026-11-05): above the query price because a delta is the product no rival sells. */

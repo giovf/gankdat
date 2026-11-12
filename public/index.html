@@ -861,6 +861,22 @@
           </p>
         </div>
         <div class="card">
+          <h3>uk-payment-practices <span>// will this customer pay on time?</span></h3>
+          <p>
+            Every statutory payment practices report filed by a large UK company since 2017 —
+            average days to pay, the share of invoices paid within 30, 31–60 and over 60 days, the
+            share paid late or disputed, standard and maximum terms, and the yes/no policy answers
+            (payment code, e-invoicing, supply-chain finance). Latest report and history by company
+            number; the company lookup carries the latest figures on every record. Daily diff: each
+            new report as it is filed. Narrative answers never ingested.
+          </p>
+          <p class="chips">
+            <code>company_number</code><code>company</code><code>average_days_to_pay_max</code
+            ><code>not_paid_within_terms_pct_min</code><code>period_end_after</code
+            ><code>participates_in_payment_codes</code><code>q</code>
+          </p>
+        </div>
+        <div class="card">
           <h3>nhs-ods <span>// healthcare leads &amp; KYB</span></h3>
           <p>
             Every GP practice, NHS trust and trust site, pharmacy, dental practice and independent
@@ -930,10 +946,10 @@
             Every register diffs itself each morning:
             <code>/v1/changes/…?since=YYYY-MM-DD</code> returns what was added, removed or changed —
             food hygiene, charities, care locations, schools, NHS organisations, sponsors,
-            exclusions, gambling licences and the weekly trade-mark journal — with the dataset's own
-            filters, so <code>?classes=09&amp;q=acme</code> is a watch. 90-day history, MCP tool
-            <code>get_changes</code>; the activity per day is on each
-            <a href="/stats">stats page</a>. Poll the delta, not the register — no other source
+            exclusions, gambling licences, payment practices reports and the weekly trade-mark
+            journal — with the dataset's own filters, so <code>?classes=09&amp;q=acme</code> is a
+            watch. 90-day history, MCP tool <code>get_changes</code>; the activity per day is on
+            each <a href="/stats">stats page</a>. Poll the delta, not the register — no other source
             publishes official-register deltas.
           </p>
         </div>

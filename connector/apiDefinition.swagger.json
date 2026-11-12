@@ -3,7 +3,7 @@
   "info": {
     "title": "gankdat",
     "description": "UK and EU public registers as clean JSON: company lookup and monitoring, tenders and contract awards, sanctions and exclusions, charities, schools, NHS organisations, care locations, trade marks and licences. One schema across every dataset, from official open-data feeds, with a daily change feed on each register. Connect with the key from your gankdat account.",
-    "version": "0.28.7",
+    "version": "0.29.0",
     "contact": {
       "name": "gankdat",
       "url": "https://gankdat.com/feedback",
@@ -4990,7 +4990,7 @@
       "get": {
         "operationId": "query_uk_company_profiles",
         "summary": "UK company lookup (Companies House)",
-        "description": "One UK company by number or name, live from the official Companies House API: profile, status, type, SIC codes, registered-office area, accounts and confirmation-statement dates and overdue flags, charges, the latest filing events and corporate persons with significant control. Blind Mode: officers and individual PSCs are never ingested — filing events carry the category code, not the name. Cached 24 h. One call returns the one record named by the lookup key and costs one credit.",
+        "description": "One UK company by number or name, live from the official Companies House API: profile, status, type, SIC codes, registered-office area, accounts and confirmation-statement dates and overdue flags, charges, the latest filing events, corporate persons with significant control and, for a large company, its latest statutory payment practices report (average days to pay, share paid late). One call returns the one record named by the lookup key and costs one credit.",
         "x-ms-visibility": "important",
         "parameters": [
           {
@@ -5418,6 +5418,104 @@
                         "x-ms-summary": "Corporate controllers",
                         "description": "Corporate controllers."
                       },
+                      "payment_practices": {
+                        "type": "object",
+                        "properties": {
+                          "report_id": {
+                            "type": "integer",
+                            "x-ms-summary": "Report id",
+                            "description": "Report id."
+                          },
+                          "period_start": {
+                            "type": "string",
+                            "x-nullable": true,
+                            "x-ms-summary": "Period start",
+                            "description": "Period start."
+                          },
+                          "period_end": {
+                            "type": "string",
+                            "x-nullable": true,
+                            "x-ms-summary": "Period end",
+                            "description": "Period end."
+                          },
+                          "filed_on": {
+                            "type": "string",
+                            "x-nullable": true,
+                            "x-ms-summary": "Filed on",
+                            "description": "Filed on."
+                          },
+                          "average_days_to_pay": {
+                            "type": "integer",
+                            "x-nullable": true,
+                            "x-ms-summary": "Average days to pay",
+                            "description": "Average days to pay."
+                          },
+                          "paid_within_30_days_pct": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Paid within 30 days pct",
+                            "description": "Paid within 30 days pct."
+                          },
+                          "paid_31_to_60_days_pct": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Paid 31 to 60 days pct",
+                            "description": "Paid 31 to 60 days pct."
+                          },
+                          "paid_after_60_days_pct": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Paid after 60 days pct",
+                            "description": "Paid after 60 days pct."
+                          },
+                          "not_paid_within_terms_pct": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Not paid within terms pct",
+                            "description": "Not paid within terms pct."
+                          },
+                          "disputed_pct": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Disputed pct",
+                            "description": "Disputed pct."
+                          },
+                          "participates_in_payment_codes": {
+                            "type": "boolean",
+                            "x-nullable": true,
+                            "x-ms-summary": "Participates in payment codes",
+                            "description": "Participates in payment codes."
+                          },
+                          "reports": {
+                            "type": "integer",
+                            "x-ms-summary": "Reports",
+                            "description": "Reports."
+                          },
+                          "report_url": {
+                            "type": "string",
+                            "x-ms-summary": "Report url",
+                            "description": "Report url."
+                          }
+                        },
+                        "required": [
+                          "report_id",
+                          "period_start",
+                          "period_end",
+                          "filed_on",
+                          "average_days_to_pay",
+                          "paid_within_30_days_pct",
+                          "paid_31_to_60_days_pct",
+                          "paid_after_60_days_pct",
+                          "not_paid_within_terms_pct",
+                          "disputed_pct",
+                          "participates_in_payment_codes",
+                          "reports",
+                          "report_url"
+                        ],
+                        "x-nullable": true,
+                        "x-ms-summary": "Payment practices",
+                        "description": "Payment practices."
+                      },
                       "company_url": {
                         "type": "string",
                         "x-ms-summary": "Company url",
@@ -5461,7 +5559,423 @@
                       "controllers_ceased",
                       "individual_controllers",
                       "corporate_controllers",
+                      "payment_practices",
                       "company_url"
+                    ]
+                  },
+                  "x-ms-summary": "Data"
+                },
+                "meta": {
+                  "type": "object",
+                  "description": "Page, total and freshness of the data.",
+                  "properties": {
+                    "source": {
+                      "type": "string",
+                      "description": "The dataset slug.",
+                      "x-ms-summary": "Source"
+                    },
+                    "page": {
+                      "type": "integer",
+                      "description": "The page returned.",
+                      "x-ms-summary": "Page"
+                    },
+                    "per_page": {
+                      "type": "integer",
+                      "description": "Records per page.",
+                      "x-ms-summary": "Per page"
+                    },
+                    "total": {
+                      "type": "integer",
+                      "description": "Total matching records across all pages.",
+                      "x-ms-summary": "Total"
+                    },
+                    "last_refreshed_at": {
+                      "type": "string",
+                      "description": "When the dataset was last refreshed (ISO date-time), null before the first refresh.",
+                      "x-nullable": true,
+                      "x-ms-summary": "Last refreshed at"
+                    }
+                  },
+                  "required": ["source", "page", "per_page", "total", "last_refreshed_at"],
+                  "x-ms-summary": "Meta"
+                }
+              },
+              "required": ["ok", "data", "meta"]
+            }
+          }
+        }
+      }
+    },
+    "/v1/data/uk-payment-practices": {
+      "get": {
+        "operationId": "query_uk_payment_practices",
+        "summary": "UK payment practices reports (large companies)",
+        "description": "Records from UK payment practices reports (large companies). One call returns one page of matching records (25 by default, up to 100) with the total count and the last refresh time, and costs the credits the sources listing states.",
+        "x-ms-visibility": "important",
+        "parameters": [
+          {
+            "name": "company_number",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose company number contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Company number"
+          },
+          {
+            "name": "company",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose company contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Company"
+          },
+          {
+            "name": "report_id",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "description": "Only records whose report id contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Report id"
+          },
+          {
+            "name": "period_end_after",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose period end is on or after this date (YYYY-MM-DD).",
+            "x-ms-summary": "Period end after",
+            "format": "date"
+          },
+          {
+            "name": "period_end_before",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose period end is on or before this date (YYYY-MM-DD).",
+            "x-ms-summary": "Period end before",
+            "format": "date"
+          },
+          {
+            "name": "filed_on_after",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose filed on is on or after this date (YYYY-MM-DD).",
+            "x-ms-summary": "Filed on after",
+            "format": "date"
+          },
+          {
+            "name": "filed_on_before",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose filed on is on or before this date (YYYY-MM-DD).",
+            "x-ms-summary": "Filed on before",
+            "format": "date"
+          },
+          {
+            "name": "average_days_to_pay_min",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose average days to pay is at least this number.",
+            "x-ms-summary": "Average days to pay min"
+          },
+          {
+            "name": "average_days_to_pay_max",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose average days to pay is at most this number.",
+            "x-ms-summary": "Average days to pay max"
+          },
+          {
+            "name": "not_paid_within_terms_pct_min",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose not paid within terms pct is at least this number.",
+            "x-ms-summary": "Not paid within terms pct min"
+          },
+          {
+            "name": "not_paid_within_terms_pct_max",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose not paid within terms pct is at most this number.",
+            "x-ms-summary": "Not paid within terms pct max"
+          },
+          {
+            "name": "paid_after_60_days_pct_min",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose paid after 60 days pct is at least this number.",
+            "x-ms-summary": "Paid after 60 days pct min"
+          },
+          {
+            "name": "participates_in_payment_codes",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose participates in payment codes contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Participates in payment codes"
+          },
+          {
+            "name": "e_invoicing_offered",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose e invoicing offered contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "E invoicing offered"
+          },
+          {
+            "name": "supply_chain_financing_offered",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose supply chain financing offered contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Supply chain financing offered"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "description": "Page number, starting at 1.",
+            "x-ms-summary": "Page",
+            "default": 1,
+            "minimum": 1,
+            "maximum": 100000,
+            "x-ms-visibility": "advanced"
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "description": "Records per page, from 1 to 100 (25 by default).",
+            "x-ms-summary": "Per page",
+            "default": 25,
+            "minimum": 1,
+            "maximum": 100,
+            "x-ms-visibility": "advanced"
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Text to search for across every text field of the record (case-insensitive).",
+            "x-ms-summary": "Q",
+            "x-ms-visibility": "advanced"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Matching UK payment practices reports (large companies) records.",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "ok": {
+                  "type": "boolean",
+                  "description": "True when the call succeeded.",
+                  "enum": [true],
+                  "x-ms-summary": "Ok"
+                },
+                "data": {
+                  "type": "array",
+                  "description": "The matching records.",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "report_id": {
+                        "type": "integer",
+                        "x-ms-summary": "Report id",
+                        "description": "Report id."
+                      },
+                      "company_number": {
+                        "type": "string",
+                        "x-ms-summary": "Company number",
+                        "description": "Company number."
+                      },
+                      "company": {
+                        "type": "string",
+                        "x-ms-summary": "Company",
+                        "description": "Company."
+                      },
+                      "period_start": {
+                        "type": "string",
+                        "x-nullable": true,
+                        "x-ms-summary": "Period start",
+                        "description": "Period start."
+                      },
+                      "period_end": {
+                        "type": "string",
+                        "x-nullable": true,
+                        "x-ms-summary": "Period end",
+                        "description": "Period end."
+                      },
+                      "filed_on": {
+                        "type": "string",
+                        "x-nullable": true,
+                        "x-ms-summary": "Filed on",
+                        "description": "Filed on."
+                      },
+                      "average_days_to_pay": {
+                        "type": "integer",
+                        "x-nullable": true,
+                        "x-ms-summary": "Average days to pay",
+                        "description": "Average days to pay."
+                      },
+                      "paid_within_30_days_pct": {
+                        "type": "number",
+                        "x-nullable": true,
+                        "x-ms-summary": "Paid within 30 days pct",
+                        "description": "Paid within 30 days pct."
+                      },
+                      "paid_31_to_60_days_pct": {
+                        "type": "number",
+                        "x-nullable": true,
+                        "x-ms-summary": "Paid 31 to 60 days pct",
+                        "description": "Paid 31 to 60 days pct."
+                      },
+                      "paid_after_60_days_pct": {
+                        "type": "number",
+                        "x-nullable": true,
+                        "x-ms-summary": "Paid after 60 days pct",
+                        "description": "Paid after 60 days pct."
+                      },
+                      "not_paid_within_terms_pct": {
+                        "type": "number",
+                        "x-nullable": true,
+                        "x-ms-summary": "Not paid within terms pct",
+                        "description": "Not paid within terms pct."
+                      },
+                      "disputed_pct": {
+                        "type": "number",
+                        "x-nullable": true,
+                        "x-ms-summary": "Disputed pct",
+                        "description": "Disputed pct."
+                      },
+                      "shortest_standard_terms_days": {
+                        "type": "integer",
+                        "x-nullable": true,
+                        "x-ms-summary": "Shortest standard terms days",
+                        "description": "Shortest standard terms days."
+                      },
+                      "longest_standard_terms_days": {
+                        "type": "integer",
+                        "x-nullable": true,
+                        "x-ms-summary": "Longest standard terms days",
+                        "description": "Longest standard terms days."
+                      },
+                      "max_contractual_days": {
+                        "type": "integer",
+                        "x-nullable": true,
+                        "x-ms-summary": "Max contractual days",
+                        "description": "Max contractual days."
+                      },
+                      "terms_changed": {
+                        "type": "boolean",
+                        "x-nullable": true,
+                        "x-ms-summary": "Terms changed",
+                        "description": "Terms changed."
+                      },
+                      "suppliers_notified": {
+                        "type": "boolean",
+                        "x-nullable": true,
+                        "x-ms-summary": "Suppliers notified",
+                        "description": "Suppliers notified."
+                      },
+                      "qualifying_contracts": {
+                        "type": "boolean",
+                        "x-nullable": true,
+                        "x-ms-summary": "Qualifying contracts",
+                        "description": "Qualifying contracts."
+                      },
+                      "payments_made": {
+                        "type": "boolean",
+                        "x-nullable": true,
+                        "x-ms-summary": "Payments made",
+                        "description": "Payments made."
+                      },
+                      "construction_contracts": {
+                        "type": "boolean",
+                        "x-nullable": true,
+                        "x-ms-summary": "Construction contracts",
+                        "description": "Construction contracts."
+                      },
+                      "construction_retention_clauses": {
+                        "type": "boolean",
+                        "x-nullable": true,
+                        "x-ms-summary": "Construction retention clauses",
+                        "description": "Construction retention clauses."
+                      },
+                      "participates_in_payment_codes": {
+                        "type": "boolean",
+                        "x-nullable": true,
+                        "x-ms-summary": "Participates in payment codes",
+                        "description": "Participates in payment codes."
+                      },
+                      "e_invoicing_offered": {
+                        "type": "boolean",
+                        "x-nullable": true,
+                        "x-ms-summary": "E invoicing offered",
+                        "description": "E invoicing offered."
+                      },
+                      "supply_chain_financing_offered": {
+                        "type": "boolean",
+                        "x-nullable": true,
+                        "x-ms-summary": "Supply chain financing offered",
+                        "description": "Supply chain financing offered."
+                      },
+                      "supplier_list_charges_policy": {
+                        "type": "boolean",
+                        "x-nullable": true,
+                        "x-ms-summary": "Supplier list charges policy",
+                        "description": "Supplier list charges policy."
+                      },
+                      "supplier_list_charges_made": {
+                        "type": "boolean",
+                        "x-nullable": true,
+                        "x-ms-summary": "Supplier list charges made",
+                        "description": "Supplier list charges made."
+                      },
+                      "report_url": {
+                        "type": "string",
+                        "x-ms-summary": "Report url",
+                        "description": "Report url."
+                      }
+                    },
+                    "required": [
+                      "report_id",
+                      "company_number",
+                      "company",
+                      "period_start",
+                      "period_end",
+                      "filed_on",
+                      "average_days_to_pay",
+                      "paid_within_30_days_pct",
+                      "paid_31_to_60_days_pct",
+                      "paid_after_60_days_pct",
+                      "not_paid_within_terms_pct",
+                      "disputed_pct",
+                      "shortest_standard_terms_days",
+                      "longest_standard_terms_days",
+                      "max_contractual_days",
+                      "terms_changed",
+                      "suppliers_notified",
+                      "qualifying_contracts",
+                      "payments_made",
+                      "construction_contracts",
+                      "construction_retention_clauses",
+                      "participates_in_payment_codes",
+                      "e_invoicing_offered",
+                      "supply_chain_financing_offered",
+                      "supplier_list_charges_policy",
+                      "supplier_list_charges_made",
+                      "report_url"
                     ]
                   },
                   "x-ms-summary": "Data"
@@ -8973,6 +9487,463 @@
                           "postcode",
                           "outward_code",
                           "register_url"
+                        ],
+                        "x-ms-summary": "Record"
+                      }
+                    },
+                    "required": ["change", "changed_at", "record_id", "record"]
+                  },
+                  "x-ms-summary": "Data"
+                },
+                "meta": {
+                  "type": "object",
+                  "description": "Page, total and freshness of the data.",
+                  "properties": {
+                    "source": {
+                      "type": "string",
+                      "description": "The dataset slug.",
+                      "x-ms-summary": "Source"
+                    },
+                    "page": {
+                      "type": "integer",
+                      "description": "The page returned.",
+                      "x-ms-summary": "Page"
+                    },
+                    "per_page": {
+                      "type": "integer",
+                      "description": "Records per page.",
+                      "x-ms-summary": "Per page"
+                    },
+                    "total": {
+                      "type": "integer",
+                      "description": "Total matching records across all pages.",
+                      "x-ms-summary": "Total"
+                    },
+                    "last_refreshed_at": {
+                      "type": "string",
+                      "description": "When the dataset was last refreshed (ISO date-time), null before the first refresh.",
+                      "x-nullable": true,
+                      "x-ms-summary": "Last refreshed at"
+                    }
+                  },
+                  "required": ["source", "page", "per_page", "total", "last_refreshed_at"],
+                  "x-ms-summary": "Meta"
+                }
+              },
+              "required": ["ok", "data", "meta"]
+            }
+          }
+        }
+      }
+    },
+    "/v1/changes/uk-payment-practices": {
+      "get": {
+        "operationId": "changes_uk_payment_practices",
+        "summary": "UK payment practices reports (large companies) changes",
+        "description": "Rows added, removed or changed in UK payment practices reports (large companies) between daily refreshes, newest first, with 90 days of history. Poll this instead of re-reading the whole register; the same filters as the query apply to the changed record, so one call is a watch. Costs the same credits as a query.",
+        "x-ms-visibility": "important",
+        "parameters": [
+          {
+            "name": "company_number",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose company number contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Company number"
+          },
+          {
+            "name": "company",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose company contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Company"
+          },
+          {
+            "name": "report_id",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "description": "Only records whose report id contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Report id"
+          },
+          {
+            "name": "period_end_after",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose period end is on or after this date (YYYY-MM-DD).",
+            "x-ms-summary": "Period end after",
+            "format": "date"
+          },
+          {
+            "name": "period_end_before",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose period end is on or before this date (YYYY-MM-DD).",
+            "x-ms-summary": "Period end before",
+            "format": "date"
+          },
+          {
+            "name": "filed_on_after",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose filed on is on or after this date (YYYY-MM-DD).",
+            "x-ms-summary": "Filed on after",
+            "format": "date"
+          },
+          {
+            "name": "filed_on_before",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose filed on is on or before this date (YYYY-MM-DD).",
+            "x-ms-summary": "Filed on before",
+            "format": "date"
+          },
+          {
+            "name": "average_days_to_pay_min",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose average days to pay is at least this number.",
+            "x-ms-summary": "Average days to pay min"
+          },
+          {
+            "name": "average_days_to_pay_max",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose average days to pay is at most this number.",
+            "x-ms-summary": "Average days to pay max"
+          },
+          {
+            "name": "not_paid_within_terms_pct_min",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose not paid within terms pct is at least this number.",
+            "x-ms-summary": "Not paid within terms pct min"
+          },
+          {
+            "name": "not_paid_within_terms_pct_max",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose not paid within terms pct is at most this number.",
+            "x-ms-summary": "Not paid within terms pct max"
+          },
+          {
+            "name": "paid_after_60_days_pct_min",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose paid after 60 days pct is at least this number.",
+            "x-ms-summary": "Paid after 60 days pct min"
+          },
+          {
+            "name": "participates_in_payment_codes",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose participates in payment codes contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Participates in payment codes"
+          },
+          {
+            "name": "e_invoicing_offered",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose e invoicing offered contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "E invoicing offered"
+          },
+          {
+            "name": "supply_chain_financing_offered",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose supply chain financing offered contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Supply chain financing offered"
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Text to search for across every text field of the record (case-insensitive).",
+            "x-ms-summary": "Q",
+            "x-ms-visibility": "advanced"
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only changes observed on or after this date (YYYY-MM-DD). Default: the last 7 days.",
+            "x-ms-summary": "Since",
+            "format": "date"
+          },
+          {
+            "name": "change",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only changes of this kind: added, removed or changed.",
+            "x-ms-summary": "Change",
+            "enum": ["added", "removed", "changed"]
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "description": "Page number, starting at 1.",
+            "x-ms-summary": "Page",
+            "default": 1,
+            "minimum": 1,
+            "maximum": 100000,
+            "x-ms-visibility": "advanced"
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "description": "Records per page, from 1 to 100 (25 by default).",
+            "x-ms-summary": "Per page",
+            "default": 25,
+            "minimum": 1,
+            "maximum": 100,
+            "x-ms-visibility": "advanced"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Changes to UK payment practices reports (large companies).",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "ok": {
+                  "type": "boolean",
+                  "description": "True when the call succeeded.",
+                  "enum": [true],
+                  "x-ms-summary": "Ok"
+                },
+                "data": {
+                  "type": "array",
+                  "description": "The changed rows, newest first.",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "change": {
+                        "type": "string",
+                        "description": "Whether the record was added to, removed from or changed in the register.",
+                        "enum": ["added", "removed", "changed"],
+                        "x-ms-summary": "Change"
+                      },
+                      "changed_at": {
+                        "type": "string",
+                        "description": "When the change was observed (ISO date-time).",
+                        "x-ms-summary": "Changed at"
+                      },
+                      "record_id": {
+                        "type": "string",
+                        "description": "The stable id of the record in this register.",
+                        "x-ms-summary": "Record id"
+                      },
+                      "record": {
+                        "type": "object",
+                        "description": "The record as it reads after the change.",
+                        "properties": {
+                          "report_id": {
+                            "type": "integer",
+                            "x-ms-summary": "Report id",
+                            "description": "Report id."
+                          },
+                          "company_number": {
+                            "type": "string",
+                            "x-ms-summary": "Company number",
+                            "description": "Company number."
+                          },
+                          "company": {
+                            "type": "string",
+                            "x-ms-summary": "Company",
+                            "description": "Company."
+                          },
+                          "period_start": {
+                            "type": "string",
+                            "x-nullable": true,
+                            "x-ms-summary": "Period start",
+                            "description": "Period start."
+                          },
+                          "period_end": {
+                            "type": "string",
+                            "x-nullable": true,
+                            "x-ms-summary": "Period end",
+                            "description": "Period end."
+                          },
+                          "filed_on": {
+                            "type": "string",
+                            "x-nullable": true,
+                            "x-ms-summary": "Filed on",
+                            "description": "Filed on."
+                          },
+                          "average_days_to_pay": {
+                            "type": "integer",
+                            "x-nullable": true,
+                            "x-ms-summary": "Average days to pay",
+                            "description": "Average days to pay."
+                          },
+                          "paid_within_30_days_pct": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Paid within 30 days pct",
+                            "description": "Paid within 30 days pct."
+                          },
+                          "paid_31_to_60_days_pct": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Paid 31 to 60 days pct",
+                            "description": "Paid 31 to 60 days pct."
+                          },
+                          "paid_after_60_days_pct": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Paid after 60 days pct",
+                            "description": "Paid after 60 days pct."
+                          },
+                          "not_paid_within_terms_pct": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Not paid within terms pct",
+                            "description": "Not paid within terms pct."
+                          },
+                          "disputed_pct": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Disputed pct",
+                            "description": "Disputed pct."
+                          },
+                          "shortest_standard_terms_days": {
+                            "type": "integer",
+                            "x-nullable": true,
+                            "x-ms-summary": "Shortest standard terms days",
+                            "description": "Shortest standard terms days."
+                          },
+                          "longest_standard_terms_days": {
+                            "type": "integer",
+                            "x-nullable": true,
+                            "x-ms-summary": "Longest standard terms days",
+                            "description": "Longest standard terms days."
+                          },
+                          "max_contractual_days": {
+                            "type": "integer",
+                            "x-nullable": true,
+                            "x-ms-summary": "Max contractual days",
+                            "description": "Max contractual days."
+                          },
+                          "terms_changed": {
+                            "type": "boolean",
+                            "x-nullable": true,
+                            "x-ms-summary": "Terms changed",
+                            "description": "Terms changed."
+                          },
+                          "suppliers_notified": {
+                            "type": "boolean",
+                            "x-nullable": true,
+                            "x-ms-summary": "Suppliers notified",
+                            "description": "Suppliers notified."
+                          },
+                          "qualifying_contracts": {
+                            "type": "boolean",
+                            "x-nullable": true,
+                            "x-ms-summary": "Qualifying contracts",
+                            "description": "Qualifying contracts."
+                          },
+                          "payments_made": {
+                            "type": "boolean",
+                            "x-nullable": true,
+                            "x-ms-summary": "Payments made",
+                            "description": "Payments made."
+                          },
+                          "construction_contracts": {
+                            "type": "boolean",
+                            "x-nullable": true,
+                            "x-ms-summary": "Construction contracts",
+                            "description": "Construction contracts."
+                          },
+                          "construction_retention_clauses": {
+                            "type": "boolean",
+                            "x-nullable": true,
+                            "x-ms-summary": "Construction retention clauses",
+                            "description": "Construction retention clauses."
+                          },
+                          "participates_in_payment_codes": {
+                            "type": "boolean",
+                            "x-nullable": true,
+                            "x-ms-summary": "Participates in payment codes",
+                            "description": "Participates in payment codes."
+                          },
+                          "e_invoicing_offered": {
+                            "type": "boolean",
+                            "x-nullable": true,
+                            "x-ms-summary": "E invoicing offered",
+                            "description": "E invoicing offered."
+                          },
+                          "supply_chain_financing_offered": {
+                            "type": "boolean",
+                            "x-nullable": true,
+                            "x-ms-summary": "Supply chain financing offered",
+                            "description": "Supply chain financing offered."
+                          },
+                          "supplier_list_charges_policy": {
+                            "type": "boolean",
+                            "x-nullable": true,
+                            "x-ms-summary": "Supplier list charges policy",
+                            "description": "Supplier list charges policy."
+                          },
+                          "supplier_list_charges_made": {
+                            "type": "boolean",
+                            "x-nullable": true,
+                            "x-ms-summary": "Supplier list charges made",
+                            "description": "Supplier list charges made."
+                          },
+                          "report_url": {
+                            "type": "string",
+                            "x-ms-summary": "Report url",
+                            "description": "Report url."
+                          }
+                        },
+                        "required": [
+                          "report_id",
+                          "company_number",
+                          "company",
+                          "period_start",
+                          "period_end",
+                          "filed_on",
+                          "average_days_to_pay",
+                          "paid_within_30_days_pct",
+                          "paid_31_to_60_days_pct",
+                          "paid_after_60_days_pct",
+                          "not_paid_within_terms_pct",
+                          "disputed_pct",
+                          "shortest_standard_terms_days",
+                          "longest_standard_terms_days",
+                          "max_contractual_days",
+                          "terms_changed",
+                          "suppliers_notified",
+                          "qualifying_contracts",
+                          "payments_made",
+                          "construction_contracts",
+                          "construction_retention_clauses",
+                          "participates_in_payment_codes",
+                          "e_invoicing_offered",
+                          "supply_chain_financing_offered",
+                          "supplier_list_charges_policy",
+                          "supplier_list_charges_made",
+                          "report_url"
                         ],
                         "x-ms-summary": "Record"
                       }

@@ -1,0 +1,13 @@
+{
+  "name": "gankdat-apify-uk-payment-practices",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Apify actor: UK payment practices reports (large companies, days to pay, paid late) via gankdat.com",
+  "scripts": {
+    "start": "node src/main.mjs"
+  },
+  "dependencies": {
+    "apify": "^3.4.0"
+  }
+}

@@ -37,6 +37,7 @@ describe('registry', () => {
       'uk-trademark-journal',
       'uk-gambling-operators',
       'uk-company-profiles',
+      'uk-payment-practices',
     ]);
   });
 });

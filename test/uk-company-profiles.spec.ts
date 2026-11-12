@@ -1,4 +1,4 @@
-import { SELF } from 'cloudflare:test';
+import { SELF, env } from 'cloudflare:test';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ErrorEnvelope, SuccessEnvelope } from '../src/lib/envelope';
 import fixture from '../src/sources/fixtures/uk-company-profiles.json';
@@ -9,6 +9,9 @@ import {
 } from '../src/sources/uk-company-profiles';
 import { authedFetch, bearer, issueKey } from './helpers/auth';
 import { stubOrigins } from './helpers/origin-mock';
+import { refreshD1Source } from '../src/sources/d1store';
+import { ukPaymentPracticesSource } from '../src/sources/uk-payment-practices';
+import { CSV as PAYMENT_CSV, chunked } from './uk-payment-practices.spec';
 
 const LOOKUP_URL = 'https://example.com/v1/data/uk-company-profiles';
 const MCP_URL = 'https://example.com/mcp';
@@ -319,5 +322,27 @@ describe('GET /v1/data/uk-company-profiles (lookup)', () => {
     expect(payload.data.map((r) => r.company)).toEqual(['EXAMPLE WIDGETS LIMITED']);
     expect(payload.meta.total).toBe(1);
     expect(payload.meta.credits_remaining).toBeDefined();
+  });
+});
+
+describe('payment_practices on the lookup (join on the company number)', () => {
+  it('is null before the register loads, then the latest report of the company', async () => {
+    stubOrigins({ companyApi: companyApi() });
+    const before = (await lookup('company_number=12345678')).data[0];
+    expect(before?.payment_practices).toBeNull();
+
+    stubOrigins({ companyApi: companyApi(), paymentPractices: () => chunked(PAYMENT_CSV) });
+    await refreshD1Source(env, ukPaymentPracticesSource);
+    await env.CACHE.delete('lookup:uk-company-profiles:company_number=12345678');
+    const after = (await lookup('company_number=12345678')).data[0];
+    expect(after?.payment_practices).toMatchObject({
+      report_id: 118366,
+      period_end: '2026-09-30',
+      not_paid_within_terms_pct: 18,
+      reports: 2,
+    });
+    // The dissolved fixture company has never reported.
+    const other = (await lookup(`company_number=${dissolved.profile.company_number}`)).data[0];
+    expect(other?.payment_practices).toBeNull();
   });
 });

@@ -21,6 +21,7 @@ const GIAS_ORIGIN = 'https://ea-edubase-api-prod.azurewebsites.net/edubase/downl
 const ODS_ORIGIN = 'https://www.odsdatasearchandexport.nhs.uk/api/getReport?report=';
 const TMJ_ORIGIN = 'https://www.ipo.gov.uk/t-tmj/tm-journals/';
 const GC_ORIGIN = 'https://www.gamblingcommission.gov.uk/downloads/';
+const PP_ORIGIN = 'https://check-payment-practices.service.gov.uk/export/csv/';
 
 /**
  * Tests run in the same isolate as the worker under test, so stubbing the
@@ -54,6 +55,8 @@ export function stubOrigins(handlers: {
   ipoJournal?: (url: string) => Response;
   /** Called with the register file URL (…/downloads/<file>.csv) so a test can serve one file per record kind. */
   gamblingCommission?: (url: string) => Response;
+  /** The payment practices export (one generated CSV). */
+  paymentPractices?: () => Response;
 }): ReturnType<typeof vi.fn> {
   const mock = vi.fn((input: RequestInfo | URL) => {
     const url = String(input instanceof Request ? input.url : input);
@@ -119,6 +122,9 @@ export function stubOrigins(handlers: {
     }
     if (url.startsWith(GC_ORIGIN) && handlers.gamblingCommission) {
       return Promise.resolve(handlers.gamblingCommission(url));
+    }
+    if (url.startsWith(PP_ORIGIN) && handlers.paymentPractices) {
+      return Promise.resolve(handlers.paymentPractices());
     }
     throw new Error(`unexpected outbound fetch in test: ${url}`);
   });

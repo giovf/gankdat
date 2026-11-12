@@ -1,0 +1,114 @@
+{
+  "title": "UK Payment Practices Reports (Large Companies, Days to Pay) \u2014 filters",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "mode": {
+      "title": "Mode",
+      "type": "string",
+      "description": "Current reports (default), or only the reports added, removed or changed since a date \u2014 schedule a daily run in changes mode to see each new report as it is filed and pay only for what changed.",
+      "editor": "select",
+      "enum": ["data", "changes"],
+      "enumTitles": ["Current reports", "Changes since a date (monitor)"],
+      "default": "data"
+    },
+    "since": {
+      "title": "Changes since",
+      "type": "string",
+      "description": "Changes mode only: YYYY-MM-DD. Default: the last 7 days. The feed keeps 90 days.",
+      "editor": "textfield",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "change": {
+      "title": "Change type",
+      "type": "string",
+      "description": "Changes mode only: one kind of change. Default: all three.",
+      "editor": "select",
+      "enum": ["added", "removed", "changed"],
+      "enumTitles": ["Added to the register", "Removed from the register", "Changed"]
+    },
+    "company_number": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Company number",
+      "description": "Companies House number as the register writes it, e.g. 00519500 or SC123456 \u2014 every report the company has filed."
+    },
+    "company": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Company name contains",
+      "description": "Registered company name (case-insensitive substring)."
+    },
+    "period_end_after": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Reporting period ended on or after",
+      "description": "Only reports for periods ending on or after this date (YYYY-MM-DD)",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "filed_on_after": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Filed on or after",
+      "description": "Only reports published on or after this date (YYYY-MM-DD)",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "average_days_to_pay_max": {
+      "type": "integer",
+      "editor": "number",
+      "title": "Average days to pay at most",
+      "description": "Prompt payers: reports whose average time to pay is at most this many days."
+    },
+    "average_days_to_pay_min": {
+      "type": "integer",
+      "editor": "number",
+      "title": "Average days to pay at least",
+      "description": "Slow payers: reports whose average time to pay is at least this many days."
+    },
+    "not_paid_within_terms_pct_min": {
+      "type": "integer",
+      "editor": "number",
+      "title": "Paid late: at least this % of invoices",
+      "description": "Reports where at least this share of invoices was not paid within the agreed terms."
+    },
+    "paid_after_60_days_pct_min": {
+      "type": "integer",
+      "editor": "number",
+      "title": "Paid after 60 days: at least this %",
+      "description": "Reports where at least this share of invoices took more than 60 days to pay."
+    },
+    "participates_in_payment_codes": {
+      "type": "boolean",
+      "editor": "checkbox",
+      "title": "Payment code signatories only",
+      "description": "Tick for reports that declare membership of a payment code (Prompt Payment Code / Fair Payment Code)."
+    },
+    "e_invoicing_offered": {
+      "type": "boolean",
+      "editor": "checkbox",
+      "title": "Offers e-invoicing",
+      "description": "Tick for reports that declare electronic invoicing is offered to suppliers."
+    },
+    "supply_chain_financing_offered": {
+      "type": "boolean",
+      "editor": "checkbox",
+      "title": "Offers supply-chain finance",
+      "description": "Tick for reports that declare supply-chain financing is offered to suppliers."
+    },
+    "q": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Free-text search",
+      "description": "Filter: Free-text search (case-insensitive substring match)."
+    },
+    "max_results": {
+      "title": "Maximum results",
+      "type": "integer",
+      "description": "Stop after this many reports (you are charged per result).",
+      "default": 1000,
+      "minimum": 1,
+      "maximum": 100000
+    }
+  },
+  "required": []
+}

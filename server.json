@@ -2,8 +2,8 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "com.gankdat/gankdat",
   "title": "gankdat",
-  "description": "UK company lookup & monitor, UK/EU tenders, awards, planning, charities, schools, NHS, trade marks.",
-  "version": "0.28.7",
+  "description": "UK company lookup & payment practices, UK/EU tenders, awards, planning, charities, NHS, trade marks.",
+  "version": "0.29.0",
   "websiteUrl": "https://gankdat.com",
   "icons": [
     {

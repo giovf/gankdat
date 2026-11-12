@@ -1,0 +1,20 @@
+{
+  "actorSpecification": 1,
+  "name": "uk-payment-practices-reports",
+  "title": "UK Payment Practices Reports (Large Companies, Days to Pay)",
+  "description": "Every statutory payment practices report filed by large UK companies since 2017, from the official GOV.UK register: average days to pay, share of invoices paid within 30/60 days, paid late or disputed, standard terms and payment-code membership, by company number. Latest and history, daily.",
+  "version": "0.1",
+  "buildTag": "latest",
+  "dockerfile": "../Dockerfile",
+  "readme": "./README.md",
+  "input": "./input_schema.json",
+  "environmentVariables": {
+    "GANKDAT_API_KEY": "@gankdatApiKey"
+  },
+  "minMemoryMbytes": 256,
+  "maxMemoryMbytes": 512,
+  "output": "./output_schema.json",
+  "storages": {
+    "dataset": "./dataset_schema.json"
+  }
+}

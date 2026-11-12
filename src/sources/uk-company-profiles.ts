@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import fixture from './fixtures/uk-company-profiles.json';
 import type { DataSource } from './types';
+import { latestPaymentPractices, paymentPracticesSummarySchema } from './uk-payment-practices';
 
 // Companies House — company lookup + monitor (exchange 2026-W41 winner, built
 // 2026-10-07). The register is 5.4M companies, so this is the platform's first
@@ -22,7 +23,10 @@ import type { DataSource } from './types';
 // (e.g. `appoint-person-director-company-with-name`), never the
 // description_values that carry the officer's name; charge entries drop
 // persons_entitled; registered-office address lines are dropped as in
-// uk-companies. Requires COMPANIES_HOUSE_API_KEY (HTTP Basic, key as username;
+// uk-companies. `payment_practices` (2026-11-12, `uk-payment-practices`): the
+// company's latest statutory payment practices report, joined on the number from
+// the register gankdat mirrors (one D1 read at lookup time; null for a company
+// that has never reported, or before the register's first load). Requires COMPANIES_HOUSE_API_KEY (HTTP Basic, key as username;
 // 600 requests / 5 min shared with uk-companies — the per-source rate limit
 // below keeps a full-speed client under a quarter of that).
 const API_URL = 'https://api.company-information.service.gov.uk';
@@ -215,6 +219,8 @@ export const ukCompanyProfilesRecordSchema = z.object({
   controllers_ceased: z.number(),
   individual_controllers: z.number(),
   corporate_controllers: z.array(controllerSchema),
+  /** Latest payment practices report (large companies only); null when the company has never reported. */
+  payment_practices: paymentPracticesSummarySchema.nullable(),
   company_url: z.string(),
 });
 
@@ -305,6 +311,7 @@ function normalize(raw: RawCompany): UkCompanyProfilesRecord {
       notified_on: c.notified_on ?? null,
       ceased_on: c.ceased_on ?? null,
     })),
+    payment_practices: null,
     company_url: `https://find-and-update.company-information.service.gov.uk/company/${p.company_number}`,
   };
 }
@@ -384,6 +391,15 @@ async function fetchFromOrigin(
   return normalize({ profile, charges, filing_history, pscs });
 }
 
+/** The record with its payment practices join; the join never fails the lookup. */
+async function withPaymentPractices(
+  env: CloudflareBindings,
+  record: UkCompanyProfilesRecord | null,
+): Promise<UkCompanyProfilesRecord | null> {
+  if (!record) return null;
+  return { ...record, payment_practices: await latestPaymentPractices(env, record.company_number) };
+}
+
 const fixtureSchema = z.object({
   companies: z.array(
     z.object({
@@ -420,7 +436,7 @@ export const ukCompanyProfilesSource: DataSource<UkCompanyProfilesRecord> = {
   slug: 'uk-company-profiles',
   title: 'UK company lookup (Companies House)',
   description:
-    'One UK company by number or name, live from the official Companies House API: profile, status, type, SIC codes, registered-office area, accounts and confirmation-statement dates and overdue flags, charges, the latest filing events and corporate persons with significant control. Blind Mode: officers and individual PSCs are never ingested — filing events carry the category code, not the name. Cached 24 h.',
+    'One UK company by number or name, live from the official Companies House API: profile, status, type, SIC codes, registered-office area, accounts and confirmation-statement dates and overdue flags, charges, the latest filing events, corporate persons with significant control and, for a large company, its latest statutory payment practices report (average days to pay, share paid late). Blind Mode: officers and individual PSCs are never ingested — filing events carry the category code, not the name. Cached 24 h.',
   recordSchema: ukCompanyProfilesRecordSchema,
   queryParams: z.object({
     company_number: z.string().trim().min(1).max(12).optional(),
@@ -434,7 +450,7 @@ export const ukCompanyProfilesSource: DataSource<UkCompanyProfilesRecord> = {
       try {
         const key = String(env.COMPANIES_HOUSE_API_KEY ?? '');
         if (key === '') throw new Error('COMPANIES_HOUSE_API_KEY not configured');
-        return await fetchFromOrigin(key, params);
+        return await withPaymentPractices(env, await fetchFromOrigin(key, params));
       } catch (err) {
         if (String(env.FIXTURE_FALLBACK) === 'true') {
           console.log(
@@ -445,7 +461,7 @@ export const ukCompanyProfilesSource: DataSource<UkCompanyProfilesRecord> = {
               reason: err instanceof Error ? err.message : String(err),
             }),
           );
-          return fixtureFor(params);
+          return withPaymentPractices(env, fixtureFor(params));
         }
         throw err;
       }

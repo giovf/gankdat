@@ -29,6 +29,7 @@ Every dataset has one query action; every register dataset also has a change-fee
 | UK trade mark applications published for opposition (Trade Marks Journal) | `query_uk_trademark_journal` | `changes_uk_trademark_journal` |
 | Licensed gambling operators in Great Britain (Gambling Commission register) | `query_uk_gambling_operators` | `changes_uk_gambling_operators` |
 | UK company lookup (Companies House) | `query_uk_company_profiles` | — |
+| UK payment practices reports (large companies) | `query_uk_payment_practices` | `changes_uk_payment_practices` |
 
 ### UK planning applications
 uk feed, normalized to one schema. Blind Mode: no applicant personal data. One call returns one page of matching records (25 by default, up to 100) with the total count and the last refresh time, and costs the credits the sources listing states.
@@ -79,7 +80,10 @@ Records from UK trade mark applications published for opposition (Trade Marks Jo
 Records from Licensed gambling operators in Great Britain (Gambling Commission register). One call returns one page of matching records (25 by default, up to 100) with the total count and the last refresh time, and costs the credits the sources listing states.
 
 ### UK company lookup (Companies House)
-One UK company by number or name, live from the official Companies House API: profile, status, type, SIC codes, registered-office area, accounts and confirmation-statement dates and overdue flags, charges, the latest filing events and corporate persons with significant control. Blind Mode: officers and individual PSCs are never ingested — filing events carry the category code, not the name. Cached 24 h. One call returns the one record named by the lookup key and costs one credit.
+One UK company by number or name, live from the official Companies House API: profile, status, type, SIC codes, registered-office area, accounts and confirmation-statement dates and overdue flags, charges, the latest filing events, corporate persons with significant control and, for a large company, its latest statutory payment practices report (average days to pay, share paid late). One call returns the one record named by the lookup key and costs one credit.
+
+### UK payment practices reports (large companies)
+Records from UK payment practices reports (large companies). One call returns one page of matching records (25 by default, up to 100) with the total count and the last refresh time, and costs the credits the sources listing states.
 
 ### US federal exclusions (SAM gov) changes
 Rows added, removed or changed in US federal exclusions (SAM.gov) between daily refreshes, newest first, with 90 days of history. Poll this instead of re-reading the whole register; the same filters as the query apply to the changed record, so one call is a watch. Costs the same credits as a query.
@@ -107,6 +111,9 @@ Rows added, removed or changed in UK trade mark applications published for oppos
 
 ### Licensed gambling operators in Great Britain (Gambling Commission register)
 Rows added, removed or changed in Licensed gambling operators in Great Britain (Gambling Commission register) between daily refreshes, newest first, with 90 days of history. Poll this instead of re-reading the whole register; the same filters as the query apply to the changed record, so one call is a watch. Costs the same credits as a query.
+
+### UK payment practices reports (large companies) changes
+Rows added, removed or changed in UK payment practices reports (large companies) between daily refreshes, newest first, with 90 days of history. Poll this instead of re-reading the whole register; the same filters as the query apply to the changed record, so one call is a watch. Costs the same credits as a query.
 
 ### List datasets
 Lists every dataset with its filters, refresh schedule, credit cost per call and whether it carries a change feed.

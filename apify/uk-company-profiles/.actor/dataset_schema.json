@@ -126,6 +126,9 @@
           "type": "object"
         }
       },
+      "payment_practices": {
+        "type": ["object", "null"]
+      },
       "company_url": {
         "type": ["string", "null"]
       },

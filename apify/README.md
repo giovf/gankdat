@@ -55,6 +55,7 @@ the origin republishes (the weekly re-read item restores the source).
 | `nhs-ods` | pushed by CI on the 2026-09-22 commit | https://console.apify.com/actors |
 | `uk-trademark-journal` | pushed by CI on the 2026-09-23 commit | https://console.apify.com/actors |
 | `uk-gambling-operators` | pushed by CI on the 2026-09-24 commit | https://console.apify.com/actors |
+| `uk-payment-practices` | pushed by CI on the 2026-11-12 commit | https://console.apify.com/actors |
 | `uk-no-website-leads` | pushed by CI on the 2026-09-21 commit (merged feed: care + charities + schools with `website_present=false`) | https://console.apify.com/actors |
 | `uk-company-profiles` | pushed by CI on the 2026-10-07 commit (`uk-companies-house-lookup-monitor`: lookup + monitor over the buyer's list) | https://console.apify.com/actors |
 
