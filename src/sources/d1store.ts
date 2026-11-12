@@ -818,10 +818,11 @@ function carriedFacets(previous: CachedStats | null, facets: StatsFacet[]): Face
  * so a page once computed never disappears while the register is served. The facet pass gets
  * its own progress marker, started after the ok row so the stale-marker rule does not hide it:
  * a wave killed there is the next night's `silent nights:` reading, phase `stats facets`.
- * The parent aggregation and each facet batch wait D1's throttle window out once and run again
+ * Each parent scan and each facet batch wait D1's throttle window out once and run again
  * (`withOverloadRetry`, logged `stats_throttled` with the phase; 2026-11-10): the pass follows
  * the paced delta writes into the same 10-second window, and a refusal used to cost the night's
- * every page.
+ * every page. The parent's scans are paced and retried one at a time, a refused one carried
+ * (`aggregateD1Stats`, 2026-11-12): retried as one unit they tripped the window again.
  */
 async function precomputeStats(
   env: CloudflareBindings,
@@ -836,13 +837,9 @@ async function precomputeStats(
   let interim = false;
   try {
     const facets = source.stats?.facets;
-    // Reads only, so the whole parent aggregation is repeated once after the throttle window;
-    // a window that still refuses falls through to the carried blob below.
-    const stats = await withOverloadRetry(
-      () => aggregateD1Stats(env, source, generation, meta.total),
-      1,
-      (attempt) => logStatsThrottled(source.slug, 'parent', attempt),
-    );
+    // Statement by statement: each parent scan waits the window out once on its own, paced like
+    // the delta index, and a scan refused twice carries its previous value (never the whole blob).
+    const stats = await aggregateD1Stats(env, source, generation, meta.total, previous);
     if (facets) {
       stats.facets = carriedFacets(previous, facets);
       await putSourceStats(env, source, stats, meta.last_refreshed_at);
@@ -1734,19 +1731,77 @@ async function aggregateFacets(
   return facets.map((facet) => done.get(facet.segment)!);
 }
 
+/**
+ * A parent scan the window refused twice: its previous value is carried (the blob is still
+ * written fresh around it) and the night names the phase (gankdat
+ * `stats-parent-scans-paced-per-statement`, 2026-11-12: the first night of the whole-parent
+ * retry logged `stats_throttled phase=parent attempt=1` and failed 21 s later on both sources —
+ * the change-day, monthly and per-column scans of a 196k–600k-row register, repeated as one
+ * unit, never fit one 10-second window together).
+ */
+function logStatsPartCarried(slug: string, phase: string, carried: boolean): void {
+  console.log(
+    JSON.stringify({ level: 'warn', event: 'stats_part_carried', source: slug, phase, carried }),
+  );
+}
+
+/**
+ * The parent aggregation, one full-register scan at a time: each statement runs under its own
+ * `withOverloadRetry` (one 12 s wait, logged `stats_throttled` with the phase — `changes`,
+ * `monthly`, `group <title>`), the statements are `d1Pace.indexPauseMs` apart on a register of
+ * `d1Pace.statsPaceRows` or more so the pass stays under the window like the delta index, and a
+ * statement refused again falls back to the
+ * previous blob's value for that part (`stats_part_carried`), so one hot scan costs a table,
+ * not the night's every page.
+ */
 async function aggregateD1Stats(
   env: CloudflareBindings,
   source: DataSource,
   generation: number,
   total: number,
+  previous: CachedStats | null,
 ): Promise<SourceStats> {
   const spec: StatsSpec | undefined = source.stats;
   const stats: SourceStats = { total, monthly: null, groups: [] };
-  if (source.idOf) stats.changes = await aggregateChangeDays(env, source.slug);
+  let first = true;
+  const scan = async <T>(phase: string, fn: () => Promise<T>, carried: () => T | undefined) => {
+    if (!first && total >= d1Pace.statsPaceRows) await d1Pace.sleep(d1Pace.indexPauseMs);
+    first = false;
+    try {
+      return await withOverloadRetry(fn, 1, (attempt) =>
+        logStatsThrottled(source.slug, phase, attempt),
+      );
+    } catch (err) {
+      if (!isD1Overloaded(err)) throw err;
+      const value = carried();
+      logStatsPartCarried(source.slug, phase, value !== undefined);
+      return value;
+    }
+  };
+  if (source.idOf) {
+    stats.changes =
+      (await scan(
+        'changes',
+        () => aggregateChangeDays(env, source.slug),
+        () => previous?.stats.changes,
+      )) ?? [];
+  }
   if (!spec) return stats;
   const where = buildWhere(source.slug, generation, {});
-  stats.monthly = await aggregateMonthly(env, where, spec.date);
-  stats.groups = await aggregateGroups(env, where, spec.groupBy);
+  stats.monthly =
+    (await scan(
+      'monthly',
+      () => aggregateMonthly(env, where, spec.date),
+      () => previous?.stats.monthly,
+    )) ?? null;
+  for (const group of spec.groupBy) {
+    const rows = await scan(
+      `group ${group.title}`,
+      () => aggregateGroups(env, where, [group]),
+      () => previous?.stats.groups.filter((g) => g.title === group.title),
+    );
+    if (rows) stats.groups.push(...rows);
+  }
   // Facets are precomputeStats's second step (after the parent blob is written).
   return stats;
 }

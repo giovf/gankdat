@@ -1091,29 +1091,51 @@ describe('d1store under the D1 throttle', () => {
       const { result, waits } = await paced(() => logged(() => refreshD1Source(flaky.env, source)));
       expect(waits).toContain(D1_OVERLOAD_WAIT_MS);
       expect(flaky.tripped()).toBe(1);
-      expect(result.events).toContain('stats_throttled parent');
+      expect(result.events).toContain('stats_throttled monthly');
       expect(result.events.some((e) => e.startsWith('stats_precompute_failed'))).toBe(false);
+      expect(result.events.some((e) => e.startsWith('stats_part_carried'))).toBe(false);
       const cached = await readSourceStats(env, 'd1-stats-throttled');
       expect(cached?.stats.total).toBe(RECORDS.length);
       expect(cached?.stats.monthly?.buckets.length).toBeGreaterThan(0);
       expect((await lastLog('d1-stats-throttled'))?.status).toBe('ok');
     });
 
-    it('keeps the carried blob when the window refuses the parent aggregation again', async () => {
+    // 2026-11-12 (`stats-parent-scans-paced-per-statement`): the parent's scans run one at a
+    // time, a pause apart, each with its own retry; a scan refused twice carries its previous
+    // value and the blob is still written fresh around it — the night loses a table, not every page.
+    it('carries one refused parent scan and writes the rest of the blob fresh', async () => {
       const source = statsSource('d1-stats-refused');
       await refreshD1Source(env, source);
       const first = await readSourceStats(env, 'd1-stats-refused');
-      await new Promise((resolve) => setTimeout(resolve, 5));
+      await new Promise((resolve) => setTimeout(resolve, 1_100)); // last_refreshed_at is second precision
       const flaky = throttled({ match: (sql) => sql.includes(MONTHLY_SQL), fail: 99 });
-      const { result, waits } = await paced(() => logged(() => refreshD1Source(flaky.env, source)));
-      expect(waits).toEqual([D1_OVERLOAD_WAIT_MS]); // one wait, one retry, then the carried blob
+      const { result, waits } = await paced(() => {
+        d1Pace.statsPaceRows = 1; // a 6-row fixture counts as a big register tonight (paced() restores it)
+        return logged(() => refreshD1Source(flaky.env, source));
+      });
+      expect(waits.filter((w) => w === D1_OVERLOAD_WAIT_MS)).toEqual([D1_OVERLOAD_WAIT_MS]); // one wait, one retry
+      expect(waits).toContain(d1Pace.indexPauseMs); // the group scan waited its pause after the monthly one
       expect(flaky.tripped()).toBe(2);
-      expect(result.events).toContain('stats_throttled parent');
-      expect(result.events).toContain('stats_precompute_failed true');
+      expect(result.events).toContain('stats_throttled monthly');
+      expect(result.events).toContain('stats_part_carried monthly');
+      expect(result.events.some((e) => e.startsWith('stats_precompute_failed'))).toBe(false);
       const cached = await readSourceStats(env, 'd1-stats-refused');
-      expect(cached?.last_refreshed_at).toBe(first?.last_refreshed_at);
+      expect(cached?.last_refreshed_at).not.toBe(first?.last_refreshed_at); // a fresh blob
+      expect(cached?.stats.monthly).toEqual(first?.stats.monthly); // with the carried table
+      expect(cached?.stats.groups.length).toBeGreaterThan(0); // and the scans that ran
       expect(cached?.stats.total).toBe(RECORDS.length);
       expect((await lastLog('d1-stats-refused'))?.status).toBe('ok'); // the row is never the stats'
+    });
+
+    it('leaves a refused scan empty when no previous blob holds it', async () => {
+      const source = statsSource('d1-stats-refused-first');
+      const flaky = throttled({ match: (sql) => sql.includes(MONTHLY_SQL), fail: 99 });
+      const { result } = await paced(() => logged(() => refreshD1Source(flaky.env, source)));
+      expect(flaky.tripped()).toBe(2);
+      expect(result.events).toContain('stats_part_carried monthly');
+      const cached = await readSourceStats(env, 'd1-stats-refused-first');
+      expect(cached?.stats.monthly).toBeNull();
+      expect(cached?.stats.groups.length).toBeGreaterThan(0);
     });
 
     it('repeats a throttled facet batch after the window; a batch refused again is carried', async () => {
@@ -1139,7 +1161,7 @@ describe('d1store under the D1 throttle', () => {
       await new Promise((resolve) => setTimeout(resolve, 5));
       const always = throttled({ match: (sql) => sql.includes(FACET_SQL), fail: 99 });
       const night2 = await paced(() => logged(() => refreshD1Source(always.env, source)));
-      expect(night2.waits).toEqual([D1_OVERLOAD_WAIT_MS]);
+      expect(night2.waits.filter((w) => w === D1_OVERLOAD_WAIT_MS)).toEqual([D1_OVERLOAD_WAIT_MS]);
       expect(always.tripped()).toBe(2);
       expect(night2.result.events.filter((e) => e === 'stats_facet_failed')).toHaveLength(1);
       expect(night2.result.events.some((e) => e.startsWith('stats_precompute_failed'))).toBe(false);

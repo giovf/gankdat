@@ -29,6 +29,13 @@ export const d1Pace = {
   indexPauseMs: 2_500,
   /** Throttle hits one index read may absorb before the night is given up (each costs D1_OVERLOAD_WAIT_MS). */
   indexMaxTrips: 4,
+  /**
+   * Rows a register must hold before the stats parent's scans are paced `indexPauseMs` apart
+   * (2026-11-12, `stats-parent-scans-paced-per-statement`): a full-register GROUP BY over a
+   * few thousand rows consumes nothing the window notices, while the 196k-row journal and the
+   * ~600k-row hygiene register tripped it on every scan.
+   */
+  statsPaceRows: 10_000,
   sleep: (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms)),
 };
 
