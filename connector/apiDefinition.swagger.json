@@ -3,7 +3,7 @@
   "info": {
     "title": "gankdat",
     "description": "UK and EU public registers as clean JSON: company lookup and monitoring, tenders and contract awards, sanctions and exclusions, charities, schools, NHS organisations, care locations, trade marks and licences. One schema across every dataset, from official open-data feeds, with a daily change feed on each register. Connect with the key from your gankdat account.",
-    "version": "0.29.0",
+    "version": "0.30.0",
     "contact": {
       "name": "gankdat",
       "url": "https://gankdat.com/feedback",
@@ -4990,7 +4990,7 @@
       "get": {
         "operationId": "query_uk_company_profiles",
         "summary": "UK company lookup (Companies House)",
-        "description": "One UK company by number or name, live from the official Companies House API: profile, status, type, SIC codes, registered-office area, accounts and confirmation-statement dates and overdue flags, charges, the latest filing events, corporate persons with significant control and, for a large company, its latest statutory payment practices report (average days to pay, share paid late). One call returns the one record named by the lookup key and costs one credit.",
+        "description": "Records from UK company lookup (Companies House). One call returns the one record named by the lookup key and costs one credit.",
         "x-ms-visibility": "important",
         "parameters": [
           {
@@ -5516,6 +5516,158 @@
                         "x-ms-summary": "Payment practices",
                         "description": "Payment practices."
                       },
+                      "financials": {
+                        "type": "object",
+                        "properties": {
+                          "balance_sheet_date": {
+                            "type": "string",
+                            "x-ms-summary": "Balance sheet date",
+                            "description": "Balance sheet date."
+                          },
+                          "period_start": {
+                            "type": "string",
+                            "x-nullable": true,
+                            "x-ms-summary": "Period start",
+                            "description": "Period start."
+                          },
+                          "dormant": {
+                            "type": "boolean",
+                            "x-nullable": true,
+                            "x-ms-summary": "Dormant",
+                            "description": "Dormant."
+                          },
+                          "net_assets": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Net assets",
+                            "description": "Net assets."
+                          },
+                          "net_assets_source": {
+                            "type": "string",
+                            "enum": ["NetAssetsLiabilities", "Equity"],
+                            "x-nullable": true,
+                            "x-ms-summary": "Net assets source",
+                            "description": "Net assets source."
+                          },
+                          "cash": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Cash",
+                            "description": "Cash."
+                          },
+                          "creditors_within_one_year": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Creditors within one year",
+                            "description": "Creditors within one year."
+                          },
+                          "employees": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Employees",
+                            "description": "Employees."
+                          },
+                          "turnover": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Turnover",
+                            "description": "Turnover."
+                          },
+                          "profit_loss": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Profit loss",
+                            "description": "Profit loss."
+                          },
+                          "prior": {
+                            "type": "object",
+                            "properties": {
+                              "balance_sheet_date": {
+                                "type": "string",
+                                "x-nullable": true,
+                                "x-ms-summary": "Balance sheet date",
+                                "description": "Balance sheet date."
+                              },
+                              "net_assets": {
+                                "type": "number",
+                                "x-nullable": true,
+                                "x-ms-summary": "Net assets",
+                                "description": "Net assets."
+                              },
+                              "cash": {
+                                "type": "number",
+                                "x-nullable": true,
+                                "x-ms-summary": "Cash",
+                                "description": "Cash."
+                              },
+                              "creditors_within_one_year": {
+                                "type": "number",
+                                "x-nullable": true,
+                                "x-ms-summary": "Creditors within one year",
+                                "description": "Creditors within one year."
+                              },
+                              "employees": {
+                                "type": "number",
+                                "x-nullable": true,
+                                "x-ms-summary": "Employees",
+                                "description": "Employees."
+                              },
+                              "turnover": {
+                                "type": "number",
+                                "x-nullable": true,
+                                "x-ms-summary": "Turnover",
+                                "description": "Turnover."
+                              },
+                              "profit_loss": {
+                                "type": "number",
+                                "x-nullable": true,
+                                "x-ms-summary": "Profit loss",
+                                "description": "Profit loss."
+                              }
+                            },
+                            "required": [
+                              "balance_sheet_date",
+                              "net_assets",
+                              "cash",
+                              "creditors_within_one_year",
+                              "employees",
+                              "turnover",
+                              "profit_loss"
+                            ],
+                            "x-nullable": true,
+                            "x-ms-summary": "Prior",
+                            "description": "Prior."
+                          },
+                          "filings": {
+                            "type": "integer",
+                            "x-ms-summary": "Filings",
+                            "description": "Filings."
+                          },
+                          "file_date": {
+                            "type": "string",
+                            "x-ms-summary": "File date",
+                            "description": "File date."
+                          }
+                        },
+                        "required": [
+                          "balance_sheet_date",
+                          "period_start",
+                          "dormant",
+                          "net_assets",
+                          "net_assets_source",
+                          "cash",
+                          "creditors_within_one_year",
+                          "employees",
+                          "turnover",
+                          "profit_loss",
+                          "prior",
+                          "filings",
+                          "file_date"
+                        ],
+                        "x-nullable": true,
+                        "x-ms-summary": "Financials",
+                        "description": "Financials."
+                      },
                       "company_url": {
                         "type": "string",
                         "x-ms-summary": "Company url",
@@ -5560,6 +5712,7 @@
                       "individual_controllers",
                       "corporate_controllers",
                       "payment_practices",
+                      "financials",
                       "company_url"
                     ]
                   },
@@ -5976,6 +6129,388 @@
                       "supplier_list_charges_policy",
                       "supplier_list_charges_made",
                       "report_url"
+                    ]
+                  },
+                  "x-ms-summary": "Data"
+                },
+                "meta": {
+                  "type": "object",
+                  "description": "Page, total and freshness of the data.",
+                  "properties": {
+                    "source": {
+                      "type": "string",
+                      "description": "The dataset slug.",
+                      "x-ms-summary": "Source"
+                    },
+                    "page": {
+                      "type": "integer",
+                      "description": "The page returned.",
+                      "x-ms-summary": "Page"
+                    },
+                    "per_page": {
+                      "type": "integer",
+                      "description": "Records per page.",
+                      "x-ms-summary": "Per page"
+                    },
+                    "total": {
+                      "type": "integer",
+                      "description": "Total matching records across all pages.",
+                      "x-ms-summary": "Total"
+                    },
+                    "last_refreshed_at": {
+                      "type": "string",
+                      "description": "When the dataset was last refreshed (ISO date-time), null before the first refresh.",
+                      "x-nullable": true,
+                      "x-ms-summary": "Last refreshed at"
+                    }
+                  },
+                  "required": ["source", "page", "per_page", "total", "last_refreshed_at"],
+                  "x-ms-summary": "Meta"
+                }
+              },
+              "required": ["ok", "data", "meta"]
+            }
+          }
+        }
+      }
+    },
+    "/v1/data/uk-company-accounts": {
+      "get": {
+        "operationId": "query_uk_company_accounts",
+        "summary": "UK company accounts headline financials (Companies House)",
+        "description": "Records from UK company accounts — headline financials (Companies House). One call returns one page of matching records (25 by default, up to 100) with the total count and the last refresh time, and costs the credits the sources listing states.",
+        "x-ms-visibility": "important",
+        "parameters": [
+          {
+            "name": "company_number",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose company number contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Company number"
+          },
+          {
+            "name": "company",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose company contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Company"
+          },
+          {
+            "name": "balance_sheet_date_after",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose balance sheet date is on or after this date (YYYY-MM-DD).",
+            "x-ms-summary": "Balance sheet date after",
+            "format": "date"
+          },
+          {
+            "name": "balance_sheet_date_before",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose balance sheet date is on or before this date (YYYY-MM-DD).",
+            "x-ms-summary": "Balance sheet date before",
+            "format": "date"
+          },
+          {
+            "name": "file_date_after",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose file date is on or after this date (YYYY-MM-DD).",
+            "x-ms-summary": "File date after",
+            "format": "date"
+          },
+          {
+            "name": "file_date_before",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose file date is on or before this date (YYYY-MM-DD).",
+            "x-ms-summary": "File date before",
+            "format": "date"
+          },
+          {
+            "name": "dormant",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose dormant contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Dormant"
+          },
+          {
+            "name": "net_assets_min",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose net assets is at least this number.",
+            "x-ms-summary": "Net assets min"
+          },
+          {
+            "name": "net_assets_max",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose net assets is at most this number.",
+            "x-ms-summary": "Net assets max"
+          },
+          {
+            "name": "cash_min",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose cash is at least this number.",
+            "x-ms-summary": "Cash min"
+          },
+          {
+            "name": "cash_max",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose cash is at most this number.",
+            "x-ms-summary": "Cash max"
+          },
+          {
+            "name": "creditors_within_one_year_min",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose creditors within one year is at least this number.",
+            "x-ms-summary": "Creditors within one year min"
+          },
+          {
+            "name": "employees_min",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose employees is at least this number.",
+            "x-ms-summary": "Employees min"
+          },
+          {
+            "name": "employees_max",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose employees is at most this number.",
+            "x-ms-summary": "Employees max"
+          },
+          {
+            "name": "turnover_min",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose turnover is at least this number.",
+            "x-ms-summary": "Turnover min"
+          },
+          {
+            "name": "profit_loss_max",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose profit loss is at most this number.",
+            "x-ms-summary": "Profit loss max"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "description": "Page number, starting at 1.",
+            "x-ms-summary": "Page",
+            "default": 1,
+            "minimum": 1,
+            "maximum": 100000,
+            "x-ms-visibility": "advanced"
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "description": "Records per page, from 1 to 100 (25 by default).",
+            "x-ms-summary": "Per page",
+            "default": 25,
+            "minimum": 1,
+            "maximum": 100,
+            "x-ms-visibility": "advanced"
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Text to search for across every text field of the record (case-insensitive).",
+            "x-ms-summary": "Q",
+            "x-ms-visibility": "advanced"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Matching UK company accounts — headline financials (Companies House) records.",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "ok": {
+                  "type": "boolean",
+                  "description": "True when the call succeeded.",
+                  "enum": [true],
+                  "x-ms-summary": "Ok"
+                },
+                "data": {
+                  "type": "array",
+                  "description": "The matching records.",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "company_number": {
+                        "type": "string",
+                        "x-ms-summary": "Company number",
+                        "description": "Company number."
+                      },
+                      "company": {
+                        "type": "string",
+                        "x-nullable": true,
+                        "x-ms-summary": "Company",
+                        "description": "Company."
+                      },
+                      "balance_sheet_date": {
+                        "type": "string",
+                        "x-ms-summary": "Balance sheet date",
+                        "description": "Balance sheet date."
+                      },
+                      "period_start": {
+                        "type": "string",
+                        "x-nullable": true,
+                        "x-ms-summary": "Period start",
+                        "description": "Period start."
+                      },
+                      "dormant": {
+                        "type": "boolean",
+                        "x-nullable": true,
+                        "x-ms-summary": "Dormant",
+                        "description": "Dormant."
+                      },
+                      "net_assets": {
+                        "type": "number",
+                        "x-nullable": true,
+                        "x-ms-summary": "Net assets",
+                        "description": "Net assets."
+                      },
+                      "net_assets_source": {
+                        "type": "string",
+                        "enum": ["NetAssetsLiabilities", "Equity"],
+                        "x-nullable": true,
+                        "x-ms-summary": "Net assets source",
+                        "description": "Net assets source."
+                      },
+                      "cash": {
+                        "type": "number",
+                        "x-nullable": true,
+                        "x-ms-summary": "Cash",
+                        "description": "Cash."
+                      },
+                      "creditors_within_one_year": {
+                        "type": "number",
+                        "x-nullable": true,
+                        "x-ms-summary": "Creditors within one year",
+                        "description": "Creditors within one year."
+                      },
+                      "employees": {
+                        "type": "number",
+                        "x-nullable": true,
+                        "x-ms-summary": "Employees",
+                        "description": "Employees."
+                      },
+                      "turnover": {
+                        "type": "number",
+                        "x-nullable": true,
+                        "x-ms-summary": "Turnover",
+                        "description": "Turnover."
+                      },
+                      "profit_loss": {
+                        "type": "number",
+                        "x-nullable": true,
+                        "x-ms-summary": "Profit loss",
+                        "description": "Profit loss."
+                      },
+                      "prior_balance_sheet_date": {
+                        "type": "string",
+                        "x-nullable": true,
+                        "x-ms-summary": "Prior balance sheet date",
+                        "description": "Prior balance sheet date."
+                      },
+                      "prior_net_assets": {
+                        "type": "number",
+                        "x-nullable": true,
+                        "x-ms-summary": "Prior net assets",
+                        "description": "Prior net assets."
+                      },
+                      "prior_cash": {
+                        "type": "number",
+                        "x-nullable": true,
+                        "x-ms-summary": "Prior cash",
+                        "description": "Prior cash."
+                      },
+                      "prior_creditors_within_one_year": {
+                        "type": "number",
+                        "x-nullable": true,
+                        "x-ms-summary": "Prior creditors within one year",
+                        "description": "Prior creditors within one year."
+                      },
+                      "prior_employees": {
+                        "type": "number",
+                        "x-nullable": true,
+                        "x-ms-summary": "Prior employees",
+                        "description": "Prior employees."
+                      },
+                      "prior_turnover": {
+                        "type": "number",
+                        "x-nullable": true,
+                        "x-ms-summary": "Prior turnover",
+                        "description": "Prior turnover."
+                      },
+                      "prior_profit_loss": {
+                        "type": "number",
+                        "x-nullable": true,
+                        "x-ms-summary": "Prior profit loss",
+                        "description": "Prior profit loss."
+                      },
+                      "file_date": {
+                        "type": "string",
+                        "x-ms-summary": "File date",
+                        "description": "File date."
+                      },
+                      "filing_history_url": {
+                        "type": "string",
+                        "x-ms-summary": "Filing history url",
+                        "description": "Filing history url."
+                      }
+                    },
+                    "required": [
+                      "company_number",
+                      "company",
+                      "balance_sheet_date",
+                      "period_start",
+                      "dormant",
+                      "net_assets",
+                      "net_assets_source",
+                      "cash",
+                      "creditors_within_one_year",
+                      "employees",
+                      "turnover",
+                      "profit_loss",
+                      "prior_balance_sheet_date",
+                      "prior_net_assets",
+                      "prior_cash",
+                      "prior_creditors_within_one_year",
+                      "prior_employees",
+                      "prior_turnover",
+                      "prior_profit_loss",
+                      "file_date",
+                      "filing_history_url"
                     ]
                   },
                   "x-ms-summary": "Data"
@@ -9944,6 +10479,430 @@
                           "supplier_list_charges_policy",
                           "supplier_list_charges_made",
                           "report_url"
+                        ],
+                        "x-ms-summary": "Record"
+                      }
+                    },
+                    "required": ["change", "changed_at", "record_id", "record"]
+                  },
+                  "x-ms-summary": "Data"
+                },
+                "meta": {
+                  "type": "object",
+                  "description": "Page, total and freshness of the data.",
+                  "properties": {
+                    "source": {
+                      "type": "string",
+                      "description": "The dataset slug.",
+                      "x-ms-summary": "Source"
+                    },
+                    "page": {
+                      "type": "integer",
+                      "description": "The page returned.",
+                      "x-ms-summary": "Page"
+                    },
+                    "per_page": {
+                      "type": "integer",
+                      "description": "Records per page.",
+                      "x-ms-summary": "Per page"
+                    },
+                    "total": {
+                      "type": "integer",
+                      "description": "Total matching records across all pages.",
+                      "x-ms-summary": "Total"
+                    },
+                    "last_refreshed_at": {
+                      "type": "string",
+                      "description": "When the dataset was last refreshed (ISO date-time), null before the first refresh.",
+                      "x-nullable": true,
+                      "x-ms-summary": "Last refreshed at"
+                    }
+                  },
+                  "required": ["source", "page", "per_page", "total", "last_refreshed_at"],
+                  "x-ms-summary": "Meta"
+                }
+              },
+              "required": ["ok", "data", "meta"]
+            }
+          }
+        }
+      }
+    },
+    "/v1/changes/uk-company-accounts": {
+      "get": {
+        "operationId": "changes_uk_company_accounts",
+        "summary": "UK company accounts headline financials (Companies House) changes",
+        "description": "Rows added, removed or changed in UK company accounts — headline financials (Companies House) between daily refreshes, newest first, with 90 days of history. Poll this instead of re-reading the whole register; the same filters as the query apply to the changed record, so one call is a watch. Costs the same credits as a query.",
+        "x-ms-visibility": "important",
+        "parameters": [
+          {
+            "name": "company_number",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose company number contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Company number"
+          },
+          {
+            "name": "company",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose company contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Company"
+          },
+          {
+            "name": "balance_sheet_date_after",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose balance sheet date is on or after this date (YYYY-MM-DD).",
+            "x-ms-summary": "Balance sheet date after",
+            "format": "date"
+          },
+          {
+            "name": "balance_sheet_date_before",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose balance sheet date is on or before this date (YYYY-MM-DD).",
+            "x-ms-summary": "Balance sheet date before",
+            "format": "date"
+          },
+          {
+            "name": "file_date_after",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose file date is on or after this date (YYYY-MM-DD).",
+            "x-ms-summary": "File date after",
+            "format": "date"
+          },
+          {
+            "name": "file_date_before",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose file date is on or before this date (YYYY-MM-DD).",
+            "x-ms-summary": "File date before",
+            "format": "date"
+          },
+          {
+            "name": "dormant",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose dormant contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Dormant"
+          },
+          {
+            "name": "net_assets_min",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose net assets is at least this number.",
+            "x-ms-summary": "Net assets min"
+          },
+          {
+            "name": "net_assets_max",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose net assets is at most this number.",
+            "x-ms-summary": "Net assets max"
+          },
+          {
+            "name": "cash_min",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose cash is at least this number.",
+            "x-ms-summary": "Cash min"
+          },
+          {
+            "name": "cash_max",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose cash is at most this number.",
+            "x-ms-summary": "Cash max"
+          },
+          {
+            "name": "creditors_within_one_year_min",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose creditors within one year is at least this number.",
+            "x-ms-summary": "Creditors within one year min"
+          },
+          {
+            "name": "employees_min",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose employees is at least this number.",
+            "x-ms-summary": "Employees min"
+          },
+          {
+            "name": "employees_max",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose employees is at most this number.",
+            "x-ms-summary": "Employees max"
+          },
+          {
+            "name": "turnover_min",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose turnover is at least this number.",
+            "x-ms-summary": "Turnover min"
+          },
+          {
+            "name": "profit_loss_max",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose profit loss is at most this number.",
+            "x-ms-summary": "Profit loss max"
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Text to search for across every text field of the record (case-insensitive).",
+            "x-ms-summary": "Q",
+            "x-ms-visibility": "advanced"
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only changes observed on or after this date (YYYY-MM-DD). Default: the last 7 days.",
+            "x-ms-summary": "Since",
+            "format": "date"
+          },
+          {
+            "name": "change",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only changes of this kind: added, removed or changed.",
+            "x-ms-summary": "Change",
+            "enum": ["added", "removed", "changed"]
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "description": "Page number, starting at 1.",
+            "x-ms-summary": "Page",
+            "default": 1,
+            "minimum": 1,
+            "maximum": 100000,
+            "x-ms-visibility": "advanced"
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "description": "Records per page, from 1 to 100 (25 by default).",
+            "x-ms-summary": "Per page",
+            "default": 25,
+            "minimum": 1,
+            "maximum": 100,
+            "x-ms-visibility": "advanced"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Changes to UK company accounts — headline financials (Companies House).",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "ok": {
+                  "type": "boolean",
+                  "description": "True when the call succeeded.",
+                  "enum": [true],
+                  "x-ms-summary": "Ok"
+                },
+                "data": {
+                  "type": "array",
+                  "description": "The changed rows, newest first.",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "change": {
+                        "type": "string",
+                        "description": "Whether the record was added to, removed from or changed in the register.",
+                        "enum": ["added", "removed", "changed"],
+                        "x-ms-summary": "Change"
+                      },
+                      "changed_at": {
+                        "type": "string",
+                        "description": "When the change was observed (ISO date-time).",
+                        "x-ms-summary": "Changed at"
+                      },
+                      "record_id": {
+                        "type": "string",
+                        "description": "The stable id of the record in this register.",
+                        "x-ms-summary": "Record id"
+                      },
+                      "record": {
+                        "type": "object",
+                        "description": "The record as it reads after the change.",
+                        "properties": {
+                          "company_number": {
+                            "type": "string",
+                            "x-ms-summary": "Company number",
+                            "description": "Company number."
+                          },
+                          "company": {
+                            "type": "string",
+                            "x-nullable": true,
+                            "x-ms-summary": "Company",
+                            "description": "Company."
+                          },
+                          "balance_sheet_date": {
+                            "type": "string",
+                            "x-ms-summary": "Balance sheet date",
+                            "description": "Balance sheet date."
+                          },
+                          "period_start": {
+                            "type": "string",
+                            "x-nullable": true,
+                            "x-ms-summary": "Period start",
+                            "description": "Period start."
+                          },
+                          "dormant": {
+                            "type": "boolean",
+                            "x-nullable": true,
+                            "x-ms-summary": "Dormant",
+                            "description": "Dormant."
+                          },
+                          "net_assets": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Net assets",
+                            "description": "Net assets."
+                          },
+                          "net_assets_source": {
+                            "type": "string",
+                            "enum": ["NetAssetsLiabilities", "Equity"],
+                            "x-nullable": true,
+                            "x-ms-summary": "Net assets source",
+                            "description": "Net assets source."
+                          },
+                          "cash": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Cash",
+                            "description": "Cash."
+                          },
+                          "creditors_within_one_year": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Creditors within one year",
+                            "description": "Creditors within one year."
+                          },
+                          "employees": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Employees",
+                            "description": "Employees."
+                          },
+                          "turnover": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Turnover",
+                            "description": "Turnover."
+                          },
+                          "profit_loss": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Profit loss",
+                            "description": "Profit loss."
+                          },
+                          "prior_balance_sheet_date": {
+                            "type": "string",
+                            "x-nullable": true,
+                            "x-ms-summary": "Prior balance sheet date",
+                            "description": "Prior balance sheet date."
+                          },
+                          "prior_net_assets": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Prior net assets",
+                            "description": "Prior net assets."
+                          },
+                          "prior_cash": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Prior cash",
+                            "description": "Prior cash."
+                          },
+                          "prior_creditors_within_one_year": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Prior creditors within one year",
+                            "description": "Prior creditors within one year."
+                          },
+                          "prior_employees": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Prior employees",
+                            "description": "Prior employees."
+                          },
+                          "prior_turnover": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Prior turnover",
+                            "description": "Prior turnover."
+                          },
+                          "prior_profit_loss": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Prior profit loss",
+                            "description": "Prior profit loss."
+                          },
+                          "file_date": {
+                            "type": "string",
+                            "x-ms-summary": "File date",
+                            "description": "File date."
+                          },
+                          "filing_history_url": {
+                            "type": "string",
+                            "x-ms-summary": "Filing history url",
+                            "description": "Filing history url."
+                          }
+                        },
+                        "required": [
+                          "company_number",
+                          "company",
+                          "balance_sheet_date",
+                          "period_start",
+                          "dormant",
+                          "net_assets",
+                          "net_assets_source",
+                          "cash",
+                          "creditors_within_one_year",
+                          "employees",
+                          "turnover",
+                          "profit_loss",
+                          "prior_balance_sheet_date",
+                          "prior_net_assets",
+                          "prior_cash",
+                          "prior_creditors_within_one_year",
+                          "prior_employees",
+                          "prior_turnover",
+                          "prior_profit_loss",
+                          "file_date",
+                          "filing_history_url"
                         ],
                         "x-ms-summary": "Record"
                       }

@@ -96,12 +96,13 @@ export async function sourceStats(
  */
 /**
  * Which wave a trigger runs, from the cron's minute field: 0 → wave 1, 15 → wave 2,
- * 30 → wave 3, 45 → wave 4, 50 → wave 5, 55 → wave 6, 5 → wave 7 (06:05); anything else (a
+ * 30 → wave 3, 45 → wave 4, 50 → wave 5, 55 → wave 6, 5 → wave 7 (06:05), 10 → wave 8
+ * (08:10); anything else (a
  * manual/temporary trigger) →
  * every wave in order. Keeping each wave under the 15-minute Cron Trigger limit is what
  * matters — a four-source D1 wave was killed mid-load on 2026-09-20 when D1 ran slow.
  */
-export type RefreshWave = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+export type RefreshWave = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 /** Each wave's Cron Trigger, exactly as wrangler.jsonc `triggers.crons` spells it (one truth, 2026-10-17). */
 export const CRON_BY_WAVE: Record<RefreshWave, string> = {
   1: '0 5 * * *',
@@ -111,6 +112,7 @@ export const CRON_BY_WAVE: Record<RefreshWave, string> = {
   5: '50 5 * * *',
   6: '55 5 * * *',
   7: '5 6 * * *',
+  8: '10 8 * * *',
 };
 const WAVE_BY_MINUTE: Record<string, RefreshWave> = Object.fromEntries(
   (Object.entries(CRON_BY_WAVE) as [string, string][]).map(([wave, cron]) => [

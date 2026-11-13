@@ -1,0 +1,108 @@
+{
+  "title": "UK Company Accounts: Net Assets, Cash, Staff (Companies House) \u2014 filters",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "mode": {
+      "title": "Mode",
+      "type": "string",
+      "description": "Current register (default), or only the accounts added or changed since a date \u2014 schedule a daily run in changes mode to see each new set of accounts as it is filed and pay only for what changed.",
+      "editor": "select",
+      "enum": ["data", "changes"],
+      "enumTitles": ["Current register", "Changes since a date (monitor)"],
+      "default": "data"
+    },
+    "since": {
+      "title": "Changes since",
+      "type": "string",
+      "description": "Changes mode only: YYYY-MM-DD. Default: the last 7 days. The feed keeps 90 days.",
+      "editor": "textfield",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "change": {
+      "title": "Change type",
+      "type": "string",
+      "description": "Changes mode only: one kind of change. Default: all.",
+      "editor": "select",
+      "enum": ["added", "removed", "changed"],
+      "enumTitles": ["Added to the register", "Removed from the register", "Changed"]
+    },
+    "company_number": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Company number",
+      "description": "Companies House number as the register writes it, e.g. 00519500 or SC123456 \u2014 every set of accounts held for the company."
+    },
+    "company": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Company name contains",
+      "description": "Registered company name as tagged in the accounts (case-insensitive substring)."
+    },
+    "balance_sheet_date_after": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Balance sheet dated on or after",
+      "description": "Only accounts drawn up to a date on or after this one (YYYY-MM-DD)",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "file_date_after": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Published on or after",
+      "description": "Only accounts carried by a Companies House daily file dated on or after this date (YYYY-MM-DD)",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "net_assets_max": {
+      "type": "integer",
+      "editor": "number",
+      "title": "Net assets at most (\u00a3)",
+      "description": "Set to -1 for companies with net liabilities (negative net assets)."
+    },
+    "net_assets_min": {
+      "type": "integer",
+      "editor": "number",
+      "title": "Net assets at least (\u00a3)",
+      "description": "Companies whose balance sheet shows at least this much in net assets."
+    },
+    "cash_min": {
+      "type": "integer",
+      "editor": "number",
+      "title": "Cash at bank at least (\u00a3)",
+      "description": "Cash-rich companies: at least this much cash at bank and in hand."
+    },
+    "employees_min": {
+      "type": "integer",
+      "editor": "number",
+      "title": "Employees at least",
+      "description": "Average number of employees in the period is at least this."
+    },
+    "employees_max": {
+      "type": "integer",
+      "editor": "number",
+      "title": "Employees at most",
+      "description": "Average number of employees in the period is at most this."
+    },
+    "dormant": {
+      "type": "boolean",
+      "editor": "checkbox",
+      "title": "Dormant companies only",
+      "description": "Tick for accounts that declare the company dormant."
+    },
+    "q": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Free-text search",
+      "description": "Filter: Free-text search (case-insensitive substring match)."
+    },
+    "max_results": {
+      "title": "Maximum results",
+      "type": "integer",
+      "description": "Stop after this many sets of accounts (you are charged per result).",
+      "default": 1000,
+      "minimum": 1,
+      "maximum": 100000
+    }
+  },
+  "required": []
+}

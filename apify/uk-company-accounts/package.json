@@ -1,0 +1,13 @@
+{
+  "name": "gankdat-apify-uk-company-accounts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Apify actor: UK company accounts headline financials (net assets, cash, creditors, employees) via gankdat.com",
+  "scripts": {
+    "start": "node src/main.mjs"
+  },
+  "dependencies": {
+    "apify": "^3.4.0"
+  }
+}

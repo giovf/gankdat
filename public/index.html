@@ -877,6 +877,23 @@
           </p>
         </div>
         <div class="card">
+          <h3>uk-company-accounts <span>// is this company solvent?</span></h3>
+          <p>
+            Headline figures from the accounts UK companies file electronically at Companies House,
+            read every morning from the official daily file: net assets (negative means net
+            liabilities), cash at bank, creditors due within a year, average employees, the dormant
+            flag and the prior period for the trend; turnover and profit where filed. One record per
+            company and balance-sheet date, building up from November 2026; the company lookup
+            carries the latest figures as <code>financials</code>. Daily diff: each new set of
+            accounts as it is filed. Directors and narrative notes never ingested.
+          </p>
+          <p class="chips">
+            <code>company_number</code><code>company</code><code>net_assets_max</code
+            ><code>cash_min</code><code>employees_min</code><code>balance_sheet_date_after</code
+            ><code>file_date_after</code><code>dormant</code><code>q</code>
+          </p>
+        </div>
+        <div class="card">
           <h3>nhs-ods <span>// healthcare leads &amp; KYB</span></h3>
           <p>
             Every GP practice, NHS trust and trust site, pharmacy, dental practice and independent
@@ -946,10 +963,11 @@
             Every register diffs itself each morning:
             <code>/v1/changes/…?since=YYYY-MM-DD</code> returns what was added, removed or changed —
             food hygiene, charities, care locations, schools, NHS organisations, sponsors,
-            exclusions, gambling licences, payment practices reports and the weekly trade-mark
-            journal — with the dataset's own filters, so <code>?classes=09&amp;q=acme</code> is a
-            watch. 90-day history, MCP tool <code>get_changes</code>; the activity per day is on
-            each <a href="/stats">stats page</a>. Poll the delta, not the register — no other source
+            exclusions, gambling licences, payment practices reports, company accounts and the
+            weekly trade-mark journal — with the dataset's own filters, so
+            <code>?classes=09&amp;q=acme</code> is a watch. 90-day history, MCP tool
+            <code>get_changes</code>; the activity per day is on each
+            <a href="/stats">stats page</a>. Poll the delta, not the register — no other source
             publishes official-register deltas.
           </p>
         </div>

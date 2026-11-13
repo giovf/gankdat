@@ -190,3 +190,118 @@ export function inflateZipEntry(
   });
   return verified.pipeThrough(byteCapTransform(maxBytes));
 }
+
+const ZIP_CENTRAL_HEADER = 0x02014b50;
+const ZIP_END_OF_CENTRAL = 0x06054b50;
+const ZIP_METHOD_STORED = 0;
+
+/** One entry of a ZIP as the walker hands it over: still compressed, with where the next one starts. */
+export interface ZipMember {
+  name: string;
+  /** 8 = deflate (inflate with `inflateRaw`), 0 = stored. */
+  method: number;
+  /** The entry's bytes exactly as stored in the ZIP. */
+  data: Uint8Array;
+  uncompressedSize: number;
+  /** Byte offset of this entry's local header in the ZIP. */
+  offset: number;
+  /** Byte offset of the next local header — where a later read resumes. */
+  next: number;
+}
+
+export interface ZipWalkOptions {
+  /** Reads bytes `[start, end)` of the ZIP (an HTTP Range read); may return fewer at the end of the file. */
+  read(start: number, end: number): Promise<Uint8Array>;
+  /** Total size of the ZIP in bytes. */
+  size: number;
+  /** Local-header offset to start from (0, or a previous member's `next`). */
+  offset?: number;
+  /** Bytes asked per read (default 8 MiB). */
+  sliceBytes?: number;
+}
+
+/**
+ * Walks a many-member ZIP entry by entry from any local-header offset, reading it in Range
+ * slices (uk-company-accounts, 2026-11-13: Companies House's daily accounts ZIP holds
+ * 8,000–80,000 iXBRL files in 60–600 MiB, far past one request's memory and one wave's budget).
+ * Each member is yielded whole with the offset of the next header, so the caller can stop
+ * after any member and resume there on a later run; the walk ends at the central directory.
+ * Requires sizes in the local header (general-purpose flag bit 3 clear — the data-descriptor
+ * form needs the scan `zipFirstEntryDeflate` does and is rejected here) and no ZIP64 entry.
+ */
+export async function* zipMembers(options: ZipWalkOptions): AsyncGenerator<ZipMember> {
+  const slice = options.sliceBytes ?? 8 * 1024 * 1024;
+  let position = options.offset ?? 0; // offset of buffer[0] in the ZIP
+  let buffer: Uint8Array = new Uint8Array(0);
+  let fetched = position; // first byte not yet read
+
+  /** Grows the buffer until it holds `need` bytes; false when the file ends first. */
+  const ensure = async (need: number): Promise<boolean> => {
+    while (buffer.length < need) {
+      if (fetched >= options.size) return false;
+      const end = Math.min(options.size, fetched + Math.max(slice, need - buffer.length));
+      const chunk = await options.read(fetched, end);
+      if (chunk.length === 0) return false;
+      const merged = new Uint8Array(buffer.length + chunk.length);
+      merged.set(buffer);
+      merged.set(chunk, buffer.length);
+      buffer = merged;
+      fetched += chunk.length;
+    }
+    return true;
+  };
+
+  for (;;) {
+    if (!(await ensure(ZIP_LOCAL_HEADER_LEN))) {
+      if (buffer.length === 0) return; // clean end of file (a ZIP cut exactly at a header)
+      throw new Error(`ZIP ended inside a header at byte ${position}`);
+    }
+    const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+    const signature = view.getUint32(0, true);
+    if (signature === ZIP_CENTRAL_HEADER || signature === ZIP_END_OF_CENTRAL) return;
+    if (signature !== ZIP_LOCAL_HEADER) {
+      throw new Error(`no ZIP entry at byte ${position} (signature ${signature.toString(16)})`);
+    }
+    const flags = view.getUint16(6, true);
+    const method = view.getUint16(8, true);
+    const compressedSize = view.getUint32(18, true);
+    const uncompressedSize = view.getUint32(22, true);
+    const nameLen = view.getUint16(26, true);
+    const extraLen = view.getUint16(28, true);
+    if ((flags & ZIP_FLAG_DATA_DESCRIPTOR) !== 0) {
+      throw new Error(`ZIP entry at byte ${position} uses a data descriptor (not walkable)`);
+    }
+    if (compressedSize === 0xffffffff) {
+      throw new Error(`ZIP entry at byte ${position} is ZIP64 (not supported)`);
+    }
+    if (method !== ZIP_METHOD_DEFLATE && method !== ZIP_METHOD_STORED) {
+      throw new Error(`ZIP entry at byte ${position} uses unsupported method ${method}`);
+    }
+    const dataStart = ZIP_LOCAL_HEADER_LEN + nameLen + extraLen;
+    const total = dataStart + compressedSize;
+    if (!(await ensure(total))) {
+      throw new Error(`ZIP ended inside the entry at byte ${position} (truncated download?)`);
+    }
+    const name = new TextDecoder().decode(
+      buffer.subarray(ZIP_LOCAL_HEADER_LEN, ZIP_LOCAL_HEADER_LEN + nameLen),
+    );
+    const offset = position;
+    position += total;
+    yield {
+      name,
+      method,
+      data: buffer.subarray(dataStart, total),
+      uncompressedSize,
+      offset,
+      next: position,
+    };
+    buffer = buffer.subarray(total);
+  }
+}
+
+/** Inflates one member's raw deflate bytes (`ZipMember.data` of method 8), capped at `maxBytes`. */
+export async function inflateRaw(data: Uint8Array, maxBytes: number): Promise<Uint8Array> {
+  const inflated = new Response(data).body!.pipeThrough(new DecompressionStream('deflate-raw'));
+  const out = await new Response(inflated.pipeThrough(byteCapTransform(maxBytes))).arrayBuffer();
+  return new Uint8Array(out);
+}

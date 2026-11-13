@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import fixture from './fixtures/uk-company-profiles.json';
 import type { DataSource } from './types';
+import { financialsSummarySchema, latestFinancials } from './uk-company-accounts';
 import { latestPaymentPractices, paymentPracticesSummarySchema } from './uk-payment-practices';
 
 // Companies House — company lookup + monitor (exchange 2026-W41 winner, built
@@ -26,7 +27,11 @@ import { latestPaymentPractices, paymentPracticesSummarySchema } from './uk-paym
 // uk-companies. `payment_practices` (2026-11-12, `uk-payment-practices`): the
 // company's latest statutory payment practices report, joined on the number from
 // the register gankdat mirrors (one D1 read at lookup time; null for a company
-// that has never reported, or before the register's first load). Requires COMPANIES_HOUSE_API_KEY (HTTP Basic, key as username;
+// that has never reported, or before the register's first load). `financials`
+// (2026-11-13, `uk-company-accounts`): the headline figures of the company's latest
+// electronically filed accounts — net assets, cash, creditors within a year,
+// employees, the prior period — joined the same way from the accounts register
+// (null for a paper filer or a company that has not filed since the register began). Requires COMPANIES_HOUSE_API_KEY (HTTP Basic, key as username;
 // 600 requests / 5 min shared with uk-companies — the per-source rate limit
 // below keeps a full-speed client under a quarter of that).
 const API_URL = 'https://api.company-information.service.gov.uk';
@@ -221,6 +226,8 @@ export const ukCompanyProfilesRecordSchema = z.object({
   corporate_controllers: z.array(controllerSchema),
   /** Latest payment practices report (large companies only); null when the company has never reported. */
   payment_practices: paymentPracticesSummarySchema.nullable(),
+  /** Headline figures of the latest electronically filed accounts; null when the accounts register holds none. */
+  financials: financialsSummarySchema.nullable(),
   company_url: z.string(),
 });
 
@@ -312,6 +319,7 @@ function normalize(raw: RawCompany): UkCompanyProfilesRecord {
       ceased_on: c.ceased_on ?? null,
     })),
     payment_practices: null,
+    financials: null,
     company_url: `https://find-and-update.company-information.service.gov.uk/company/${p.company_number}`,
   };
 }
@@ -391,13 +399,17 @@ async function fetchFromOrigin(
   return normalize({ profile, charges, filing_history, pscs });
 }
 
-/** The record with its payment practices join; the join never fails the lookup. */
-async function withPaymentPractices(
+/** The record with its register joins (payment practices, accounts); a join never fails the lookup. */
+async function withJoins(
   env: CloudflareBindings,
   record: UkCompanyProfilesRecord | null,
 ): Promise<UkCompanyProfilesRecord | null> {
   if (!record) return null;
-  return { ...record, payment_practices: await latestPaymentPractices(env, record.company_number) };
+  const [payment_practices, financials] = await Promise.all([
+    latestPaymentPractices(env, record.company_number),
+    latestFinancials(env, record.company_number),
+  ]);
+  return { ...record, payment_practices, financials };
 }
 
 const fixtureSchema = z.object({
@@ -436,7 +448,7 @@ export const ukCompanyProfilesSource: DataSource<UkCompanyProfilesRecord> = {
   slug: 'uk-company-profiles',
   title: 'UK company lookup (Companies House)',
   description:
-    'One UK company by number or name, live from the official Companies House API: profile, status, type, SIC codes, registered-office area, accounts and confirmation-statement dates and overdue flags, charges, the latest filing events, corporate persons with significant control and, for a large company, its latest statutory payment practices report (average days to pay, share paid late). Blind Mode: officers and individual PSCs are never ingested — filing events carry the category code, not the name. Cached 24 h.',
+    'One UK company by number or name, live from the official Companies House API: profile, status, type, SIC codes, registered-office area, accounts and confirmation-statement dates and overdue flags, charges, the latest filing events, corporate persons with significant control and, for a large company, its latest statutory payment practices report (average days to pay, share paid late), plus `financials` — net assets, cash, creditors due within a year, employees and the prior period from the latest accounts filed electronically. Blind Mode: officers and individual PSCs are never ingested — filing events carry the category code, not the name. Cached 24 h.',
   recordSchema: ukCompanyProfilesRecordSchema,
   queryParams: z.object({
     company_number: z.string().trim().min(1).max(12).optional(),
@@ -450,7 +462,7 @@ export const ukCompanyProfilesSource: DataSource<UkCompanyProfilesRecord> = {
       try {
         const key = String(env.COMPANIES_HOUSE_API_KEY ?? '');
         if (key === '') throw new Error('COMPANIES_HOUSE_API_KEY not configured');
-        return await withPaymentPractices(env, await fetchFromOrigin(key, params));
+        return await withJoins(env, await fetchFromOrigin(key, params));
       } catch (err) {
         if (String(env.FIXTURE_FALLBACK) === 'true') {
           console.log(
@@ -461,7 +473,7 @@ export const ukCompanyProfilesSource: DataSource<UkCompanyProfilesRecord> = {
               reason: err instanceof Error ? err.message : String(err),
             }),
           );
-          return withPaymentPractices(env, fixtureFor(params));
+          return withJoins(env, fixtureFor(params));
         }
         throw err;
       }

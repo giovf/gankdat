@@ -1,0 +1,104 @@
+{
+  "actorSpecification": 1,
+  "fields": {
+    "type": "object",
+    "properties": {
+      "company_number": {
+        "type": "string"
+      },
+      "company": {
+        "type": ["string", "null"]
+      },
+      "balance_sheet_date": {
+        "type": "string"
+      },
+      "period_start": {
+        "type": ["string", "null"]
+      },
+      "dormant": {
+        "type": ["boolean", "null"]
+      },
+      "net_assets": {
+        "type": ["number", "null"]
+      },
+      "net_assets_source": {
+        "type": ["string", "null"]
+      },
+      "cash": {
+        "type": ["number", "null"]
+      },
+      "creditors_within_one_year": {
+        "type": ["number", "null"]
+      },
+      "employees": {
+        "type": ["number", "null"]
+      },
+      "turnover": {
+        "type": ["number", "null"]
+      },
+      "profit_loss": {
+        "type": ["number", "null"]
+      },
+      "prior_balance_sheet_date": {
+        "type": ["string", "null"]
+      },
+      "prior_net_assets": {
+        "type": ["number", "null"]
+      },
+      "prior_cash": {
+        "type": ["number", "null"]
+      },
+      "prior_creditors_within_one_year": {
+        "type": ["number", "null"]
+      },
+      "prior_employees": {
+        "type": ["number", "null"]
+      },
+      "prior_turnover": {
+        "type": ["number", "null"]
+      },
+      "prior_profit_loss": {
+        "type": ["number", "null"]
+      },
+      "file_date": {
+        "type": "string"
+      },
+      "filing_history_url": {
+        "type": "string"
+      },
+      "change": {
+        "type": ["string", "null"]
+      },
+      "changed_at": {
+        "type": ["string", "null"]
+      }
+    }
+  },
+  "views": {
+    "overview": {
+      "title": "Overview",
+      "transformation": {
+        "fields": [
+          "company_number",
+          "company",
+          "balance_sheet_date",
+          "dormant",
+          "net_assets",
+          "cash",
+          "creditors_within_one_year",
+          "employees",
+          "prior_net_assets",
+          "prior_cash",
+          "turnover",
+          "profit_loss",
+          "change",
+          "changed_at",
+          "filing_history_url"
+        ]
+      },
+      "display": {
+        "component": "table"
+      }
+    }
+  }
+}

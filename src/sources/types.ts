@@ -14,10 +14,11 @@ export interface RefreshPolicy {
    * the daily refresh is split across staggered triggers: wave 1 = KV snapshot
    * sources (05:00), wave 2 = smaller D1 sources (05:15), wave 3 = charities +
    * care locations (05:30), wave 4 = uk-food-hygiene (05:45), wave 5 =
-   * uk-schools (05:50), wave 6 = nhs-ods (05:55), wave 7 = uk-trademark-journal (06:05).
+   * uk-schools (05:50), wave 6 = nhs-ods (05:55), wave 7 = uk-trademark-journal (06:05),
+   * wave 8 = uk-company-accounts (08:10 — its origin publishes the day's file after 07:45).
    * Defaults: kv → 1, d1 → 2. Budget each wave at well under 15 minutes on a slow D1 day.
    */
-  wave?: 1 | 2 | 3 | 4 | 5 | 6 | 7;
+  wave?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
   /**
    * Refreshed by a GitHub Actions runner (`scripts/runner-refresh.mjs`, in the
    * `gankdat metrics` job) instead of the Worker's cron: the origin serves the
@@ -156,6 +157,21 @@ export interface DataSource<TRecord = unknown> {
    * `/v1/changes/<slug>` (task 51). Sources without a stable id have no feed.
    */
   idOf?(record: TRecord): string;
+  /**
+   * An accumulating register (2026-11-13, uk-company-accounts): each refresh yields only the
+   * records the origin published since the last one (a daily file of yesterday's filings), so
+   * the store upserts them by `idOf` and never removes a row for being absent from the stream;
+   * a refresh that yields nothing is a quiet day, not an origin failure. D1 sources with `idOf`
+   * only (d1store `refreshD1Append`). The change feed carries `added` and `changed` rows.
+   */
+  append?: boolean;
+  /**
+   * Called once by an `append` refresh after every row of the stream is written and before the
+   * `ok` refresh_log row: the place to persist a read cursor, so a refresh that failed mid-way
+   * re-reads from the old cursor (the upsert makes that harmless). A returned string is added
+   * to the refresh_log message (what was read, what is left).
+   */
+  commit?(env: CloudflareBindings): Promise<string | undefined>;
   /** On-demand lookup by key (see LookupSpec); such a source has no snapshot, refresh or feed. */
   lookup?: LookupSpec<TRecord>;
   /** Pull fresh records from the origin (called by cron refresh / cache miss). */

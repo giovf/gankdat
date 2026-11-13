@@ -62,6 +62,7 @@ describe('runner-fed sources', () => {
       '50 5 * * *',
       '55 5 * * *',
       '5 6 * * *',
+      '10 8 * * *',
     ];
     expect(Object.values(CRON_BY_WAVE).sort()).toEqual([...crons].sort());
     for (const [wave, cron] of Object.entries(CRON_BY_WAVE)) {

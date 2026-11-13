@@ -1,0 +1,20 @@
+{
+  "actorSpecification": 1,
+  "name": "uk-company-accounts-financials",
+  "title": "UK Company Accounts: Net Assets, Cash, Staff (Companies House)",
+  "description": "Headline financials from the accounts UK companies file at Companies House, daily from the official iXBRL data product: net assets, cash, creditors due within a year, employees, dormant flag and the prior period, by company number. Filter for negative net assets or cash-rich companies.",
+  "version": "0.1",
+  "buildTag": "latest",
+  "dockerfile": "../Dockerfile",
+  "readme": "./README.md",
+  "input": "./input_schema.json",
+  "environmentVariables": {
+    "GANKDAT_API_KEY": "@gankdatApiKey"
+  },
+  "minMemoryMbytes": 256,
+  "maxMemoryMbytes": 512,
+  "output": "./output_schema.json",
+  "storages": {
+    "dataset": "./dataset_schema.json"
+  }
+}

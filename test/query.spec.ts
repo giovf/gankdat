@@ -38,6 +38,7 @@ describe('registry', () => {
       'uk-gambling-operators',
       'uk-company-profiles',
       'uk-payment-practices',
+      'uk-company-accounts',
     ]);
   });
 });

@@ -10,6 +10,7 @@ import {
 import { authedFetch, bearer, issueKey } from './helpers/auth';
 import { stubOrigins } from './helpers/origin-mock';
 import { refreshD1Source } from '../src/sources/d1store';
+import { ukCompanyAccountsSource } from '../src/sources/uk-company-accounts';
 import { ukPaymentPracticesSource } from '../src/sources/uk-payment-practices';
 import { CSV as PAYMENT_CSV, chunked } from './uk-payment-practices.spec';
 
@@ -344,5 +345,57 @@ describe('payment_practices on the lookup (join on the company number)', () => {
     // The dissolved fixture company has never reported.
     const other = (await lookup(`company_number=${dissolved.profile.company_number}`)).data[0];
     expect(other?.payment_practices).toBeNull();
+  });
+});
+
+describe('financials on the lookup (join on the company number)', () => {
+  it('is null until the accounts register holds the company, then its latest figures', async () => {
+    stubOrigins({ companyApi: companyApi() });
+    const before = (await lookup('company_number=12345678')).data[0];
+    expect(before?.financials).toBeNull();
+
+    const record = {
+      company_number: '12345678',
+      company: 'EXAMPLE WIDGETS LIMITED',
+      balance_sheet_date: '2026-03-31',
+      period_start: '2025-04-01',
+      dormant: false,
+      net_assets: -4200,
+      net_assets_source: 'Equity' as const,
+      cash: 310,
+      creditors_within_one_year: 9800,
+      employees: 2,
+      turnover: null,
+      profit_loss: null,
+      prior_balance_sheet_date: '2025-03-31',
+      prior_net_assets: 1500,
+      prior_cash: 2900,
+      prior_creditors_within_one_year: 4000,
+      prior_employees: 2,
+      prior_turnover: null,
+      prior_profit_loss: null,
+      file_date: '2026-11-12',
+      filing_history_url:
+        'https://find-and-update.company-information.service.gov.uk/company/12345678/filing-history',
+    };
+    // The register is loaded through its own refresh path, from a stream of one filing.
+    await refreshD1Source(env, {
+      ...ukCompanyAccountsSource,
+      fetchStream: undefined,
+      commit: undefined,
+      fetchFresh: () => Promise.resolve([record]),
+    });
+    await env.CACHE.delete('lookup:uk-company-profiles:company_number=12345678');
+    const after = (await lookup('company_number=12345678')).data[0];
+    expect(after?.financials).toMatchObject({
+      balance_sheet_date: '2026-03-31',
+      net_assets: -4200,
+      net_assets_source: 'Equity',
+      cash: 310,
+      prior: { balance_sheet_date: '2025-03-31', net_assets: 1500, cash: 2900 },
+      filings: 1,
+    });
+    const other = (await lookup(`company_number=${dissolved.profile.company_number}`)).data[0];
+    expect(other?.financials).toBeNull();
   });
 });

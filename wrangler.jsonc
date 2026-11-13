@@ -67,7 +67,8 @@
   "triggers": {
     // Daily refresh in four waves (store.ts waveForCron): 05:00 KV snapshot sources,
     // 05:15 smaller D1 sources (exclusions, sponsors), 05:30 charities + care locations,
-    // 05:45 uk-food-hygiene, 05:50 uk-schools, 05:55 nhs-ods, 06:05 uk-trademark-journal.
+    // 05:45 uk-food-hygiene, 05:50 uk-schools, 05:55 nhs-ods, 06:05 uk-trademark-journal,
+    // 08:10 uk-company-accounts (Companies House publishes the day's accounts ZIP after 07:45).
     // Each wave must stay well under the 15-minute Cron Trigger
     // limit even on a slow D1 day (a four-source wave was killed on 2026-09-20).
     "crons": [
@@ -78,6 +79,7 @@
       "50 5 * * *",
       "55 5 * * *",
       "5 6 * * *",
+      "10 8 * * *",
     ],
   },
   "observability": {

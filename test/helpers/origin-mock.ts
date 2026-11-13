@@ -22,6 +22,7 @@ const ODS_ORIGIN = 'https://www.odsdatasearchandexport.nhs.uk/api/getReport?repo
 const TMJ_ORIGIN = 'https://www.ipo.gov.uk/t-tmj/tm-journals/';
 const GC_ORIGIN = 'https://www.gamblingcommission.gov.uk/downloads/';
 const PP_ORIGIN = 'https://check-payment-practices.service.gov.uk/export/csv/';
+const CH_ACCOUNTS_ORIGIN = 'https://download.companieshouse.gov.uk/Accounts_Bulk_Data-';
 
 /**
  * Tests run in the same isolate as the worker under test, so stubbing the
@@ -57,8 +58,10 @@ export function stubOrigins(handlers: {
   gamblingCommission?: (url: string) => Response;
   /** The payment practices export (one generated CSV). */
   paymentPractices?: () => Response;
+  /** Called with the daily accounts ZIP URL and the request init (HEAD, or a GET with a Range header). */
+  companyAccounts?: (url: string, init?: RequestInit) => Response;
 }): ReturnType<typeof vi.fn> {
-  const mock = vi.fn((input: RequestInfo | URL) => {
+  const mock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input instanceof Request ? input.url : input);
     if (url.startsWith(PLANNING_ORIGIN) && handlers.planning) {
       return Promise.resolve(handlers.planning());
@@ -125,6 +128,9 @@ export function stubOrigins(handlers: {
     }
     if (url.startsWith(PP_ORIGIN) && handlers.paymentPractices) {
       return Promise.resolve(handlers.paymentPractices());
+    }
+    if (url.startsWith(CH_ACCOUNTS_ORIGIN) && handlers.companyAccounts) {
+      return Promise.resolve(handlers.companyAccounts(url, init));
     }
     throw new Error(`unexpected outbound fetch in test: ${url}`);
   });

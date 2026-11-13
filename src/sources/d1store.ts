@@ -319,6 +319,9 @@ export async function refreshD1Source(
 ): Promise<SourceMeta> {
   const start = Date.now();
   const previous = await readMeta(env, source.slug);
+  if (source.append && source.idOf) {
+    return traceOrigin(() => refreshD1Append(env, source, previous, start));
+  }
   if (previous && source.idOf) {
     let backfill: { done: number; left: number };
     try {
@@ -784,6 +787,190 @@ async function refreshD1Delta(
     );
     throw err;
   }
+}
+
+const APPEND_LOOKUP_SQL = `SELECT seq, record_id, record_hash FROM source_records
+   WHERE source_slug = ?1 AND generation = ?2 AND record_id IN (SELECT value FROM json_each(?3))`;
+
+/**
+ * Refresh of an accumulating register (`DataSource.append`, uk-company-accounts 2026-11-13):
+ * the stream holds only what the origin published since the last refresh, so each chunk's ids
+ * are looked up through the (slug, generation, record_id) index — never the whole stored index,
+ * the register only grows — and written as upserts: a new id is appended after the highest seq,
+ * a known id whose content differs is rewritten in place, an identical one costs no write.
+ * Nothing is ever removed for being absent, and an empty stream is a quiet day (an `ok` row with
+ * `append +0`). The first run creates generation 1 and the meta row. `source.commit` runs after
+ * the last chunk and before the row, so a cursor only advances past rows that are stored; a run
+ * that dies mid-way is repeated from the old cursor and the upserts make that a no-op.
+ */
+async function refreshD1Append(
+  env: CloudflareBindings,
+  source: DataSource,
+  previous: SourceMeta | null,
+  start: number,
+): Promise<SourceMeta> {
+  const generation = previous?.generation ?? 1;
+  const changedAt = new Date().toISOString();
+  try {
+    const size = await env.DB.prepare(
+      'SELECT COUNT(*) AS n, COALESCE(MAX(seq), -1) AS max FROM source_records WHERE source_slug = ?1 AND generation = ?2',
+    )
+      .bind(source.slug, generation)
+      .first<{ n: number; max: number }>();
+    let nextSeq = (size?.max ?? -1) + 1;
+    let streamed = 0;
+    let added = 0;
+    let changed = 0;
+    // One chunk, keyed by id so a record the stream repeats is written once (the later wins).
+    let chunk = new Map<string, { entry: IngestRow; bytes: number }>();
+    let chunkBytes = 0;
+    const flush = async (): Promise<void> => {
+      if (chunk.size === 0) return;
+      const stored = await withOverloadRetry(
+        () =>
+          env.DB.prepare(APPEND_LOOKUP_SQL)
+            .bind(source.slug, generation, JSON.stringify([...chunk.keys()]))
+            .all<{ seq: number; record_id: string; record_hash: number }>(),
+        1,
+        () => logThrottledWrite(source.slug),
+      );
+      const known = new Map((stored.results ?? []).map((row) => [row.record_id, row]));
+      const rows: (IngestRow & { q: number })[] = [];
+      const addedSeqs: number[] = [];
+      const changedSeqs: number[] = [];
+      for (const [id, { entry }] of chunk) {
+        const row = known.get(id);
+        if (row) {
+          if (row.record_hash === entry.h) continue;
+          changedSeqs.push(row.seq);
+          rows.push({ ...entry, q: row.seq });
+        } else {
+          addedSeqs.push(nextSeq);
+          rows.push({ ...entry, q: nextSeq });
+          nextSeq += 1;
+        }
+      }
+      chunk = new Map();
+      chunkBytes = 0;
+      if (rows.length === 0) return;
+      const batch = [
+        env.DB.prepare(UPSERT_SQL).bind(source.slug, generation, JSON.stringify(rows)),
+      ];
+      for (const [kind, seqs] of [
+        ['added', addedSeqs],
+        ['changed', changedSeqs],
+      ] as const) {
+        if (seqs.length === 0) continue;
+        batch.push(
+          env.DB.prepare(CHANGES_FROM_ROWS_SQL).bind(
+            source.slug,
+            generation,
+            changedAt,
+            kind,
+            JSON.stringify(seqs),
+          ),
+        );
+      }
+      await withOverloadRetry(
+        () => env.DB.batch(batch),
+        1,
+        () => logThrottledWrite(source.slug),
+      );
+      added += addedSeqs.length;
+      changed += changedSeqs.length;
+    };
+    const records: AsyncIterable<unknown> | unknown[] = source.fetchStream
+      ? source.fetchStream(env)
+      : await source.fetchFresh(env);
+    for await (const record of records) {
+      streamed += 1;
+      if (streamed % PROGRESS_EVERY === 0) {
+        await markRefreshProgress(env, source.slug, start, 'stream', `${streamed} records`);
+      }
+      const json = JSON.stringify(record);
+      const entry = ingestRow(source, record, json);
+      const id = entry.i ?? '';
+      const bytes = ingestBytes(entry, json);
+      chunkBytes += bytes - (chunk.get(id)?.bytes ?? 0);
+      chunk.set(id, { entry, bytes });
+      if (chunk.size >= INSERT_CHUNK || chunkBytes >= INSERT_CHUNK_BYTES) await flush();
+    }
+    await flush();
+    const note = source.commit ? await source.commit(env) : undefined;
+
+    const meta: SourceMeta = {
+      generation,
+      last_refreshed_at: changedAt,
+      total: (size?.n ?? 0) + added,
+    };
+    await env.DB.batch([
+      env.DB.prepare(
+        `INSERT INTO source_meta (source_slug, generation, last_refreshed_at, total)
+         VALUES (?1, ?2, ?3, ?4)
+         ON CONFLICT (source_slug) DO UPDATE
+         SET generation = ?2, last_refreshed_at = ?3, total = ?4`,
+      ).bind(source.slug, meta.generation, meta.last_refreshed_at, meta.total),
+      env.DB.prepare(
+        "DELETE FROM source_changes WHERE source_slug = ?1 AND changed_at < datetime('now', ?2)",
+      ).bind(source.slug, `-${CHANGES_RETENTION_DAYS} days`),
+    ]);
+    const summary = `append +${added} ~${changed}${note ? `; ${note}` : ''}`;
+    console.log(
+      JSON.stringify({
+        level: 'info',
+        event: 'refresh_append',
+        source: source.slug,
+        streamed,
+        added,
+        changed,
+        note: note ?? null,
+      }),
+    );
+    await markRefreshProgress(env, source.slug, start, 'written', summary);
+    await writeRefreshLog(env, source.slug, 'ok', meta.total, Date.now() - start, summary);
+    if (added + changed > 0 || !previous) {
+      await markRefreshProgress(env, source.slug, start, 'stats');
+      await precomputeStats(env, source, generation, meta, start);
+    }
+    return meta;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    await writeRefreshLog(
+      env,
+      source.slug,
+      failedRefreshStatus(err),
+      0,
+      Date.now() - start,
+      message,
+    );
+    throw err;
+  }
+}
+
+/** Most rows one id-prefix read returns. */
+const ID_PREFIX_LIMIT = 100;
+
+/**
+ * The live rows whose record id starts with `prefix`, through the (slug, generation, record_id)
+ * index — an exact, bounded read for a join on a composite id (`<key>_<date>`), where the
+ * generic engine's substring filter would scan a multi-million-row register per request.
+ * Throws SourceNotLoadedError before the first load, like `queryD1Source`.
+ */
+export async function readD1ByIdPrefix(
+  env: CloudflareBindings,
+  source: DataSource,
+  prefix: string,
+): Promise<unknown[]> {
+  const meta = await readMeta(env, source.slug);
+  if (!meta) throw new SourceNotLoadedError(source.slug);
+  const rows = await env.DB.prepare(
+    `SELECT record FROM source_records
+     WHERE source_slug = ?1 AND generation = ?2 AND record_id >= ?3 AND record_id < ?4
+     ORDER BY record_id LIMIT ${ID_PREFIX_LIMIT}`,
+  )
+    .bind(source.slug, meta.generation, prefix, `${prefix}￿`)
+    .all<{ record: string }>();
+  return (rows.results ?? []).map((row) => JSON.parse(row.record) as unknown);
 }
 
 /** Facet aggregation stops this long after the wave started, whatever its own budget says. */
