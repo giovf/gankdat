@@ -1390,16 +1390,24 @@ export async function queryD1Source(
   let total = await cachedCount(env, countKey);
   let rows: D1Result<{ record: string }>;
   if (total === null) {
-    // First page of this filter set since the last refresh: one COUNT scan beside the page,
-    // then every later page of the same filters reads the total from KV.
-    const [countRow, fetched] = await Promise.all([
-      env.DB.prepare(`SELECT COUNT(*) AS n FROM source_records WHERE ${where.sql}`)
+    // The page first, the COUNT only when the page cannot say the total itself (gankdat
+    // `d1-register-burst-reads`, 2026-11-15). A short page — fewer rows than asked — ends the
+    // result set, so the total is the offset plus its rows; that is every lookup-shaped read (a
+    // company number, a name: 0–5 hits), which ran two full scans of the register side by side
+    // and now runs one. A full page stops at its LIMIT, so there the COUNT is the only full scan.
+    // An empty page past the first cannot tell the total and still counts.
+    rows = await pageQuery;
+    const got = rows.results?.length ?? 0;
+    if (got < perPage && (got > 0 || page === 1)) {
+      total = (page - 1) * perPage + got;
+    } else {
+      const countRow = await env.DB.prepare(
+        `SELECT COUNT(*) AS n FROM source_records WHERE ${where.sql}`,
+      )
         .bind(...where.binds)
-        .first<{ n: number }>(),
-      pageQuery,
-    ]);
-    rows = fetched;
-    total = countRow?.n ?? 0;
+        .first<{ n: number }>();
+      total = countRow?.n ?? 0;
+    }
     try {
       await env.CACHE.put(countKey, String(total), { expirationTtl: COUNT_CACHE_TTL_S });
     } catch {

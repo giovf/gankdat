@@ -2,7 +2,7 @@ import { computeStats } from '../lib/stats';
 import type { SourceStats } from '../lib/stats';
 import { readCached, readSnapshot, readSourceStats, refreshSource, writeRefreshLog } from './cache';
 import { queryD1Source, refreshD1Source } from './d1store';
-import { D1_OVERLOAD_WAIT_MS } from './d1pace';
+import { D1_OVERLOAD_RETRY_AFTER_S, D1_OVERLOAD_WAIT_MS, isD1Overloaded } from './d1pace';
 import { isLookup, lookupRecord } from './lookup';
 import { isOriginUnavailable } from './origin';
 import {
@@ -35,6 +35,31 @@ export function unavailableMessage(source: DataSource): string {
   return source.notice
     ? `Source '${source.slug}' is unavailable: ${source.notice}`
     : `Source '${source.slug}' is temporarily unavailable, retry later`;
+}
+
+/**
+ * What a failed read tells its caller, and the one place the cause is logged (gankdat
+ * `d1-register-burst-reads`, 2026-11-15). The MCP tools caught the error and logged nothing:
+ * five keyless reads of uk-charities and uk-sponsors sent half a second apart answered
+ * "temporarily unavailable" and the Worker's error lines showed none of them. A read D1
+ * throttled is a busy register, not an unavailable one, so it says how long to wait on every
+ * surface, as the REST route already did.
+ */
+export function readFailure(
+  source: DataSource,
+  err: unknown,
+  surface: string,
+): { busy: boolean; message: string } {
+  const busy = isD1Overloaded(err);
+  console.error(
+    `read failed: ${source.slug} via ${surface}: ${err instanceof Error ? err.message : String(err)}`,
+  );
+  return {
+    busy,
+    message: busy
+      ? `Source '${source.slug}' is busy, retry in ${D1_OVERLOAD_RETRY_AFTER_S} s`
+      : unavailableMessage(source),
+  };
 }
 
 export async function querySource(

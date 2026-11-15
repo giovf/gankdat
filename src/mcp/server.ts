@@ -29,7 +29,7 @@ import { buildQuerySchema } from '../sources/query';
 import { missingLookupKey } from '../sources/lookup';
 import { queryD1Changes } from '../sources/d1store';
 import { changeFiltersSchema, changesQuerySchema } from '../routes/changes';
-import { querySource, unavailableMessage } from '../sources/store';
+import { querySource, readFailure } from '../sources/store';
 import { getSource, hasChangeFeed, listSources } from '../sources/registry';
 import type { DataSource } from '../sources/types';
 import type { KeyContext } from '../types';
@@ -270,8 +270,8 @@ function registerQueryTool(
             source,
             gate.kind === 'preview' ? clampPreviewArgs(args) : args,
           );
-        } catch {
-          return errorResult(unavailableMessage(source));
+        } catch (err) {
+          return errorResult(readFailure(source, err, `mcp ${toolName}`).message);
         }
 
         clock.phase = 'settle';
@@ -348,8 +348,8 @@ function registerChangesTool(
             since,
             filters: filters.data as Record<string, unknown>,
           });
-        } catch {
-          return errorResult(unavailableMessage(source));
+        } catch (err) {
+          return errorResult(readFailure(source, err, 'mcp get_changes').message);
         }
         clock.phase = 'settle';
         if (clock.expired) return errorResult(slowMessage(source, 'query', budgetMs));

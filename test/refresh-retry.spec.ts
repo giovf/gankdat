@@ -8,7 +8,12 @@ import {
   snapshotWrites,
   statsKey,
 } from '../src/sources/cache';
-import { isTransientD1Error, refreshOne, unavailableMessage } from '../src/sources/store';
+import {
+  isTransientD1Error,
+  readFailure,
+  refreshOne,
+  unavailableMessage,
+} from '../src/sources/store';
 import type { DataSource } from '../src/sources/types';
 
 // A refresh that dies on a transient D1 error ("internal error; reference = …",
@@ -129,5 +134,30 @@ describe('unavailableMessage', () => {
     expect(unavailableMessage({ ...source, notice: 'Origin paused since 2026-10-10.' })).toBe(
       "Source 'msg' is unavailable: Origin paused since 2026-10-10.",
     );
+  });
+});
+
+describe('readFailure (d1-register-burst-reads, 2026-11-15)', () => {
+  it('logs the cause, and tells a throttled read to wait instead of calling the source unavailable', () => {
+    const { source } = flaky('busy', []);
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const throttled = readFailure(
+      source,
+      new Error(
+        'D1_ERROR: D1 DB is overloaded. Too many resources consumed within a 10 second window.',
+      ),
+      'mcp query_busy',
+    );
+    expect(throttled).toEqual({ busy: true, message: "Source 'busy' is busy, retry in 11 s" });
+    expect(logged).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'read failed: busy via mcp query_busy: D1_ERROR: D1 DB is overloaded',
+      ),
+    );
+    expect(readFailure(source, new Error('no such table'), 'rest')).toEqual({
+      busy: false,
+      message: "Source 'busy' is temporarily unavailable, retry later",
+    });
+    logged.mockRestore();
   });
 });

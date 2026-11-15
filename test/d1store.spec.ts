@@ -1209,6 +1209,35 @@ describe('d1store under the D1 throttle', () => {
       expect(after.keys).toHaveLength(2);
     });
 
+    it('takes the total from a short page and counts only when the page is full (d1-register-burst-reads)', async () => {
+      const source = makeSource('d1-short-page');
+      await refreshD1Source(env, source);
+      const schema = buildQuerySchema(source);
+      const all = applyQuery(RECORDS, schema.parse({ classification: 'firm' })).total;
+      expect(all).toBeGreaterThan(1);
+
+      // a short first page: the lookup shape, one scan, total = its rows
+      const wide = schema.parse({ classification: 'firm', per_page: String(all + 5) });
+      const short = await queryD1Source(env, source, wide);
+      expect(short.page.records).toHaveLength(all);
+      expect(short.page.total).toBe(all);
+
+      // no hit at all on page 1 is a total of 0
+      const none = await queryD1Source(env, source, schema.parse({ classification: 'no-such' }));
+      expect(none.page).toMatchObject({ records: [], total: 0 });
+
+      // a full page cannot know the total: it is counted, and matches the JS engine
+      const one = schema.parse({ classification: 'firm', per_page: '1' });
+      expect((await queryD1Source(env, source, one)).page.total).toBe(all);
+
+      // a short last page past the first: offset plus its rows
+      const perPage = all - 1;
+      const last = schema.parse({ classification: 'firm', per_page: String(perPage), page: '2' });
+      const tail = await queryD1Source(env, source, last);
+      expect(tail.page.records).toHaveLength(1);
+      expect(tail.page.total).toBe(all);
+    });
+
     it('never serves a previous refresh’s total: the key carries the generation and the refresh stamp', async () => {
       const source = makeSource('d1-count-gen');
       await refreshD1Source(env, source);
