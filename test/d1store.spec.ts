@@ -6,6 +6,8 @@ import {
   BACKFILL_HANDOVER_MS,
   BACKFILL_UPDATE_SQL,
   DeltaIndexUnavailableError,
+  KEY_BACKFILL_BUDGET_MS,
+  LOOKUP_NARROW_SQL,
   backfillClock,
   facetsClock,
   filteredCountKey,
@@ -18,6 +20,7 @@ import { readSourceStats, writeRefreshLog } from '../src/sources/cache';
 import { computeStats } from '../src/lib/stats';
 import { applyQuery, buildQuerySchema } from '../src/sources/query';
 import type { DataSource } from '../src/sources/types';
+import { listSources } from '../src/sources/registry';
 
 // Semantics parity: a D1-backed source must answer every query exactly like
 // the KV path's applyQuery — including non-ASCII case folding (record_lc is
@@ -1272,5 +1275,173 @@ describe('d1store under the D1 throttle', () => {
       ).not.toBe(a);
       expect(filteredCountKey('s', 3, t, { sql: 'x = ?', binds: ['a'] })).toBe(a);
     });
+  });
+});
+
+// gankdat d1-lookup-key-index (2026-11-15): a source's `lookupKey` field is stored lowercased in
+// an indexed column and a filter on it walks the index, not the register's wide rows.
+describe('d1store lookup key', () => {
+  const keysOf = async (slug: string): Promise<string[]> =>
+    (
+      await env.DB.prepare(
+        'SELECT lookup_key FROM source_keys WHERE source_slug = ?1 ORDER BY seq, lookup_key',
+      )
+        .bind(slug)
+        .all<{ lookup_key: string }>()
+    ).results.map((r) => r.lookup_key);
+  const keyedFlag = async (slug: string): Promise<string | null> =>
+    (
+      await env.DB.prepare('SELECT lookup_keyed FROM source_key_state WHERE source_slug = ?1')
+        .bind(slug)
+        .first<{ lookup_keyed: string | null }>()
+    )?.lookup_keyed ?? null;
+  const expectParity = async (source: DataSource, records: unknown[]): Promise<void> => {
+    const schema = buildQuerySchema(source);
+    for (const query of [
+      ...QUERIES,
+      { name: 'a' },
+      { name: 'no-such' },
+      { name: 'l', country: 'gbr' },
+    ]) {
+      const parsed = schema.parse(query);
+      const got = await queryD1Source(env, source, parsed);
+      const want = applyQuery(records, parsed);
+      expect(got.page.total, JSON.stringify(query)).toBe(want.total);
+      expect(got.page.records, JSON.stringify(query)).toEqual(want.records);
+    }
+  };
+
+  it('writes the key at ingest and answers every query like the JS engine', async () => {
+    const records = [
+      ...RECORDS,
+      { name: 42, classification: 'Firm', country: 'GBR' },
+      { classification: 'Firm' },
+    ];
+    const source: DataSource = { ...makeSource('d1-key', records), lookupKey: 'name' };
+    await refreshD1Source(env, source);
+    expect(await keyedFlag('d1-key')).toBe('name');
+    expect(await keysOf('d1-key')).toEqual([
+      'alpha corp',
+      'beta llc',
+      'charlie person',
+      'delta vessel',
+      'epsilon firm',
+      'josé müller sl',
+    ]); // the two records without a string name have no key row
+    await expectParity(source, records);
+  });
+
+  it('reads a keyed filter through the key table’s primary key, the matching rows by theirs', async () => {
+    const source: DataSource = { ...makeSource('d1-key-plan'), lookupKey: 'name' };
+    await refreshD1Source(env, source);
+    const plan = await env.DB.prepare(
+      `EXPLAIN QUERY PLAN SELECT record FROM source_records WHERE source_slug = ? AND generation = ? AND ${LOOKUP_NARROW_SQL} ORDER BY seq LIMIT 5`,
+    )
+      .bind('d1-key-plan', 1, 'd1-key-plan', 1, 'alpha')
+      .all<{ detail: string }>();
+    const details = plan.results.map((r) => r.detail);
+    expect(
+      details.some((d) =>
+        /^SEARCH source_keys USING PRIMARY KEY \(source_slug=\? AND generation=\?\)/.test(d),
+      ),
+      details.join(' | '),
+    ).toBe(true);
+    expect(
+      details.some((d) => /^SEARCH source_records USING .*seq=\?/.test(d)),
+      details.join(' | '),
+    ).toBe(true);
+    // no walk of the wide rows
+    expect(
+      details.some((d) => /^SCAN source_records\b/.test(d)),
+      details.join(' | '),
+    ).toBe(false);
+  });
+
+  it('leaves a source without a key unkeyed, and a keyless register off the index', async () => {
+    const source = makeSource('d1-nokey');
+    await refreshD1Source(env, source);
+    expect(await keyedFlag('d1-nokey')).toBeNull();
+    expect(await keysOf('d1-nokey')).toEqual([]);
+    // the key is declared later: until a refresh keys the rows, reads scan and stay right
+    const keyed: DataSource = { ...source, lookupKey: 'name' };
+    await expectParity(keyed, RECORDS);
+  });
+
+  it('keys the stored rows in place at the next refresh, then the delta keeps them keyed', async () => {
+    const plain = makeIdSource('d1-key-backfill', RECORDS);
+    await refreshD1Source(env, plain);
+    const source: DataSource = { ...plain, lookupKey: 'name' };
+    const day2 = [
+      ...RECORDS.slice(1),
+      { ...RECORDS[0], amount: 101 },
+      {
+        name: 'Zeta GmbH',
+        classification: 'Firm',
+        country: 'DEU',
+        amount: 1,
+        listed_on: null,
+        flagged: false,
+      },
+    ];
+    await refreshD1Source(env, { ...source, fetchFresh: () => Promise.resolve(day2) });
+    expect((await metaOf('d1-key-backfill'))?.generation).toBe(1); // still the delta path
+    // a stale key row (a record since removed, a key since changed) is a candidate, never an answer
+    await env.DB.prepare(
+      "INSERT INTO source_keys (source_slug, generation, lookup_key, seq) VALUES ('d1-key-backfill', 1, 'zeta ghost', 9999), ('d1-key-backfill', 1, 'zeta stale', 1)",
+    ).run();
+    expect(await keyedFlag('d1-key-backfill')).toBe('name');
+    expect(new Set(await keysOf('d1-key-backfill'))).toEqual(
+      new Set([
+        'alpha corp',
+        'beta llc',
+        'charlie person',
+        'delta vessel',
+        'epsilon firm',
+        'josé müller sl',
+        'zeta gmbh',
+        'zeta ghost',
+        'zeta stale',
+      ]),
+    );
+    const schema = buildQuerySchema(source);
+    for (const query of [{ name: 'zeta' }, { name: 'ALPHA' }, { name: 'josé' }, { name: 'e' }]) {
+      const parsed = schema.parse(query);
+      const got = await queryD1Source(env, source, parsed);
+      expect(got.page.total, JSON.stringify(query)).toBe(applyQuery(day2, parsed).total);
+      expect(got.page.records, JSON.stringify(query)).toEqual(applyQuery(day2, parsed).records);
+    }
+    // a full reload starts a clean generation and sweeps the old one's key rows
+    await refreshD1Source(env, { ...source, idOf: undefined });
+    expect((await metaOf('d1-key-backfill'))?.generation).toBe(2);
+    expect(await keysOf('d1-key-backfill')).toHaveLength(RECORDS.length);
+  });
+
+  it('does not claim a register keyed when the backfill ran out of budget', async () => {
+    const plain = makeIdSource('d1-key-budget', RECORDS);
+    await refreshD1Source(env, plain);
+    const source: DataSource = { ...plain, lookupKey: 'name' };
+    const realNow = backfillClock.now;
+    try {
+      backfillClock.now = (): number => Date.now() + KEY_BACKFILL_BUDGET_MS;
+      await refreshD1Source(env, source);
+    } finally {
+      backfillClock.now = realNow;
+    }
+    expect(await keyedFlag('d1-key-budget')).toBeNull();
+    await expectParity(source, RECORDS); // reads scan as before
+    await refreshD1Source(env, source); // the next night finishes it
+    expect(await keyedFlag('d1-key-budget')).toBe('name');
+    await expectParity(source, RECORDS);
+  });
+
+  it('every registered lookupKey is a D1 source’s string query param', () => {
+    const keyed = listSources().filter((s) => s.lookupKey);
+    expect(keyed.length).toBeGreaterThan(0);
+    for (const source of keyed) {
+      expect(source.storage, source.slug).toBe('d1');
+      const param = (source.queryParams.shape as Record<string, z.ZodType>)[source.lookupKey ?? ''];
+      expect(param, source.slug).toBeDefined();
+      expect(param.safeParse('x').data, source.slug).toBe('x');
+    }
   });
 });

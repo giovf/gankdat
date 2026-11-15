@@ -184,6 +184,7 @@ export const ukSponsorsSource: DataSource<UkSponsorsRecord> = {
   }),
   refresh: { cron: '15 5 * * *', cacheTtlSeconds: 86_400 },
   // No published id: organisation × town × route is the row's identity in the register.
+  lookupKey: 'organisation',
   idOf: (r) => [r.organisation, r.town ?? '', r.route].join('|').toLowerCase(),
   fetchStream,
   async fetchFresh(env: CloudflareBindings): Promise<UkSponsorsRecord[]> {

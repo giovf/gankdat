@@ -84,11 +84,18 @@ interface SourceMeta {
   generation: number;
   last_refreshed_at: string;
   total: number;
+  /** The field source_keys holds for every live row (source_key_state, migration 0018); null until keyed. */
+  lookup_keyed?: string | null;
 }
+
+const KEY_STATE_SQL = `INSERT INTO source_key_state (source_slug, lookup_keyed) VALUES (?1, ?2)
+   ON CONFLICT (source_slug) DO UPDATE SET lookup_keyed = ?2`;
 
 async function readMeta(env: CloudflareBindings, slug: string): Promise<SourceMeta | null> {
   return env.DB.prepare(
-    'SELECT generation, last_refreshed_at, total FROM source_meta WHERE source_slug = ?1',
+    `SELECT m.generation, m.last_refreshed_at, m.total, k.lookup_keyed
+     FROM source_meta m LEFT JOIN source_key_state k ON k.source_slug = m.source_slug
+     WHERE m.source_slug = ?1`,
   )
     .bind(slug)
     .first<SourceMeta>();
@@ -149,10 +156,20 @@ interface IngestRow {
   l: unknown;
   i: string | null;
   h: number;
+  /** The source's `lookupKey` field lowercased ('' when the record has none); null = source not keyed. */
+  k: string | null;
+}
+
+/** The value written to source_keys — exactly what record_lc holds for the field, so both filter alike. */
+function lookupKeyOf(source: DataSource, record: unknown): string | null {
+  if (!source.lookupKey) return null;
+  const value = (record as Record<string, unknown>)[source.lookupKey];
+  return typeof value === 'string' ? value.toLowerCase() : '';
 }
 
 function ingestRow(source: DataSource, record: unknown, json: string): IngestRow {
   return {
+    k: lookupKeyOf(source, record),
     s: searchText(record as Record<string, unknown>),
     r: record,
     l: lowercaseStrings(record),
@@ -180,7 +197,29 @@ async function deleteGenerations(
   );
   for (;;) {
     const res = await stmt.bind(slug, generation).run();
-    if ((res.meta?.changes ?? 0) < DELETE_CHUNK) return;
+    if ((res.meta?.changes ?? 0) < DELETE_CHUNK) break;
+  }
+  // The generations' key rows go too. Best-effort: a key row without its record is only a
+  // candidate the read never finds (LOOKUP_NARROW_SQL), so a failure here must not fail a refresh.
+  try {
+    const keys = env.DB.prepare(
+      `DELETE FROM source_keys WHERE source_slug = ?1 AND generation ${op} ?2 AND (generation, lookup_key, seq) IN (
+         SELECT generation, lookup_key, seq FROM source_keys WHERE source_slug = ?1 AND generation ${op} ?2 LIMIT ${DELETE_CHUNK}
+       )`,
+    );
+    for (;;) {
+      const res = await keys.bind(slug, generation).run();
+      if ((res.meta?.changes ?? 0) < DELETE_CHUNK) break;
+    }
+  } catch (err) {
+    console.log(
+      JSON.stringify({
+        level: 'warn',
+        event: 'source_keys_sweep_failed',
+        source: slug,
+        reason: err instanceof Error ? err.message : String(err),
+      }),
+    );
   }
 }
 
@@ -319,6 +358,7 @@ export async function refreshD1Source(
 ): Promise<SourceMeta> {
   const start = Date.now();
   const previous = await readMeta(env, source.slug);
+  if (previous) await backfillLookupKeys(env, source, previous, start);
   if (source.append && source.idOf) {
     return traceOrigin(() => refreshD1Append(env, source, previous, start));
   }
@@ -386,6 +426,95 @@ export async function refreshD1Source(
     }
   }
   return traceOrigin(() => refreshD1Full(env, source, previous, start));
+}
+
+/** Seq span one key-backfill statement covers (rows are 1.5–3 KB; one statement stays well under a second). */
+export const KEY_BACKFILL_SPAN = 5_000;
+/** The key backfill stops here and resumes the next night (rows already keyed are skipped). */
+export const KEY_BACKFILL_BUDGET_MS = 3 * 60_000;
+
+function keyBackfillSql(field: string): string {
+  const p = path(field);
+  // The same value ingest writes (lookupKeyOf): record_lc is the JS-lowercased copy; a row
+  // from before record_lc falls back to SQLite's ASCII lower(). A record whose field is not a
+  // non-empty string gets no key row (it never matches a string filter anyway).
+  return `INSERT OR IGNORE INTO source_keys (source_slug, generation, lookup_key, seq)
+     SELECT source_slug, generation, COALESCE(json_extract(record_lc, ${p}), lower(json_extract(record, ${p}))), seq
+     FROM source_records
+     WHERE source_slug = ?1 AND generation = ?2 AND seq >= ?3 AND seq < ?4
+       AND typeof(json_extract(record, ${p})) = 'text' AND json_extract(record, ${p}) != ''`;
+}
+
+/**
+ * Keys the live rows of a source that names a `lookupKey` (gankdat `d1-lookup-key-index`,
+ * 2026-11-15): the delta refresh rewrites well under 1 % of a register a night, so the rows
+ * stored before migration 0018 would never get a key from ingest alone. One INSERT … SELECT per
+ * seq span, pure SQL (no record text leaves D1); once the whole generation is covered
+ * `source_key_state.lookup_keyed` names the field and reads start using source_keys. Best-effort by
+ * contract: a throttle or the budget leaves the flag unset (reads keep scanning as before) and
+ * the next night starts over — key rows already written are ignored, not rewritten.
+ * A changed `lookupKey` adds the new field's keys beside the old ones (stale rows only cost a
+ * row read, see LOOKUP_NARROW_SQL); a removed one just stops the reads using the table.
+ */
+async function backfillLookupKeys(
+  env: CloudflareBindings,
+  source: DataSource,
+  previous: SourceMeta,
+  start: number,
+): Promise<void> {
+  const field = source.lookupKey;
+  if (!field || previous.lookup_keyed === field) return;
+  const { generation } = previous;
+  try {
+    const size = await env.DB.prepare(
+      'SELECT COALESCE(MAX(seq), -1) AS max FROM source_records WHERE source_slug = ?1 AND generation = ?2',
+    )
+      .bind(source.slug, generation)
+      .first<{ max: number }>();
+    const max = size?.max ?? -1;
+    const update = env.DB.prepare(keyBackfillSql(field));
+    let keyed = 0;
+    for (let from = 0; from <= max; from += KEY_BACKFILL_SPAN) {
+      if (backfillClock.now() - start >= KEY_BACKFILL_BUDGET_MS) {
+        console.log(
+          JSON.stringify({
+            level: 'info',
+            event: 'lookup_key_backfill',
+            source: source.slug,
+            keyed,
+            done: false,
+          }),
+        );
+        return;
+      }
+      const result = await withOverloadRetry(
+        () => update.bind(source.slug, generation, from, from + KEY_BACKFILL_SPAN).run(),
+        1,
+        () => logThrottledWrite(source.slug),
+      );
+      keyed += result.meta.changes;
+    }
+    await env.DB.prepare(KEY_STATE_SQL).bind(source.slug, field).run();
+    previous.lookup_keyed = field;
+    console.log(
+      JSON.stringify({
+        level: 'info',
+        event: 'lookup_key_backfill',
+        source: source.slug,
+        keyed,
+        done: true,
+      }),
+    );
+  } catch (err) {
+    console.log(
+      JSON.stringify({
+        level: 'warn',
+        event: 'lookup_key_backfill_failed',
+        source: source.slug,
+        reason: err instanceof Error ? err.message : String(err),
+      }),
+    );
+  }
 }
 
 /** Rows per hash-backfill page (the record text comes back, ~1–2 KB each). */
@@ -595,6 +724,25 @@ const UPSERT_SQL = `INSERT INTO source_records (source_slug, generation, seq, se
    ON CONFLICT (source_slug, generation, seq) DO UPDATE SET
      search = excluded.search, record = excluded.record, record_lc = excluded.record_lc,
      record_id = excluded.record_id, record_hash = excluded.record_hash`;
+/** The key rows of written records, from a small `[{ k, q }]` list (never the chunk's record JSON twice). */
+const KEYS_SQL = `INSERT OR IGNORE INTO source_keys (source_slug, generation, lookup_key, seq)
+   SELECT ?1, ?2, json_extract(value, '$.k'), json_extract(value, '$.q') FROM json_each(?3)`;
+
+/**
+ * The statement that writes the key rows of a chunk, or null when it has none (a source
+ * without a `lookupKey`, records without a value). Runs in the same batch as the rows it
+ * indexes, so a keyed register never holds a live row whose key is missing.
+ */
+function keysStatement(
+  env: CloudflareBindings,
+  slug: string,
+  generation: number,
+  rows: readonly { k: string | null; q: number }[],
+): D1PreparedStatement | null {
+  const keys = rows.filter((row) => row.k).map((row) => ({ k: row.k, q: row.q }));
+  if (keys.length === 0) return null;
+  return env.DB.prepare(KEYS_SQL).bind(slug, generation, JSON.stringify(keys));
+}
 /** Change-feed rows copied from the live rows named by seq (after an upsert, or before a delete). */
 const CHANGES_FROM_ROWS_SQL = `INSERT OR IGNORE INTO source_changes (source_slug, changed_at, change, record_id, record, search, record_lc)
    SELECT source_slug, ?3, ?4, record_id, record, search, record_lc FROM source_records
@@ -643,6 +791,8 @@ async function refreshD1Delta(
       const batch = [
         env.DB.prepare(UPSERT_SQL).bind(source.slug, generation, JSON.stringify(chunk)),
       ];
+      const keys = keysStatement(env, source.slug, generation, chunk);
+      if (keys) batch.push(keys);
       for (const [kind, seqs] of [
         ['added', addedSeqs],
         ['changed', changedSeqs],
@@ -733,6 +883,7 @@ async function refreshD1Delta(
       generation,
       last_refreshed_at: changedAt,
       total: index.n + added - removed,
+      lookup_keyed: previous.lookup_keyed ?? null,
     };
     await env.DB.batch([
       env.DB.prepare(
@@ -856,6 +1007,8 @@ async function refreshD1Append(
       const batch = [
         env.DB.prepare(UPSERT_SQL).bind(source.slug, generation, JSON.stringify(rows)),
       ];
+      const keys = keysStatement(env, source.slug, generation, rows);
+      if (keys) batch.push(keys);
       for (const [kind, seqs] of [
         ['added', addedSeqs],
         ['changed', changedSeqs],
@@ -902,6 +1055,7 @@ async function refreshD1Append(
       generation,
       last_refreshed_at: changedAt,
       total: (size?.n ?? 0) + added,
+      lookup_keyed: previous ? (previous.lookup_keyed ?? null) : (source.lookupKey ?? null),
     };
     await env.DB.batch([
       env.DB.prepare(
@@ -910,6 +1064,11 @@ async function refreshD1Append(
          ON CONFLICT (source_slug) DO UPDATE
          SET generation = ?2, last_refreshed_at = ?3, total = ?4`,
       ).bind(source.slug, meta.generation, meta.last_refreshed_at, meta.total),
+      // The keyed flag is written only when this run creates the register (every row then has
+      // its key row); an existing register's flag belongs to the key backfill.
+      ...(previous
+        ? []
+        : [env.DB.prepare(KEY_STATE_SQL).bind(source.slug, source.lookupKey ?? null)]),
       env.DB.prepare(
         "DELETE FROM source_changes WHERE source_slug = ?1 AND changed_at < datetime('now', ?2)",
       ).bind(source.slug, `-${CHANGES_RETENTION_DAYS} days`),
@@ -1116,15 +1275,17 @@ async function refreshD1Full(
     let chunkBytes = 0;
     const flush = async (): Promise<void> => {
       if (chunk.length === 0) return;
-      const statement = insert.bind(
+      const offset = total - chunk.length;
+      const statement = insert.bind(source.slug, generation, offset, JSON.stringify(chunk));
+      const keys = keysStatement(
+        env,
         source.slug,
         generation,
-        total - chunk.length,
-        JSON.stringify(chunk),
+        chunk.map((row, at) => ({ k: row.k, q: offset + at })),
       );
-      // One statement, atomic: a throttled chunk wrote nothing and is repeated as is.
+      // One transaction, atomic: a throttled chunk wrote nothing and is repeated as is.
       await withOverloadRetry(
-        () => statement.run(),
+        () => env.DB.batch(keys ? [statement, keys] : [statement]),
         1,
         () => logThrottledWrite(source.slug),
       );
@@ -1158,14 +1319,17 @@ async function refreshD1Full(
       last_refreshed_at: new Date().toISOString(),
       total,
     };
-    await env.DB.prepare(
-      `INSERT INTO source_meta (source_slug, generation, last_refreshed_at, total)
-       VALUES (?1, ?2, ?3, ?4)
-       ON CONFLICT (source_slug) DO UPDATE
-       SET generation = ?2, last_refreshed_at = ?3, total = ?4`,
-    )
-      .bind(source.slug, meta.generation, meta.last_refreshed_at, meta.total)
-      .run();
+    // Every row of the new generation was written with its key, so the flip also says so.
+    meta.lookup_keyed = source.lookupKey ?? null;
+    await env.DB.batch([
+      env.DB.prepare(
+        `INSERT INTO source_meta (source_slug, generation, last_refreshed_at, total)
+         VALUES (?1, ?2, ?3, ?4)
+         ON CONFLICT (source_slug) DO UPDATE
+         SET generation = ?2, last_refreshed_at = ?3, total = ?4`,
+      ).bind(source.slug, meta.generation, meta.last_refreshed_at, meta.total),
+      env.DB.prepare(KEY_STATE_SQL).bind(source.slug, meta.lookup_keyed),
+    ]);
     // Readers are on the new generation now. Before the old generation goes,
     // diff it against the new one for the change feed (best-effort).
     if (source.idOf && previous) {
@@ -1317,15 +1481,42 @@ function filterPredicate(parsed: Record<string, unknown>): {
   return { clauses, binds };
 }
 
+/**
+ * Narrows a read to the rows whose key contains the wanted text, through source_keys
+ * (migration 0018; gankdat `d1-lookup-key-index`, 2026-11-15). The subquery walks one
+ * primary-key range of short rows (key and seq, nothing else) instead of the register's wide
+ * rows, and the outer query reaches the few matching records by primary key. It only ever
+ * NARROWS: the field's ordinary substring predicate stays in the WHERE, and since a key is
+ * exactly the field's record_lc value the two select the same rows — the query language is
+ * unchanged, only the walk is far lighter. That is also why source_keys may hold stale rows
+ * (a key that changed, a record the delta removed): they add a candidate the record's own
+ * predicate then rejects, never a wrong answer.
+ */
+export const LOOKUP_NARROW_SQL = `seq IN (SELECT seq FROM source_keys
+     WHERE source_slug = ? AND generation = ? AND instr(lookup_key, ?) > 0)`;
+
 function buildWhere(
   slug: string,
   generation: number,
   parsed: Record<string, unknown>,
+  lookupKey?: string | null,
 ): SqlPredicate {
   const filters = filterPredicate(parsed);
+  const wanted = lookupKey ? parsed[lookupKey] : undefined;
+  const narrow = typeof wanted === 'string' && wanted !== '';
   return {
-    sql: ['source_slug = ?', 'generation = ?', ...filters.clauses].join(' AND '),
-    binds: [slug, generation, ...filters.binds],
+    sql: [
+      'source_slug = ?',
+      'generation = ?',
+      ...(narrow ? [LOOKUP_NARROW_SQL] : []),
+      ...filters.clauses,
+    ].join(' AND '),
+    binds: [
+      slug,
+      generation,
+      ...(narrow ? [slug, generation, wanted.toLowerCase()] : []),
+      ...filters.binds,
+    ],
   };
 }
 
@@ -1376,7 +1567,10 @@ export async function queryD1Source(
   // was an unauthenticated-DoS vector). Cron is the sole loader.
   const meta = await readMeta(env, source.slug);
   if (!meta) throw new SourceNotLoadedError(source.slug);
-  const where = buildWhere(source.slug, meta.generation, parsed);
+  // source_keys answers only for a register whose every live row has its current key there.
+  const keyed =
+    source.lookupKey && meta.lookup_keyed === source.lookupKey ? source.lookupKey : null;
+  const where = buildWhere(source.slug, meta.generation, parsed, keyed);
   const page = parsed.page as number;
   const perPage = parsed.per_page as number;
 

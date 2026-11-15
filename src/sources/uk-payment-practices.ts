@@ -261,6 +261,7 @@ export const ukPaymentPracticesSource: DataSource<UkPaymentPracticesRecord> = {
     supply_chain_financing_offered: z.stringbool().optional(),
   }),
   refresh: { cron: '50 5 * * *', cacheTtlSeconds: 86_400, wave: 5 },
+  lookupKey: 'company_number',
   idOf: (r) => String(r.report_id),
   fetchStream,
   async fetchFresh(env: CloudflareBindings): Promise<UkPaymentPracticesRecord[]> {

@@ -233,6 +233,7 @@ export const ukCharitiesSource: DataSource<UkCharitiesRecord> = {
     website_present: z.stringbool().optional(),
   }),
   refresh: { cron: '30 5 * * *', cacheTtlSeconds: 86_400, wave: 3 },
+  lookupKey: 'company_number',
   idOf: (r) => String(r.organisation_number),
   fetchStream,
   async fetchFresh(env: CloudflareBindings): Promise<UkCharitiesRecord[]> {

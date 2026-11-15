@@ -594,6 +594,7 @@ export const ukCompanyAccountsSource: DataSource<UkCompanyAccountsRecord> = {
     profit_loss_max: z.coerce.number().optional(),
   }),
   refresh: { cron: '10 8 * * *', cacheTtlSeconds: 86_400, wave: 8 },
+  lookupKey: 'company_number',
   idOf: (r) => `${r.company_number}_${r.balance_sheet_date}`,
   fetchStream,
   async fetchFresh(env: CloudflareBindings): Promise<UkCompanyAccountsRecord[]> {

@@ -436,6 +436,7 @@ export const ukSchoolsSource: DataSource<UkSchoolsRecord> = {
     open_date_before: z.iso.date().optional(),
   }),
   refresh: { cron: '50 5 * * *', cacheTtlSeconds: 86_400, wave: 5 },
+  lookupKey: 'urn',
   idOf: (r) => r.urn,
   fetchStream,
   async fetchFresh(env: CloudflareBindings): Promise<UkSchoolsRecord[]> {
