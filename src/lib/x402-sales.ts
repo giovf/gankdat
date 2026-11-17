@@ -47,8 +47,13 @@ export interface X402PayerSplit {
   probers: X402SalesSummary;
 }
 
-/** A user agent that names itself a survey of the catalogue rather than a customer. */
-export const PROBER_UA = /probe|prober|scout|observatory|survey|collector/i;
+/**
+ * A user agent that names itself a survey of the catalogue, or a test harness, rather than a
+ * customer. `harness` since 2026-11-17 (`x402-harness-ua-as-prober`): `usetested-harness/0.1` was
+ * 21 of the month's 42 buyer calls — one 25-second burst of bare first-page fetches on 11-11,
+ * nothing after — and carried the lane's repeat signal that two parked triggers quote as demand.
+ */
+export const PROBER_UA = /probe|prober|scout|observatory|survey|collector|harness/i;
 
 const whole = (value: number | string): number => Math.max(0, Math.round(Number(value) || 0));
 
@@ -63,7 +68,7 @@ export function uaFamily(ua: string | null): string {
   return clean || '(no UA)';
 }
 
-/** True for a user agent that calls itself a probe, prober, scout, observatory, survey or collector. */
+/** True for a user agent that calls itself a probe, prober, scout, observatory, survey, collector or harness. */
 export function isProberUa(ua: string | null): boolean {
   return PROBER_UA.test(ua ?? '');
 }

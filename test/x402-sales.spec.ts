@@ -9,6 +9,7 @@ import {
   x402PaidClause,
   x402Sales,
 } from '../src/lib/x402-sales';
+import type { X402PaidRow } from '../src/lib/x402-sales';
 
 const rows = [
   { slug: 'uk-sanctions', ua: 'python-requests/2.34.2', client: 'c1', n: 1 },
@@ -157,6 +158,35 @@ describe('x402PaidClause', () => {
     expect(x402PaidClause(3, null)).toBe('3 x402 paid');
     expect(x402PaidClause(2, rows)).toBe('2 x402 paid');
     expect(x402PaidClause('1', [rows[2]!])).toBe('1 x402 paid (eu-ted 1; 1 client; x402-fetch 1)');
+  });
+
+  it('reads a self-named test harness as a prober, on one day or several', () => {
+    const harness = (day: string, n: number): X402PaidRow => ({
+      slug: 'uk-trademark-journal',
+      ua: 'usetested-harness/0.1 (+https://usetested.com)',
+      client: 'h1',
+      day,
+      n,
+    });
+    expect(isProberUa('usetested-harness/0.1 (+https://usetested.com)')).toBe(true);
+    expect(isProberUa('python-requests/2.34.2')).toBe(false);
+    const { buyers, probers } = splitX402Payers(
+      [
+        harness('2026-11-10', 10),
+        harness('2026-11-11', 11),
+        {
+          slug: 'uk-trademark-journal',
+          ua: 'x402-fetch (node)',
+          client: 'b1',
+          day: '2026-11-10',
+          n: 2,
+        },
+      ],
+      25,
+    );
+    expect(probers).toMatchObject({ paid: 21, clients: 1 });
+    expect(probers.byFamily).toEqual([['usetested-harness', 21]]);
+    expect(buyers).toMatchObject({ paid: 2, clients: 1, repeat: 0 });
   });
 
   it('sets a prober apart from the buyers so a survey never reads as a sale', () => {
