@@ -9,7 +9,9 @@ import { ukCompanyProfilesSource } from './uk-company-profiles';
 import { ukContractAwardsSource } from './uk-contract-awards';
 import { ukFoodHygieneSource } from './uk-food-hygiene';
 import { ukGamblingOperatorsSource } from './uk-gambling-operators';
+import { ukGenderPayGapSource } from './uk-gender-pay-gap';
 import { ukInsolvencySource } from './uk-insolvency';
+import { ukModernSlaveryStatementsSource } from './uk-modern-slavery-statements';
 import { ukPaymentPracticesSource } from './uk-payment-practices';
 import { ukPlanningSource } from './uk-planning';
 import { ukSanctionsSource } from './uk-sanctions';
@@ -40,6 +42,8 @@ const SOURCES: DataSource[] = [
   ukCompanyProfilesSource,
   ukPaymentPracticesSource,
   ukCompanyAccountsSource,
+  ukModernSlaveryStatementsSource,
+  ukGenderPayGapSource,
 ];
 
 export const registry: ReadonlyMap<string, DataSource> = new Map(

@@ -2,6 +2,8 @@ import { z } from 'zod';
 import fixture from './fixtures/uk-company-profiles.json';
 import type { DataSource } from './types';
 import { financialsSummarySchema, latestFinancials } from './uk-company-accounts';
+import { genderPayGapSummarySchema, latestGenderPayGap } from './uk-gender-pay-gap';
+import { latestModernSlavery, modernSlaverySummarySchema } from './uk-modern-slavery-statements';
 import { latestPaymentPractices, paymentPracticesSummarySchema } from './uk-payment-practices';
 
 // Companies House — company lookup + monitor (exchange 2026-W41 winner, built
@@ -31,7 +33,10 @@ import { latestPaymentPractices, paymentPracticesSummarySchema } from './uk-paym
 // (2026-11-13, `uk-company-accounts`): the headline figures of the company's latest
 // electronically filed accounts — net assets, cash, creditors within a year,
 // employees, the prior period — joined the same way from the accounts register
-// (null for a paper filer or a company that has not filed since the register began). Requires COMPANIES_HOUSE_API_KEY (HTTP Basic, key as username;
+// (null for a paper filer or a company that has not filed since the register began). `esg`
+// (2026-11-17, `uk-esg-disclosures`): the company's latest statement on the modern slavery
+// statement registry and its latest gender pay gap report, joined the same way; null for a
+// company in neither register — the registry is voluntary, so null is never non-compliance. Requires COMPANIES_HOUSE_API_KEY (HTTP Basic, key as username;
 // 600 requests / 5 min shared with uk-companies — the per-source rate limit
 // below keeps a full-speed client under a quarter of that).
 const API_URL = 'https://api.company-information.service.gov.uk';
@@ -228,6 +233,17 @@ export const ukCompanyProfilesRecordSchema = z.object({
   payment_practices: paymentPracticesSummarySchema.nullable(),
   /** Headline figures of the latest electronically filed accounts; null when the accounts register holds none. */
   financials: financialsSummarySchema.nullable(),
+  /**
+   * Statutory disclosures by company number: the latest statement on the (voluntary) modern
+   * slavery statement registry and the latest gender pay gap report. Null when the company is
+   * in neither register; either block is null on its own when only the other exists.
+   */
+  esg: z
+    .object({
+      modern_slavery: modernSlaverySummarySchema.nullable(),
+      gender_pay_gap: genderPayGapSummarySchema.nullable(),
+    })
+    .nullable(),
   company_url: z.string(),
 });
 
@@ -320,6 +336,7 @@ function normalize(raw: RawCompany): UkCompanyProfilesRecord {
     })),
     payment_practices: null,
     financials: null,
+    esg: null,
     company_url: `https://find-and-update.company-information.service.gov.uk/company/${p.company_number}`,
   };
 }
@@ -399,17 +416,20 @@ async function fetchFromOrigin(
   return normalize({ profile, charges, filing_history, pscs });
 }
 
-/** The record with its register joins (payment practices, accounts); a join never fails the lookup. */
+/** The record with its register joins (payment practices, accounts, ESG disclosures); a join never fails the lookup. */
 async function withJoins(
   env: CloudflareBindings,
   record: UkCompanyProfilesRecord | null,
 ): Promise<UkCompanyProfilesRecord | null> {
   if (!record) return null;
-  const [payment_practices, financials] = await Promise.all([
+  const [payment_practices, financials, modern_slavery, gender_pay_gap] = await Promise.all([
     latestPaymentPractices(env, record.company_number),
     latestFinancials(env, record.company_number),
+    latestModernSlavery(env, record.company_number),
+    latestGenderPayGap(env, record.company_number),
   ]);
-  return { ...record, payment_practices, financials };
+  const esg = modern_slavery || gender_pay_gap ? { modern_slavery, gender_pay_gap } : null;
+  return { ...record, payment_practices, financials, esg };
 }
 
 const fixtureSchema = z.object({
@@ -448,7 +468,7 @@ export const ukCompanyProfilesSource: DataSource<UkCompanyProfilesRecord> = {
   slug: 'uk-company-profiles',
   title: 'UK company lookup (Companies House)',
   description:
-    'One UK company by number or name, live from the official Companies House API: profile, status, type, SIC codes, registered-office area, accounts and confirmation-statement dates and overdue flags, charges, the latest filing events, corporate persons with significant control and, for a large company, its latest statutory payment practices report (average days to pay, share paid late), plus `financials` — net assets, cash, creditors due within a year, employees and the prior period from the latest accounts filed electronically. Blind Mode: officers and individual PSCs are never ingested — filing events carry the category code, not the name. Cached 24 h.',
+    'One UK company by number or name, live from the official Companies House API: profile, status, type, SIC codes, registered-office area, accounts and confirmation-statement dates and overdue flags, charges, the latest filing events, corporate persons with significant control and, for a large company, its latest statutory payment practices report (average days to pay, share paid late), plus `financials` — net assets, cash, creditors due within a year, employees and the prior period from the latest accounts filed electronically, and `esg` — the latest modern slavery statement on the government registry and the latest gender pay gap report. Blind Mode: officers and individual PSCs are never ingested — filing events carry the category code, not the name. Cached 24 h.',
   recordSchema: ukCompanyProfilesRecordSchema,
   queryParams: z.object({
     company_number: z.string().trim().min(1).max(12).optional(),

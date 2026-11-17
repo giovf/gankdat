@@ -1,0 +1,13 @@
+{
+  "name": "gankdat-apify-uk-gender-pay-gap",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Apify actor: UK gender pay gap reports (employers of 250+) by company number via gankdat.com",
+  "scripts": {
+    "start": "node src/main.mjs"
+  },
+  "dependencies": {
+    "apify": "^3.4.0"
+  }
+}

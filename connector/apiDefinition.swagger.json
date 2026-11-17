@@ -3,7 +3,7 @@
   "info": {
     "title": "gankdat",
     "description": "UK and EU public registers as clean JSON: company lookup and monitoring, tenders and contract awards, sanctions and exclusions, charities, schools, NHS organisations, care locations, trade marks and licences. One schema across every dataset, from official open-data feeds, with a daily change feed on each register. Connect with the key from your gankdat account.",
-    "version": "0.30.0",
+    "version": "0.31.0",
     "contact": {
       "name": "gankdat",
       "url": "https://gankdat.com/feedback",
@@ -5668,6 +5668,232 @@
                         "x-ms-summary": "Financials",
                         "description": "Financials."
                       },
+                      "esg": {
+                        "type": "object",
+                        "properties": {
+                          "modern_slavery": {
+                            "type": "object",
+                            "properties": {
+                              "statement_year": {
+                                "type": "integer",
+                                "x-ms-summary": "Statement year",
+                                "description": "Statement year."
+                              },
+                              "period_start": {
+                                "type": "string",
+                                "x-nullable": true,
+                                "x-ms-summary": "Period start",
+                                "description": "Period start."
+                              },
+                              "period_end": {
+                                "type": "string",
+                                "x-nullable": true,
+                                "x-ms-summary": "Period end",
+                                "description": "Period end."
+                              },
+                              "group_submission": {
+                                "type": "boolean",
+                                "x-nullable": true,
+                                "x-ms-summary": "Group submission",
+                                "description": "Group submission."
+                              },
+                              "parent_name": {
+                                "type": "string",
+                                "x-nullable": true,
+                                "x-ms-summary": "Parent name",
+                                "description": "Parent name."
+                              },
+                              "turnover_band": {
+                                "type": "string",
+                                "x-nullable": true,
+                                "x-ms-summary": "Turnover band",
+                                "description": "Turnover band."
+                              },
+                              "sectors": {
+                                "type": "string",
+                                "x-nullable": true,
+                                "x-ms-summary": "Sectors",
+                                "description": "Sectors."
+                              },
+                              "years_producing_statements": {
+                                "type": "string",
+                                "x-nullable": true,
+                                "x-ms-summary": "Years producing statements",
+                                "description": "Years producing statements."
+                              },
+                              "includes": {
+                                "type": "object",
+                                "properties": {
+                                  "org_structure": {
+                                    "type": "boolean",
+                                    "x-nullable": true,
+                                    "x-ms-summary": "Org structure",
+                                    "description": "Org structure."
+                                  },
+                                  "policies": {
+                                    "type": "boolean",
+                                    "x-nullable": true,
+                                    "x-ms-summary": "Policies",
+                                    "description": "Policies."
+                                  },
+                                  "risk_assessment": {
+                                    "type": "boolean",
+                                    "x-nullable": true,
+                                    "x-ms-summary": "Risk assessment",
+                                    "description": "Risk assessment."
+                                  },
+                                  "due_diligence": {
+                                    "type": "boolean",
+                                    "x-nullable": true,
+                                    "x-ms-summary": "Due diligence",
+                                    "description": "Due diligence."
+                                  },
+                                  "training": {
+                                    "type": "boolean",
+                                    "x-nullable": true,
+                                    "x-ms-summary": "Training",
+                                    "description": "Training."
+                                  },
+                                  "goals": {
+                                    "type": "boolean",
+                                    "x-nullable": true,
+                                    "x-ms-summary": "Goals",
+                                    "description": "Goals."
+                                  }
+                                },
+                                "required": [
+                                  "org_structure",
+                                  "policies",
+                                  "risk_assessment",
+                                  "due_diligence",
+                                  "training",
+                                  "goals"
+                                ],
+                                "x-ms-summary": "Includes",
+                                "description": "Includes."
+                              },
+                              "statement_url": {
+                                "type": "string",
+                                "x-nullable": true,
+                                "x-ms-summary": "Statement url",
+                                "description": "Statement url."
+                              },
+                              "registry_pdf_url": {
+                                "type": "string",
+                                "x-nullable": true,
+                                "x-ms-summary": "Registry pdf url",
+                                "description": "Registry pdf url."
+                              },
+                              "statement_years": {
+                                "type": "array",
+                                "items": {
+                                  "type": "integer"
+                                },
+                                "x-ms-summary": "Statement years",
+                                "description": "Statement years."
+                              }
+                            },
+                            "required": [
+                              "statement_year",
+                              "period_start",
+                              "period_end",
+                              "group_submission",
+                              "parent_name",
+                              "turnover_band",
+                              "sectors",
+                              "years_producing_statements",
+                              "includes",
+                              "statement_url",
+                              "registry_pdf_url",
+                              "statement_years"
+                            ],
+                            "x-nullable": true,
+                            "x-ms-summary": "Modern slavery",
+                            "description": "Modern slavery."
+                          },
+                          "gender_pay_gap": {
+                            "type": "object",
+                            "properties": {
+                              "reporting_year": {
+                                "type": "integer",
+                                "x-ms-summary": "Reporting year",
+                                "description": "Reporting year."
+                              },
+                              "reporting_period": {
+                                "type": "string",
+                                "x-ms-summary": "Reporting period",
+                                "description": "Reporting period."
+                              },
+                              "mean_hourly_pct": {
+                                "type": "number",
+                                "x-nullable": true,
+                                "x-ms-summary": "Mean hourly pct",
+                                "description": "Mean hourly pct."
+                              },
+                              "median_hourly_pct": {
+                                "type": "number",
+                                "x-nullable": true,
+                                "x-ms-summary": "Median hourly pct",
+                                "description": "Median hourly pct."
+                              },
+                              "mean_bonus_pct": {
+                                "type": "number",
+                                "x-nullable": true,
+                                "x-ms-summary": "Mean bonus pct",
+                                "description": "Mean bonus pct."
+                              },
+                              "median_bonus_pct": {
+                                "type": "number",
+                                "x-nullable": true,
+                                "x-ms-summary": "Median bonus pct",
+                                "description": "Median bonus pct."
+                              },
+                              "employer_size": {
+                                "type": "string",
+                                "x-nullable": true,
+                                "x-ms-summary": "Employer size",
+                                "description": "Employer size."
+                              },
+                              "submitted_late": {
+                                "type": "boolean",
+                                "x-nullable": true,
+                                "x-ms-summary": "Submitted late",
+                                "description": "Submitted late."
+                              },
+                              "submitted_on": {
+                                "type": "string",
+                                "x-nullable": true,
+                                "x-ms-summary": "Submitted on",
+                                "description": "Submitted on."
+                              },
+                              "reports": {
+                                "type": "integer",
+                                "x-ms-summary": "Reports",
+                                "description": "Reports."
+                              }
+                            },
+                            "required": [
+                              "reporting_year",
+                              "reporting_period",
+                              "mean_hourly_pct",
+                              "median_hourly_pct",
+                              "mean_bonus_pct",
+                              "median_bonus_pct",
+                              "employer_size",
+                              "submitted_late",
+                              "submitted_on",
+                              "reports"
+                            ],
+                            "x-nullable": true,
+                            "x-ms-summary": "Gender pay gap",
+                            "description": "Gender pay gap."
+                          }
+                        },
+                        "required": ["modern_slavery", "gender_pay_gap"],
+                        "x-nullable": true,
+                        "x-ms-summary": "Esg",
+                        "description": "Esg."
+                      },
                       "company_url": {
                         "type": "string",
                         "x-ms-summary": "Company url",
@@ -5713,6 +5939,7 @@
                       "corporate_controllers",
                       "payment_practices",
                       "financials",
+                      "esg",
                       "company_url"
                     ]
                   },
@@ -6511,6 +6738,806 @@
                       "prior_profit_loss",
                       "file_date",
                       "filing_history_url"
+                    ]
+                  },
+                  "x-ms-summary": "Data"
+                },
+                "meta": {
+                  "type": "object",
+                  "description": "Page, total and freshness of the data.",
+                  "properties": {
+                    "source": {
+                      "type": "string",
+                      "description": "The dataset slug.",
+                      "x-ms-summary": "Source"
+                    },
+                    "page": {
+                      "type": "integer",
+                      "description": "The page returned.",
+                      "x-ms-summary": "Page"
+                    },
+                    "per_page": {
+                      "type": "integer",
+                      "description": "Records per page.",
+                      "x-ms-summary": "Per page"
+                    },
+                    "total": {
+                      "type": "integer",
+                      "description": "Total matching records across all pages.",
+                      "x-ms-summary": "Total"
+                    },
+                    "last_refreshed_at": {
+                      "type": "string",
+                      "description": "When the dataset was last refreshed (ISO date-time), null before the first refresh.",
+                      "x-nullable": true,
+                      "x-ms-summary": "Last refreshed at"
+                    }
+                  },
+                  "required": ["source", "page", "per_page", "total", "last_refreshed_at"],
+                  "x-ms-summary": "Meta"
+                }
+              },
+              "required": ["ok", "data", "meta"]
+            }
+          }
+        }
+      }
+    },
+    "/v1/data/uk-modern-slavery-statements": {
+      "get": {
+        "operationId": "query_uk_modern_slavery_statements",
+        "summary": "UK modern slavery statements (government registry)",
+        "description": "Records from UK modern slavery statements (government registry). One call returns one page of matching records (25 by default, up to 100) with the total count and the last refresh time, and costs the credits the sources listing states.",
+        "x-ms-visibility": "important",
+        "parameters": [
+          {
+            "name": "company_number",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose company number contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Company number"
+          },
+          {
+            "name": "organisation",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose organisation contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Organisation"
+          },
+          {
+            "name": "parent_name",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose parent name contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Parent name"
+          },
+          {
+            "name": "statement_year",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose statement year contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Statement year"
+          },
+          {
+            "name": "sector_type",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose sector type contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Sector type"
+          },
+          {
+            "name": "turnover_band",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose turnover band contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Turnover band"
+          },
+          {
+            "name": "sectors",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose sectors contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Sectors"
+          },
+          {
+            "name": "group_submission",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose group submission contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Group submission"
+          },
+          {
+            "name": "includes_risk_assessment",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose includes risk assessment contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Includes risk assessment"
+          },
+          {
+            "name": "includes_due_diligence",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose includes due diligence contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Includes due diligence"
+          },
+          {
+            "name": "includes_training",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose includes training contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Includes training"
+          },
+          {
+            "name": "includes_goals",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose includes goals contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Includes goals"
+          },
+          {
+            "name": "period_end_after",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose period end is on or after this date (YYYY-MM-DD).",
+            "x-ms-summary": "Period end after",
+            "format": "date"
+          },
+          {
+            "name": "period_end_before",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose period end is on or before this date (YYYY-MM-DD).",
+            "x-ms-summary": "Period end before",
+            "format": "date"
+          },
+          {
+            "name": "last_updated_after",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose last updated is on or after this date (YYYY-MM-DD).",
+            "x-ms-summary": "Last updated after",
+            "format": "date"
+          },
+          {
+            "name": "last_updated_before",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose last updated is on or before this date (YYYY-MM-DD).",
+            "x-ms-summary": "Last updated before",
+            "format": "date"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "description": "Page number, starting at 1.",
+            "x-ms-summary": "Page",
+            "default": 1,
+            "minimum": 1,
+            "maximum": 100000,
+            "x-ms-visibility": "advanced"
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "description": "Records per page, from 1 to 100 (25 by default).",
+            "x-ms-summary": "Per page",
+            "default": 25,
+            "minimum": 1,
+            "maximum": 100,
+            "x-ms-visibility": "advanced"
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Text to search for across every text field of the record (case-insensitive).",
+            "x-ms-summary": "Q",
+            "x-ms-visibility": "advanced"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Matching UK modern slavery statements (government registry) records.",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "ok": {
+                  "type": "boolean",
+                  "description": "True when the call succeeded.",
+                  "enum": [true],
+                  "x-ms-summary": "Ok"
+                },
+                "data": {
+                  "type": "array",
+                  "description": "The matching records.",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "statement_id": {
+                        "type": "string",
+                        "x-ms-summary": "Statement id",
+                        "description": "Statement id."
+                      },
+                      "statement_year": {
+                        "type": "integer",
+                        "x-ms-summary": "Statement year",
+                        "description": "Statement year."
+                      },
+                      "organisation": {
+                        "type": "string",
+                        "x-ms-summary": "Organisation",
+                        "description": "Organisation."
+                      },
+                      "sector_type": {
+                        "type": "string",
+                        "x-nullable": true,
+                        "x-ms-summary": "Sector type",
+                        "description": "Sector type."
+                      },
+                      "company_number": {
+                        "type": "string",
+                        "x-nullable": true,
+                        "x-ms-summary": "Company number",
+                        "description": "Company number."
+                      },
+                      "group_submission": {
+                        "type": "boolean",
+                        "x-nullable": true,
+                        "x-ms-summary": "Group submission",
+                        "description": "Group submission."
+                      },
+                      "parent_name": {
+                        "type": "string",
+                        "x-nullable": true,
+                        "x-ms-summary": "Parent name",
+                        "description": "Parent name."
+                      },
+                      "period_start": {
+                        "type": "string",
+                        "x-nullable": true,
+                        "x-ms-summary": "Period start",
+                        "description": "Period start."
+                      },
+                      "period_end": {
+                        "type": "string",
+                        "x-nullable": true,
+                        "x-ms-summary": "Period end",
+                        "description": "Period end."
+                      },
+                      "approved_on": {
+                        "type": "string",
+                        "x-nullable": true,
+                        "x-ms-summary": "Approved on",
+                        "description": "Approved on."
+                      },
+                      "last_updated": {
+                        "type": "string",
+                        "x-nullable": true,
+                        "x-ms-summary": "Last updated",
+                        "description": "Last updated."
+                      },
+                      "turnover_band": {
+                        "type": "string",
+                        "x-nullable": true,
+                        "x-ms-summary": "Turnover band",
+                        "description": "Turnover band."
+                      },
+                      "sectors": {
+                        "type": "string",
+                        "x-nullable": true,
+                        "x-ms-summary": "Sectors",
+                        "description": "Sectors."
+                      },
+                      "years_producing_statements": {
+                        "type": "string",
+                        "x-nullable": true,
+                        "x-ms-summary": "Years producing statements",
+                        "description": "Years producing statements."
+                      },
+                      "includes_org_structure": {
+                        "type": "boolean",
+                        "x-nullable": true,
+                        "x-ms-summary": "Includes org structure",
+                        "description": "Includes org structure."
+                      },
+                      "includes_policies": {
+                        "type": "boolean",
+                        "x-nullable": true,
+                        "x-ms-summary": "Includes policies",
+                        "description": "Includes policies."
+                      },
+                      "includes_risk_assessment": {
+                        "type": "boolean",
+                        "x-nullable": true,
+                        "x-ms-summary": "Includes risk assessment",
+                        "description": "Includes risk assessment."
+                      },
+                      "includes_due_diligence": {
+                        "type": "boolean",
+                        "x-nullable": true,
+                        "x-ms-summary": "Includes due diligence",
+                        "description": "Includes due diligence."
+                      },
+                      "includes_training": {
+                        "type": "boolean",
+                        "x-nullable": true,
+                        "x-ms-summary": "Includes training",
+                        "description": "Includes training."
+                      },
+                      "includes_goals": {
+                        "type": "boolean",
+                        "x-nullable": true,
+                        "x-ms-summary": "Includes goals",
+                        "description": "Includes goals."
+                      },
+                      "policies": {
+                        "type": "string",
+                        "x-nullable": true,
+                        "x-ms-summary": "Policies",
+                        "description": "Policies."
+                      },
+                      "training": {
+                        "type": "string",
+                        "x-nullable": true,
+                        "x-ms-summary": "Training",
+                        "description": "Training."
+                      },
+                      "social_audits": {
+                        "type": "string",
+                        "x-nullable": true,
+                        "x-ms-summary": "Social audits",
+                        "description": "Social audits."
+                      },
+                      "grievance_mechanisms": {
+                        "type": "string",
+                        "x-nullable": true,
+                        "x-ms-summary": "Grievance mechanisms",
+                        "description": "Grievance mechanisms."
+                      },
+                      "statement_url": {
+                        "type": "string",
+                        "x-nullable": true,
+                        "x-ms-summary": "Statement url",
+                        "description": "Statement url."
+                      },
+                      "summary_url": {
+                        "type": "string",
+                        "x-nullable": true,
+                        "x-ms-summary": "Summary url",
+                        "description": "Summary url."
+                      },
+                      "registry_pdf_url": {
+                        "type": "string",
+                        "x-nullable": true,
+                        "x-ms-summary": "Registry pdf url",
+                        "description": "Registry pdf url."
+                      }
+                    },
+                    "required": [
+                      "statement_id",
+                      "statement_year",
+                      "organisation",
+                      "sector_type",
+                      "company_number",
+                      "group_submission",
+                      "parent_name",
+                      "period_start",
+                      "period_end",
+                      "approved_on",
+                      "last_updated",
+                      "turnover_band",
+                      "sectors",
+                      "years_producing_statements",
+                      "includes_org_structure",
+                      "includes_policies",
+                      "includes_risk_assessment",
+                      "includes_due_diligence",
+                      "includes_training",
+                      "includes_goals",
+                      "policies",
+                      "training",
+                      "social_audits",
+                      "grievance_mechanisms",
+                      "statement_url",
+                      "summary_url",
+                      "registry_pdf_url"
+                    ]
+                  },
+                  "x-ms-summary": "Data"
+                },
+                "meta": {
+                  "type": "object",
+                  "description": "Page, total and freshness of the data.",
+                  "properties": {
+                    "source": {
+                      "type": "string",
+                      "description": "The dataset slug.",
+                      "x-ms-summary": "Source"
+                    },
+                    "page": {
+                      "type": "integer",
+                      "description": "The page returned.",
+                      "x-ms-summary": "Page"
+                    },
+                    "per_page": {
+                      "type": "integer",
+                      "description": "Records per page.",
+                      "x-ms-summary": "Per page"
+                    },
+                    "total": {
+                      "type": "integer",
+                      "description": "Total matching records across all pages.",
+                      "x-ms-summary": "Total"
+                    },
+                    "last_refreshed_at": {
+                      "type": "string",
+                      "description": "When the dataset was last refreshed (ISO date-time), null before the first refresh.",
+                      "x-nullable": true,
+                      "x-ms-summary": "Last refreshed at"
+                    }
+                  },
+                  "required": ["source", "page", "per_page", "total", "last_refreshed_at"],
+                  "x-ms-summary": "Meta"
+                }
+              },
+              "required": ["ok", "data", "meta"]
+            }
+          }
+        }
+      }
+    },
+    "/v1/data/uk-gender-pay-gap": {
+      "get": {
+        "operationId": "query_uk_gender_pay_gap",
+        "summary": "UK gender pay gap reports (employers of 250 )",
+        "description": "Records from UK gender pay gap reports (employers of 250+). One call returns one page of matching records (25 by default, up to 100) with the total count and the last refresh time, and costs the credits the sources listing states.",
+        "x-ms-visibility": "important",
+        "parameters": [
+          {
+            "name": "company_number",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose company number contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Company number"
+          },
+          {
+            "name": "employer",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose employer contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Employer"
+          },
+          {
+            "name": "employer_id",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "description": "Only records whose employer id contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Employer id"
+          },
+          {
+            "name": "reporting_year",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose reporting year contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Reporting year"
+          },
+          {
+            "name": "sic_codes",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose sic codes contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Sic codes"
+          },
+          {
+            "name": "employer_size",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose employer size contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Employer size"
+          },
+          {
+            "name": "submitted_late",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose submitted late contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Submitted late"
+          },
+          {
+            "name": "mean_hourly_pct_min",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose mean hourly pct is at least this number.",
+            "x-ms-summary": "Mean hourly pct min"
+          },
+          {
+            "name": "mean_hourly_pct_max",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose mean hourly pct is at most this number.",
+            "x-ms-summary": "Mean hourly pct max"
+          },
+          {
+            "name": "median_hourly_pct_min",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose median hourly pct is at least this number.",
+            "x-ms-summary": "Median hourly pct min"
+          },
+          {
+            "name": "median_hourly_pct_max",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose median hourly pct is at most this number.",
+            "x-ms-summary": "Median hourly pct max"
+          },
+          {
+            "name": "submitted_on_after",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose submitted on is on or after this date (YYYY-MM-DD).",
+            "x-ms-summary": "Submitted on after",
+            "format": "date"
+          },
+          {
+            "name": "submitted_on_before",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose submitted on is on or before this date (YYYY-MM-DD).",
+            "x-ms-summary": "Submitted on before",
+            "format": "date"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "description": "Page number, starting at 1.",
+            "x-ms-summary": "Page",
+            "default": 1,
+            "minimum": 1,
+            "maximum": 100000,
+            "x-ms-visibility": "advanced"
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "description": "Records per page, from 1 to 100 (25 by default).",
+            "x-ms-summary": "Per page",
+            "default": 25,
+            "minimum": 1,
+            "maximum": 100,
+            "x-ms-visibility": "advanced"
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Text to search for across every text field of the record (case-insensitive).",
+            "x-ms-summary": "Q",
+            "x-ms-visibility": "advanced"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Matching UK gender pay gap reports (employers of 250+) records.",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "ok": {
+                  "type": "boolean",
+                  "description": "True when the call succeeded.",
+                  "enum": [true],
+                  "x-ms-summary": "Ok"
+                },
+                "data": {
+                  "type": "array",
+                  "description": "The matching records.",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "employer_id": {
+                        "type": "integer",
+                        "x-ms-summary": "Employer id",
+                        "description": "Employer id."
+                      },
+                      "reporting_year": {
+                        "type": "integer",
+                        "x-ms-summary": "Reporting year",
+                        "description": "Reporting year."
+                      },
+                      "reporting_period": {
+                        "type": "string",
+                        "x-ms-summary": "Reporting period",
+                        "description": "Reporting period."
+                      },
+                      "employer": {
+                        "type": "string",
+                        "x-ms-summary": "Employer",
+                        "description": "Employer."
+                      },
+                      "company_number": {
+                        "type": "string",
+                        "x-nullable": true,
+                        "x-ms-summary": "Company number",
+                        "description": "Company number."
+                      },
+                      "sic_codes": {
+                        "type": "string",
+                        "x-nullable": true,
+                        "x-ms-summary": "Sic codes",
+                        "description": "Sic codes."
+                      },
+                      "mean_hourly_pct": {
+                        "type": "number",
+                        "x-nullable": true,
+                        "x-ms-summary": "Mean hourly pct",
+                        "description": "Mean hourly pct."
+                      },
+                      "median_hourly_pct": {
+                        "type": "number",
+                        "x-nullable": true,
+                        "x-ms-summary": "Median hourly pct",
+                        "description": "Median hourly pct."
+                      },
+                      "mean_bonus_pct": {
+                        "type": "number",
+                        "x-nullable": true,
+                        "x-ms-summary": "Mean bonus pct",
+                        "description": "Mean bonus pct."
+                      },
+                      "median_bonus_pct": {
+                        "type": "number",
+                        "x-nullable": true,
+                        "x-ms-summary": "Median bonus pct",
+                        "description": "Median bonus pct."
+                      },
+                      "male_bonus_pct": {
+                        "type": "number",
+                        "x-nullable": true,
+                        "x-ms-summary": "Male bonus pct",
+                        "description": "Male bonus pct."
+                      },
+                      "female_bonus_pct": {
+                        "type": "number",
+                        "x-nullable": true,
+                        "x-ms-summary": "Female bonus pct",
+                        "description": "Female bonus pct."
+                      },
+                      "male_lower_quartile_pct": {
+                        "type": "number",
+                        "x-nullable": true,
+                        "x-ms-summary": "Male lower quartile pct",
+                        "description": "Male lower quartile pct."
+                      },
+                      "female_lower_quartile_pct": {
+                        "type": "number",
+                        "x-nullable": true,
+                        "x-ms-summary": "Female lower quartile pct",
+                        "description": "Female lower quartile pct."
+                      },
+                      "male_lower_middle_quartile_pct": {
+                        "type": "number",
+                        "x-nullable": true,
+                        "x-ms-summary": "Male lower middle quartile pct",
+                        "description": "Male lower middle quartile pct."
+                      },
+                      "female_lower_middle_quartile_pct": {
+                        "type": "number",
+                        "x-nullable": true,
+                        "x-ms-summary": "Female lower middle quartile pct",
+                        "description": "Female lower middle quartile pct."
+                      },
+                      "male_upper_middle_quartile_pct": {
+                        "type": "number",
+                        "x-nullable": true,
+                        "x-ms-summary": "Male upper middle quartile pct",
+                        "description": "Male upper middle quartile pct."
+                      },
+                      "female_upper_middle_quartile_pct": {
+                        "type": "number",
+                        "x-nullable": true,
+                        "x-ms-summary": "Female upper middle quartile pct",
+                        "description": "Female upper middle quartile pct."
+                      },
+                      "male_top_quartile_pct": {
+                        "type": "number",
+                        "x-nullable": true,
+                        "x-ms-summary": "Male top quartile pct",
+                        "description": "Male top quartile pct."
+                      },
+                      "female_top_quartile_pct": {
+                        "type": "number",
+                        "x-nullable": true,
+                        "x-ms-summary": "Female top quartile pct",
+                        "description": "Female top quartile pct."
+                      },
+                      "employer_size": {
+                        "type": "string",
+                        "x-nullable": true,
+                        "x-ms-summary": "Employer size",
+                        "description": "Employer size."
+                      },
+                      "submitted_late": {
+                        "type": "boolean",
+                        "x-nullable": true,
+                        "x-ms-summary": "Submitted late",
+                        "description": "Submitted late."
+                      },
+                      "due_date": {
+                        "type": "string",
+                        "x-nullable": true,
+                        "x-ms-summary": "Due date",
+                        "description": "Due date."
+                      },
+                      "submitted_on": {
+                        "type": "string",
+                        "x-nullable": true,
+                        "x-ms-summary": "Submitted on",
+                        "description": "Submitted on."
+                      }
+                    },
+                    "required": [
+                      "employer_id",
+                      "reporting_year",
+                      "reporting_period",
+                      "employer",
+                      "company_number",
+                      "sic_codes",
+                      "mean_hourly_pct",
+                      "median_hourly_pct",
+                      "mean_bonus_pct",
+                      "median_bonus_pct",
+                      "male_bonus_pct",
+                      "female_bonus_pct",
+                      "male_lower_quartile_pct",
+                      "female_lower_quartile_pct",
+                      "male_lower_middle_quartile_pct",
+                      "female_lower_middle_quartile_pct",
+                      "male_upper_middle_quartile_pct",
+                      "female_upper_middle_quartile_pct",
+                      "male_top_quartile_pct",
+                      "female_top_quartile_pct",
+                      "employer_size",
+                      "submitted_late",
+                      "due_date",
+                      "submitted_on"
                     ]
                   },
                   "x-ms-summary": "Data"
@@ -10903,6 +11930,890 @@
                           "prior_profit_loss",
                           "file_date",
                           "filing_history_url"
+                        ],
+                        "x-ms-summary": "Record"
+                      }
+                    },
+                    "required": ["change", "changed_at", "record_id", "record"]
+                  },
+                  "x-ms-summary": "Data"
+                },
+                "meta": {
+                  "type": "object",
+                  "description": "Page, total and freshness of the data.",
+                  "properties": {
+                    "source": {
+                      "type": "string",
+                      "description": "The dataset slug.",
+                      "x-ms-summary": "Source"
+                    },
+                    "page": {
+                      "type": "integer",
+                      "description": "The page returned.",
+                      "x-ms-summary": "Page"
+                    },
+                    "per_page": {
+                      "type": "integer",
+                      "description": "Records per page.",
+                      "x-ms-summary": "Per page"
+                    },
+                    "total": {
+                      "type": "integer",
+                      "description": "Total matching records across all pages.",
+                      "x-ms-summary": "Total"
+                    },
+                    "last_refreshed_at": {
+                      "type": "string",
+                      "description": "When the dataset was last refreshed (ISO date-time), null before the first refresh.",
+                      "x-nullable": true,
+                      "x-ms-summary": "Last refreshed at"
+                    }
+                  },
+                  "required": ["source", "page", "per_page", "total", "last_refreshed_at"],
+                  "x-ms-summary": "Meta"
+                }
+              },
+              "required": ["ok", "data", "meta"]
+            }
+          }
+        }
+      }
+    },
+    "/v1/changes/uk-modern-slavery-statements": {
+      "get": {
+        "operationId": "changes_uk_modern_slavery_statements",
+        "summary": "UK modern slavery statements (government registry) changes",
+        "description": "Rows added, removed or changed in UK modern slavery statements (government registry) between daily refreshes, newest first, with 90 days of history. Poll this instead of re-reading the whole register; the same filters as the query apply to the changed record, so one call is a watch. Costs the same credits as a query.",
+        "x-ms-visibility": "important",
+        "parameters": [
+          {
+            "name": "company_number",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose company number contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Company number"
+          },
+          {
+            "name": "organisation",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose organisation contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Organisation"
+          },
+          {
+            "name": "parent_name",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose parent name contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Parent name"
+          },
+          {
+            "name": "statement_year",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose statement year contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Statement year"
+          },
+          {
+            "name": "sector_type",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose sector type contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Sector type"
+          },
+          {
+            "name": "turnover_band",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose turnover band contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Turnover band"
+          },
+          {
+            "name": "sectors",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose sectors contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Sectors"
+          },
+          {
+            "name": "group_submission",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose group submission contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Group submission"
+          },
+          {
+            "name": "includes_risk_assessment",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose includes risk assessment contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Includes risk assessment"
+          },
+          {
+            "name": "includes_due_diligence",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose includes due diligence contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Includes due diligence"
+          },
+          {
+            "name": "includes_training",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose includes training contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Includes training"
+          },
+          {
+            "name": "includes_goals",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose includes goals contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Includes goals"
+          },
+          {
+            "name": "period_end_after",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose period end is on or after this date (YYYY-MM-DD).",
+            "x-ms-summary": "Period end after",
+            "format": "date"
+          },
+          {
+            "name": "period_end_before",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose period end is on or before this date (YYYY-MM-DD).",
+            "x-ms-summary": "Period end before",
+            "format": "date"
+          },
+          {
+            "name": "last_updated_after",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose last updated is on or after this date (YYYY-MM-DD).",
+            "x-ms-summary": "Last updated after",
+            "format": "date"
+          },
+          {
+            "name": "last_updated_before",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose last updated is on or before this date (YYYY-MM-DD).",
+            "x-ms-summary": "Last updated before",
+            "format": "date"
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Text to search for across every text field of the record (case-insensitive).",
+            "x-ms-summary": "Q",
+            "x-ms-visibility": "advanced"
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only changes observed on or after this date (YYYY-MM-DD). Default: the last 7 days.",
+            "x-ms-summary": "Since",
+            "format": "date"
+          },
+          {
+            "name": "change",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only changes of this kind: added, removed or changed.",
+            "x-ms-summary": "Change",
+            "enum": ["added", "removed", "changed"]
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "description": "Page number, starting at 1.",
+            "x-ms-summary": "Page",
+            "default": 1,
+            "minimum": 1,
+            "maximum": 100000,
+            "x-ms-visibility": "advanced"
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "description": "Records per page, from 1 to 100 (25 by default).",
+            "x-ms-summary": "Per page",
+            "default": 25,
+            "minimum": 1,
+            "maximum": 100,
+            "x-ms-visibility": "advanced"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Changes to UK modern slavery statements (government registry).",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "ok": {
+                  "type": "boolean",
+                  "description": "True when the call succeeded.",
+                  "enum": [true],
+                  "x-ms-summary": "Ok"
+                },
+                "data": {
+                  "type": "array",
+                  "description": "The changed rows, newest first.",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "change": {
+                        "type": "string",
+                        "description": "Whether the record was added to, removed from or changed in the register.",
+                        "enum": ["added", "removed", "changed"],
+                        "x-ms-summary": "Change"
+                      },
+                      "changed_at": {
+                        "type": "string",
+                        "description": "When the change was observed (ISO date-time).",
+                        "x-ms-summary": "Changed at"
+                      },
+                      "record_id": {
+                        "type": "string",
+                        "description": "The stable id of the record in this register.",
+                        "x-ms-summary": "Record id"
+                      },
+                      "record": {
+                        "type": "object",
+                        "description": "The record as it reads after the change.",
+                        "properties": {
+                          "statement_id": {
+                            "type": "string",
+                            "x-ms-summary": "Statement id",
+                            "description": "Statement id."
+                          },
+                          "statement_year": {
+                            "type": "integer",
+                            "x-ms-summary": "Statement year",
+                            "description": "Statement year."
+                          },
+                          "organisation": {
+                            "type": "string",
+                            "x-ms-summary": "Organisation",
+                            "description": "Organisation."
+                          },
+                          "sector_type": {
+                            "type": "string",
+                            "x-nullable": true,
+                            "x-ms-summary": "Sector type",
+                            "description": "Sector type."
+                          },
+                          "company_number": {
+                            "type": "string",
+                            "x-nullable": true,
+                            "x-ms-summary": "Company number",
+                            "description": "Company number."
+                          },
+                          "group_submission": {
+                            "type": "boolean",
+                            "x-nullable": true,
+                            "x-ms-summary": "Group submission",
+                            "description": "Group submission."
+                          },
+                          "parent_name": {
+                            "type": "string",
+                            "x-nullable": true,
+                            "x-ms-summary": "Parent name",
+                            "description": "Parent name."
+                          },
+                          "period_start": {
+                            "type": "string",
+                            "x-nullable": true,
+                            "x-ms-summary": "Period start",
+                            "description": "Period start."
+                          },
+                          "period_end": {
+                            "type": "string",
+                            "x-nullable": true,
+                            "x-ms-summary": "Period end",
+                            "description": "Period end."
+                          },
+                          "approved_on": {
+                            "type": "string",
+                            "x-nullable": true,
+                            "x-ms-summary": "Approved on",
+                            "description": "Approved on."
+                          },
+                          "last_updated": {
+                            "type": "string",
+                            "x-nullable": true,
+                            "x-ms-summary": "Last updated",
+                            "description": "Last updated."
+                          },
+                          "turnover_band": {
+                            "type": "string",
+                            "x-nullable": true,
+                            "x-ms-summary": "Turnover band",
+                            "description": "Turnover band."
+                          },
+                          "sectors": {
+                            "type": "string",
+                            "x-nullable": true,
+                            "x-ms-summary": "Sectors",
+                            "description": "Sectors."
+                          },
+                          "years_producing_statements": {
+                            "type": "string",
+                            "x-nullable": true,
+                            "x-ms-summary": "Years producing statements",
+                            "description": "Years producing statements."
+                          },
+                          "includes_org_structure": {
+                            "type": "boolean",
+                            "x-nullable": true,
+                            "x-ms-summary": "Includes org structure",
+                            "description": "Includes org structure."
+                          },
+                          "includes_policies": {
+                            "type": "boolean",
+                            "x-nullable": true,
+                            "x-ms-summary": "Includes policies",
+                            "description": "Includes policies."
+                          },
+                          "includes_risk_assessment": {
+                            "type": "boolean",
+                            "x-nullable": true,
+                            "x-ms-summary": "Includes risk assessment",
+                            "description": "Includes risk assessment."
+                          },
+                          "includes_due_diligence": {
+                            "type": "boolean",
+                            "x-nullable": true,
+                            "x-ms-summary": "Includes due diligence",
+                            "description": "Includes due diligence."
+                          },
+                          "includes_training": {
+                            "type": "boolean",
+                            "x-nullable": true,
+                            "x-ms-summary": "Includes training",
+                            "description": "Includes training."
+                          },
+                          "includes_goals": {
+                            "type": "boolean",
+                            "x-nullable": true,
+                            "x-ms-summary": "Includes goals",
+                            "description": "Includes goals."
+                          },
+                          "policies": {
+                            "type": "string",
+                            "x-nullable": true,
+                            "x-ms-summary": "Policies",
+                            "description": "Policies."
+                          },
+                          "training": {
+                            "type": "string",
+                            "x-nullable": true,
+                            "x-ms-summary": "Training",
+                            "description": "Training."
+                          },
+                          "social_audits": {
+                            "type": "string",
+                            "x-nullable": true,
+                            "x-ms-summary": "Social audits",
+                            "description": "Social audits."
+                          },
+                          "grievance_mechanisms": {
+                            "type": "string",
+                            "x-nullable": true,
+                            "x-ms-summary": "Grievance mechanisms",
+                            "description": "Grievance mechanisms."
+                          },
+                          "statement_url": {
+                            "type": "string",
+                            "x-nullable": true,
+                            "x-ms-summary": "Statement url",
+                            "description": "Statement url."
+                          },
+                          "summary_url": {
+                            "type": "string",
+                            "x-nullable": true,
+                            "x-ms-summary": "Summary url",
+                            "description": "Summary url."
+                          },
+                          "registry_pdf_url": {
+                            "type": "string",
+                            "x-nullable": true,
+                            "x-ms-summary": "Registry pdf url",
+                            "description": "Registry pdf url."
+                          }
+                        },
+                        "required": [
+                          "statement_id",
+                          "statement_year",
+                          "organisation",
+                          "sector_type",
+                          "company_number",
+                          "group_submission",
+                          "parent_name",
+                          "period_start",
+                          "period_end",
+                          "approved_on",
+                          "last_updated",
+                          "turnover_band",
+                          "sectors",
+                          "years_producing_statements",
+                          "includes_org_structure",
+                          "includes_policies",
+                          "includes_risk_assessment",
+                          "includes_due_diligence",
+                          "includes_training",
+                          "includes_goals",
+                          "policies",
+                          "training",
+                          "social_audits",
+                          "grievance_mechanisms",
+                          "statement_url",
+                          "summary_url",
+                          "registry_pdf_url"
+                        ],
+                        "x-ms-summary": "Record"
+                      }
+                    },
+                    "required": ["change", "changed_at", "record_id", "record"]
+                  },
+                  "x-ms-summary": "Data"
+                },
+                "meta": {
+                  "type": "object",
+                  "description": "Page, total and freshness of the data.",
+                  "properties": {
+                    "source": {
+                      "type": "string",
+                      "description": "The dataset slug.",
+                      "x-ms-summary": "Source"
+                    },
+                    "page": {
+                      "type": "integer",
+                      "description": "The page returned.",
+                      "x-ms-summary": "Page"
+                    },
+                    "per_page": {
+                      "type": "integer",
+                      "description": "Records per page.",
+                      "x-ms-summary": "Per page"
+                    },
+                    "total": {
+                      "type": "integer",
+                      "description": "Total matching records across all pages.",
+                      "x-ms-summary": "Total"
+                    },
+                    "last_refreshed_at": {
+                      "type": "string",
+                      "description": "When the dataset was last refreshed (ISO date-time), null before the first refresh.",
+                      "x-nullable": true,
+                      "x-ms-summary": "Last refreshed at"
+                    }
+                  },
+                  "required": ["source", "page", "per_page", "total", "last_refreshed_at"],
+                  "x-ms-summary": "Meta"
+                }
+              },
+              "required": ["ok", "data", "meta"]
+            }
+          }
+        }
+      }
+    },
+    "/v1/changes/uk-gender-pay-gap": {
+      "get": {
+        "operationId": "changes_uk_gender_pay_gap",
+        "summary": "UK gender pay gap reports (employers of 250 ) changes",
+        "description": "Rows added, removed or changed in UK gender pay gap reports (employers of 250+) between daily refreshes, newest first, with 90 days of history. Poll this instead of re-reading the whole register; the same filters as the query apply to the changed record, so one call is a watch. Costs the same credits as a query.",
+        "x-ms-visibility": "important",
+        "parameters": [
+          {
+            "name": "company_number",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose company number contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Company number"
+          },
+          {
+            "name": "employer",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose employer contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Employer"
+          },
+          {
+            "name": "employer_id",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "description": "Only records whose employer id contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Employer id"
+          },
+          {
+            "name": "reporting_year",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose reporting year contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Reporting year"
+          },
+          {
+            "name": "sic_codes",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose sic codes contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Sic codes"
+          },
+          {
+            "name": "employer_size",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose employer size contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Employer size"
+          },
+          {
+            "name": "submitted_late",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose submitted late contains this text (case-insensitive); exact match for numbers and true/false.",
+            "x-ms-summary": "Submitted late"
+          },
+          {
+            "name": "mean_hourly_pct_min",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose mean hourly pct is at least this number.",
+            "x-ms-summary": "Mean hourly pct min"
+          },
+          {
+            "name": "mean_hourly_pct_max",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose mean hourly pct is at most this number.",
+            "x-ms-summary": "Mean hourly pct max"
+          },
+          {
+            "name": "median_hourly_pct_min",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose median hourly pct is at least this number.",
+            "x-ms-summary": "Median hourly pct min"
+          },
+          {
+            "name": "median_hourly_pct_max",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "description": "Only records whose median hourly pct is at most this number.",
+            "x-ms-summary": "Median hourly pct max"
+          },
+          {
+            "name": "submitted_on_after",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose submitted on is on or after this date (YYYY-MM-DD).",
+            "x-ms-summary": "Submitted on after",
+            "format": "date"
+          },
+          {
+            "name": "submitted_on_before",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only records whose submitted on is on or before this date (YYYY-MM-DD).",
+            "x-ms-summary": "Submitted on before",
+            "format": "date"
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Text to search for across every text field of the record (case-insensitive).",
+            "x-ms-summary": "Q",
+            "x-ms-visibility": "advanced"
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only changes observed on or after this date (YYYY-MM-DD). Default: the last 7 days.",
+            "x-ms-summary": "Since",
+            "format": "date"
+          },
+          {
+            "name": "change",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "description": "Only changes of this kind: added, removed or changed.",
+            "x-ms-summary": "Change",
+            "enum": ["added", "removed", "changed"]
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "description": "Page number, starting at 1.",
+            "x-ms-summary": "Page",
+            "default": 1,
+            "minimum": 1,
+            "maximum": 100000,
+            "x-ms-visibility": "advanced"
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "description": "Records per page, from 1 to 100 (25 by default).",
+            "x-ms-summary": "Per page",
+            "default": 25,
+            "minimum": 1,
+            "maximum": 100,
+            "x-ms-visibility": "advanced"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Changes to UK gender pay gap reports (employers of 250+).",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "ok": {
+                  "type": "boolean",
+                  "description": "True when the call succeeded.",
+                  "enum": [true],
+                  "x-ms-summary": "Ok"
+                },
+                "data": {
+                  "type": "array",
+                  "description": "The changed rows, newest first.",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "change": {
+                        "type": "string",
+                        "description": "Whether the record was added to, removed from or changed in the register.",
+                        "enum": ["added", "removed", "changed"],
+                        "x-ms-summary": "Change"
+                      },
+                      "changed_at": {
+                        "type": "string",
+                        "description": "When the change was observed (ISO date-time).",
+                        "x-ms-summary": "Changed at"
+                      },
+                      "record_id": {
+                        "type": "string",
+                        "description": "The stable id of the record in this register.",
+                        "x-ms-summary": "Record id"
+                      },
+                      "record": {
+                        "type": "object",
+                        "description": "The record as it reads after the change.",
+                        "properties": {
+                          "employer_id": {
+                            "type": "integer",
+                            "x-ms-summary": "Employer id",
+                            "description": "Employer id."
+                          },
+                          "reporting_year": {
+                            "type": "integer",
+                            "x-ms-summary": "Reporting year",
+                            "description": "Reporting year."
+                          },
+                          "reporting_period": {
+                            "type": "string",
+                            "x-ms-summary": "Reporting period",
+                            "description": "Reporting period."
+                          },
+                          "employer": {
+                            "type": "string",
+                            "x-ms-summary": "Employer",
+                            "description": "Employer."
+                          },
+                          "company_number": {
+                            "type": "string",
+                            "x-nullable": true,
+                            "x-ms-summary": "Company number",
+                            "description": "Company number."
+                          },
+                          "sic_codes": {
+                            "type": "string",
+                            "x-nullable": true,
+                            "x-ms-summary": "Sic codes",
+                            "description": "Sic codes."
+                          },
+                          "mean_hourly_pct": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Mean hourly pct",
+                            "description": "Mean hourly pct."
+                          },
+                          "median_hourly_pct": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Median hourly pct",
+                            "description": "Median hourly pct."
+                          },
+                          "mean_bonus_pct": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Mean bonus pct",
+                            "description": "Mean bonus pct."
+                          },
+                          "median_bonus_pct": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Median bonus pct",
+                            "description": "Median bonus pct."
+                          },
+                          "male_bonus_pct": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Male bonus pct",
+                            "description": "Male bonus pct."
+                          },
+                          "female_bonus_pct": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Female bonus pct",
+                            "description": "Female bonus pct."
+                          },
+                          "male_lower_quartile_pct": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Male lower quartile pct",
+                            "description": "Male lower quartile pct."
+                          },
+                          "female_lower_quartile_pct": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Female lower quartile pct",
+                            "description": "Female lower quartile pct."
+                          },
+                          "male_lower_middle_quartile_pct": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Male lower middle quartile pct",
+                            "description": "Male lower middle quartile pct."
+                          },
+                          "female_lower_middle_quartile_pct": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Female lower middle quartile pct",
+                            "description": "Female lower middle quartile pct."
+                          },
+                          "male_upper_middle_quartile_pct": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Male upper middle quartile pct",
+                            "description": "Male upper middle quartile pct."
+                          },
+                          "female_upper_middle_quartile_pct": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Female upper middle quartile pct",
+                            "description": "Female upper middle quartile pct."
+                          },
+                          "male_top_quartile_pct": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Male top quartile pct",
+                            "description": "Male top quartile pct."
+                          },
+                          "female_top_quartile_pct": {
+                            "type": "number",
+                            "x-nullable": true,
+                            "x-ms-summary": "Female top quartile pct",
+                            "description": "Female top quartile pct."
+                          },
+                          "employer_size": {
+                            "type": "string",
+                            "x-nullable": true,
+                            "x-ms-summary": "Employer size",
+                            "description": "Employer size."
+                          },
+                          "submitted_late": {
+                            "type": "boolean",
+                            "x-nullable": true,
+                            "x-ms-summary": "Submitted late",
+                            "description": "Submitted late."
+                          },
+                          "due_date": {
+                            "type": "string",
+                            "x-nullable": true,
+                            "x-ms-summary": "Due date",
+                            "description": "Due date."
+                          },
+                          "submitted_on": {
+                            "type": "string",
+                            "x-nullable": true,
+                            "x-ms-summary": "Submitted on",
+                            "description": "Submitted on."
+                          }
+                        },
+                        "required": [
+                          "employer_id",
+                          "reporting_year",
+                          "reporting_period",
+                          "employer",
+                          "company_number",
+                          "sic_codes",
+                          "mean_hourly_pct",
+                          "median_hourly_pct",
+                          "mean_bonus_pct",
+                          "median_bonus_pct",
+                          "male_bonus_pct",
+                          "female_bonus_pct",
+                          "male_lower_quartile_pct",
+                          "female_lower_quartile_pct",
+                          "male_lower_middle_quartile_pct",
+                          "female_lower_middle_quartile_pct",
+                          "male_upper_middle_quartile_pct",
+                          "female_upper_middle_quartile_pct",
+                          "male_top_quartile_pct",
+                          "female_top_quartile_pct",
+                          "employer_size",
+                          "submitted_late",
+                          "due_date",
+                          "submitted_on"
                         ],
                         "x-ms-summary": "Record"
                       }

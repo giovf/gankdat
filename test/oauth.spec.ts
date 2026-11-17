@@ -1,6 +1,7 @@
 import { env, SELF } from 'cloudflare:test';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ACCESS_TTL_SECONDS, OAUTH_SCOPE, pkceChallenge } from '../src/auth/oauth';
+import { PREVIEW_CALLS_PER_DAY } from '../src/mcp/preview';
 import { listSources } from '../src/sources/registry';
 
 // Lazy OAuth for /mcp (auth/oauth.ts, routes/oauth.ts): the flow Claude, Cursor
@@ -473,7 +474,7 @@ describe('the 401 gate on /mcp', () => {
     const client = { 'CF-Connecting-IP': '198.51.100.9', 'User-Agent': 'spent-budget' };
     await env.RATE.put(
       `preview:${await previewId('198.51.100.9', 'spent-budget')}:${new Date().toISOString().slice(0, 10)}`,
-      '20',
+      String(PREVIEW_CALLS_PER_DAY),
     );
     const spy = vi.spyOn(env.TRAFFIC, 'writeDataPoint');
     const { status, res } = await mcpCall('query_uk_tenders', {}, client);

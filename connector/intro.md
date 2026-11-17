@@ -30,6 +30,8 @@ Add a gankdat action to a flow or app, pick the dataset, set the filters you nee
 | UK company lookup (Companies House) | `query_uk_company_profiles` | — |
 | UK payment practices reports (large companies) | `query_uk_payment_practices` | `changes_uk_payment_practices` |
 | UK company accounts — headline financials (Companies House) | `query_uk_company_accounts` | `changes_uk_company_accounts` |
+| UK modern slavery statements (government registry) | `query_uk_modern_slavery_statements` | `changes_uk_modern_slavery_statements` |
+| UK gender pay gap reports (employers of 250+) | `query_uk_gender_pay_gap` | `changes_uk_gender_pay_gap` |
 
 ## Known issues and limitations
 - Each query costs the credits the dataset lists (one by default). A key over its monthly allowance receives a 402 until the period resets or credits are bought.

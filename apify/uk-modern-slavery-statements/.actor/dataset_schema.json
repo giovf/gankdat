@@ -1,0 +1,122 @@
+{
+  "actorSpecification": 1,
+  "fields": {
+    "type": "object",
+    "properties": {
+      "statement_id": {
+        "type": "string"
+      },
+      "statement_year": {
+        "type": "integer"
+      },
+      "organisation": {
+        "type": "string"
+      },
+      "sector_type": {
+        "type": ["string", "null"]
+      },
+      "company_number": {
+        "type": ["string", "null"]
+      },
+      "group_submission": {
+        "type": ["boolean", "null"]
+      },
+      "parent_name": {
+        "type": ["string", "null"]
+      },
+      "period_start": {
+        "type": ["string", "null"]
+      },
+      "period_end": {
+        "type": ["string", "null"]
+      },
+      "approved_on": {
+        "type": ["string", "null"]
+      },
+      "last_updated": {
+        "type": ["string", "null"]
+      },
+      "turnover_band": {
+        "type": ["string", "null"]
+      },
+      "sectors": {
+        "type": ["string", "null"]
+      },
+      "years_producing_statements": {
+        "type": ["string", "null"]
+      },
+      "includes_org_structure": {
+        "type": ["boolean", "null"]
+      },
+      "includes_policies": {
+        "type": ["boolean", "null"]
+      },
+      "includes_risk_assessment": {
+        "type": ["boolean", "null"]
+      },
+      "includes_due_diligence": {
+        "type": ["boolean", "null"]
+      },
+      "includes_training": {
+        "type": ["boolean", "null"]
+      },
+      "includes_goals": {
+        "type": ["boolean", "null"]
+      },
+      "policies": {
+        "type": ["string", "null"]
+      },
+      "training": {
+        "type": ["string", "null"]
+      },
+      "social_audits": {
+        "type": ["string", "null"]
+      },
+      "grievance_mechanisms": {
+        "type": ["string", "null"]
+      },
+      "statement_url": {
+        "type": ["string", "null"]
+      },
+      "summary_url": {
+        "type": ["string", "null"]
+      },
+      "registry_pdf_url": {
+        "type": ["string", "null"]
+      },
+      "change": {
+        "type": ["string", "null"]
+      },
+      "changed_at": {
+        "type": ["string", "null"]
+      }
+    }
+  },
+  "views": {
+    "overview": {
+      "title": "Overview",
+      "transformation": {
+        "fields": [
+          "organisation",
+          "company_number",
+          "statement_year",
+          "period_end",
+          "group_submission",
+          "parent_name",
+          "turnover_band",
+          "sectors",
+          "includes_risk_assessment",
+          "includes_due_diligence",
+          "includes_training",
+          "last_updated",
+          "statement_url",
+          "change",
+          "changed_at"
+        ]
+      },
+      "display": {
+        "component": "table"
+      }
+    }
+  }
+}

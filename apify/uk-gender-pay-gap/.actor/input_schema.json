@@ -1,0 +1,107 @@
+{
+  "title": "UK Gender Pay Gap Reports (Employers 250+, by Company Number) — filters",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "mode": {
+      "title": "Mode",
+      "type": "string",
+      "description": "Current reports (default), or only the reports added or changed since a date — schedule a daily run in changes mode to see each report as it is submitted and pay only for what changed.",
+      "editor": "select",
+      "enum": ["data", "changes"],
+      "enumTitles": ["Current reports", "Changes since a date (monitor)"],
+      "default": "data"
+    },
+    "since": {
+      "title": "Changes since",
+      "type": "string",
+      "description": "Changes mode only: YYYY-MM-DD. Default: the last 7 days. The feed keeps 90 days.",
+      "editor": "textfield",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "change": {
+      "title": "Change type",
+      "type": "string",
+      "description": "Changes mode only: one kind of change. Default: all three.",
+      "editor": "select",
+      "enum": ["added", "removed", "changed"],
+      "enumTitles": ["Added to the register", "Removed from the register", "Changed"]
+    },
+    "company_number": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Company number",
+      "description": "Companies House number, e.g. 00445790 or SC123456 — every year the employer has reported."
+    },
+    "employer": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Employer name contains",
+      "description": "Employer name (case-insensitive substring)."
+    },
+    "reporting_year": {
+      "type": "integer",
+      "editor": "number",
+      "title": "Reporting year",
+      "description": "The snapshot year: 2025 is the 2025/26 reporting year."
+    },
+    "sic_codes": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "SIC code contains",
+      "description": "E.g. 64191 — employers listing this SIC code."
+    },
+    "employer_size": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Employer size contains",
+      "description": "E.g. \"250 to 499\", \"1000 to 4999\" or \"20,000 or more\"."
+    },
+    "submitted_late": {
+      "type": "boolean",
+      "editor": "checkbox",
+      "title": "Late reports only",
+      "description": "Tick for reports submitted after the deadline."
+    },
+    "median_hourly_pct_min": {
+      "type": "integer",
+      "editor": "number",
+      "title": "Median hourly gap at least (%)",
+      "description": "Reports whose median hourly pay gap is at least this percentage."
+    },
+    "median_hourly_pct_max": {
+      "type": "integer",
+      "editor": "number",
+      "title": "Median hourly gap at most (%)",
+      "description": "Reports whose median hourly pay gap is at most this percentage."
+    },
+    "mean_hourly_pct_min": {
+      "type": "integer",
+      "editor": "number",
+      "title": "Mean hourly gap at least (%)",
+      "description": "Reports whose mean hourly pay gap is at least this percentage."
+    },
+    "submitted_on_after": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Submitted on or after",
+      "description": "Only reports submitted on or after this date (YYYY-MM-DD)",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "q": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Free-text search",
+      "description": "Filter: Free-text search (case-insensitive substring match)."
+    },
+    "max_results": {
+      "title": "Maximum results",
+      "type": "integer",
+      "description": "Stop after this many reports (you are charged per result).",
+      "default": 1000,
+      "minimum": 1,
+      "maximum": 100000
+    }
+  },
+  "required": []
+}

@@ -1,0 +1,111 @@
+{
+  "actorSpecification": 1,
+  "fields": {
+    "type": "object",
+    "properties": {
+      "employer_id": {
+        "type": "integer"
+      },
+      "reporting_year": {
+        "type": "integer"
+      },
+      "reporting_period": {
+        "type": "string"
+      },
+      "employer": {
+        "type": "string"
+      },
+      "company_number": {
+        "type": ["string", "null"]
+      },
+      "sic_codes": {
+        "type": ["string", "null"]
+      },
+      "mean_hourly_pct": {
+        "type": ["number", "null"]
+      },
+      "median_hourly_pct": {
+        "type": ["number", "null"]
+      },
+      "mean_bonus_pct": {
+        "type": ["number", "null"]
+      },
+      "median_bonus_pct": {
+        "type": ["number", "null"]
+      },
+      "male_bonus_pct": {
+        "type": ["number", "null"]
+      },
+      "female_bonus_pct": {
+        "type": ["number", "null"]
+      },
+      "male_lower_quartile_pct": {
+        "type": ["number", "null"]
+      },
+      "female_lower_quartile_pct": {
+        "type": ["number", "null"]
+      },
+      "male_lower_middle_quartile_pct": {
+        "type": ["number", "null"]
+      },
+      "female_lower_middle_quartile_pct": {
+        "type": ["number", "null"]
+      },
+      "male_upper_middle_quartile_pct": {
+        "type": ["number", "null"]
+      },
+      "female_upper_middle_quartile_pct": {
+        "type": ["number", "null"]
+      },
+      "male_top_quartile_pct": {
+        "type": ["number", "null"]
+      },
+      "female_top_quartile_pct": {
+        "type": ["number", "null"]
+      },
+      "employer_size": {
+        "type": ["string", "null"]
+      },
+      "submitted_late": {
+        "type": ["boolean", "null"]
+      },
+      "due_date": {
+        "type": ["string", "null"]
+      },
+      "submitted_on": {
+        "type": ["string", "null"]
+      },
+      "change": {
+        "type": ["string", "null"]
+      },
+      "changed_at": {
+        "type": ["string", "null"]
+      }
+    }
+  },
+  "views": {
+    "overview": {
+      "title": "Overview",
+      "transformation": {
+        "fields": [
+          "employer",
+          "company_number",
+          "reporting_period",
+          "mean_hourly_pct",
+          "median_hourly_pct",
+          "mean_bonus_pct",
+          "median_bonus_pct",
+          "employer_size",
+          "submitted_late",
+          "submitted_on",
+          "sic_codes",
+          "change",
+          "changed_at"
+        ]
+      },
+      "display": {
+        "component": "table"
+      }
+    }
+  }
+}

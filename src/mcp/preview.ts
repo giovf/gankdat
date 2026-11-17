@@ -18,7 +18,9 @@ import {
 // worse than today's 401 and the paywall text now says what to do next.
 
 export const PREVIEW_ROWS = 5;
-export const PREVIEW_CALLS_PER_DAY = 20;
+// 30 since 2026-11-17 (was 20): the budget must cover one call of every data tool — a directory
+// reviewer walks the whole tool list — and the registry reached 21 query tools plus get_changes.
+export const PREVIEW_CALLS_PER_DAY = 30;
 
 export interface PreviewContext {
   /** Opaque per-client id (sha-256 of ip|ua, 16 hex chars). */

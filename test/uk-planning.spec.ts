@@ -207,6 +207,9 @@ describe('scheduled refresh', () => {
       { source_slug: 'uk-companies', status: 'ok' },
       { source_slug: 'uk-contract-awards', status: 'ok' },
       { source_slug: 'uk-food-hygiene', status: 'ok' },
+      // uk-gender-pay-gap and uk-modern-slavery-statements ride wave 2 (bundled fixtures here).
+      { source_slug: 'uk-gender-pay-gap', status: 'ok' },
+      { source_slug: 'uk-modern-slavery-statements', status: 'ok' },
       // uk-schools (wave 5), nhs-ods and uk-gambling-operators (wave 6, since 2026-11-11) and
       // uk-trademark-journal (wave 7) run in triggers this test does not fire.
       { source_slug: 'uk-planning', status: 'ok' },

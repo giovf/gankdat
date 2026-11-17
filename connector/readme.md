@@ -31,6 +31,8 @@ Every dataset has one query action; every register dataset also has a change-fee
 | UK company lookup (Companies House) | `query_uk_company_profiles` | — |
 | UK payment practices reports (large companies) | `query_uk_payment_practices` | `changes_uk_payment_practices` |
 | UK company accounts — headline financials (Companies House) | `query_uk_company_accounts` | `changes_uk_company_accounts` |
+| UK modern slavery statements (government registry) | `query_uk_modern_slavery_statements` | `changes_uk_modern_slavery_statements` |
+| UK gender pay gap reports (employers of 250+) | `query_uk_gender_pay_gap` | `changes_uk_gender_pay_gap` |
 
 ### UK planning applications
 uk feed, normalized to one schema. Blind Mode: no applicant personal data. One call returns one page of matching records (25 by default, up to 100) with the total count and the last refresh time, and costs the credits the sources listing states.
@@ -89,6 +91,12 @@ Records from UK payment practices reports (large companies). One call returns on
 ### UK company accounts headline financials (Companies House)
 Records from UK company accounts — headline financials (Companies House). One call returns one page of matching records (25 by default, up to 100) with the total count and the last refresh time, and costs the credits the sources listing states.
 
+### UK modern slavery statements (government registry)
+Records from UK modern slavery statements (government registry). One call returns one page of matching records (25 by default, up to 100) with the total count and the last refresh time, and costs the credits the sources listing states.
+
+### UK gender pay gap reports (employers of 250 )
+Records from UK gender pay gap reports (employers of 250+). One call returns one page of matching records (25 by default, up to 100) with the total count and the last refresh time, and costs the credits the sources listing states.
+
 ### US federal exclusions (SAM gov) changes
 Rows added, removed or changed in US federal exclusions (SAM.gov) between daily refreshes, newest first, with 90 days of history. Poll this instead of re-reading the whole register; the same filters as the query apply to the changed record, so one call is a watch. Costs the same credits as a query.
 
@@ -121,6 +129,12 @@ Rows added, removed or changed in UK payment practices reports (large companies)
 
 ### UK company accounts headline financials (Companies House) changes
 Rows added, removed or changed in UK company accounts — headline financials (Companies House) between daily refreshes, newest first, with 90 days of history. Poll this instead of re-reading the whole register; the same filters as the query apply to the changed record, so one call is a watch. Costs the same credits as a query.
+
+### UK modern slavery statements (government registry) changes
+Rows added, removed or changed in UK modern slavery statements (government registry) between daily refreshes, newest first, with 90 days of history. Poll this instead of re-reading the whole register; the same filters as the query apply to the changed record, so one call is a watch. Costs the same credits as a query.
+
+### UK gender pay gap reports (employers of 250 ) changes
+Rows added, removed or changed in UK gender pay gap reports (employers of 250+) between daily refreshes, newest first, with 90 days of history. Poll this instead of re-reading the whole register; the same filters as the query apply to the changed record, so one call is a watch. Costs the same credits as a query.
 
 ### List datasets
 Lists every dataset with its filters, refresh schedule, credit cost per call and whether it carries a change feed.

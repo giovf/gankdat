@@ -164,7 +164,7 @@ curl -H "Authorization: Bearer fapi_..." \
 
 # 4. What changed since a date — registers diff themselves daily (charities, care
 #    locations, schools, NHS, sponsors, food hygiene, exclusions, trade marks, gambling licences,
-#    payment practices, company accounts)
+#    payment practices, company accounts, modern slavery statements, pay gap reports)
 curl -H "Authorization: Bearer fapi_..." \
   "https://gankdat.com/v1/changes/uk-charities?since=2026-09-01&change=added"
 #    …with the dataset's own filters: a trade-mark watch on one Nice class and a word
@@ -198,7 +198,7 @@ curl -X POST https://gankdat.com/v1/auth/agent-signup/claim -H "content-type: ap
         <div class="term-bar"><i></i><i></i><i></i></div>
         <pre><code># Claude (web, desktop, mobile, Code): Settings → Connectors → add "gankdat" from the directory,
 # or "Add custom connector" with the URL below. Every tool works straight away as a PREVIEW:
-# up to 5 rows per call, 20 calls per day, no account.
+# up to 5 rows per call, 30 calls per day, no account.
 https://gankdat.com/mcp
 
 # Ask Claude things like:

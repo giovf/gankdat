@@ -12,6 +12,9 @@ import { stubOrigins } from './helpers/origin-mock';
 import { refreshD1Source } from '../src/sources/d1store';
 import { ukCompanyAccountsSource } from '../src/sources/uk-company-accounts';
 import { ukPaymentPracticesSource } from '../src/sources/uk-payment-practices';
+import { ukGenderPayGapSource } from '../src/sources/uk-gender-pay-gap';
+import { ukModernSlaveryStatementsSource } from '../src/sources/uk-modern-slavery-statements';
+import { genderPayGapOrigin, modernSlaveryOrigin } from './uk-esg-disclosures.spec';
 import { CSV as PAYMENT_CSV, chunked } from './uk-payment-practices.spec';
 
 const LOOKUP_URL = 'https://example.com/v1/data/uk-company-profiles';
@@ -345,6 +348,36 @@ describe('payment_practices on the lookup (join on the company number)', () => {
     // The dissolved fixture company has never reported.
     const other = (await lookup(`company_number=${dissolved.profile.company_number}`)).data[0];
     expect(other?.payment_practices).toBeNull();
+  });
+});
+
+describe('esg on the lookup (join on the company number)', () => {
+  it('is null for a company in neither register, then carries each block on its own', async () => {
+    stubOrigins({ companyApi: companyApi() });
+    const before = (await lookup('company_number=12345678')).data[0];
+    expect(before?.esg).toBeNull();
+
+    stubOrigins({ companyApi: companyApi(), genderPayGap: genderPayGapOrigin });
+    await refreshD1Source(env, ukGenderPayGapSource);
+    await env.CACHE.delete('lookup:uk-company-profiles:company_number=12345678');
+    const gapOnly = (await lookup('company_number=12345678')).data[0];
+    expect(gapOnly?.esg?.modern_slavery).toBeNull();
+    expect(gapOnly?.esg?.gender_pay_gap).toMatchObject({ mean_hourly_pct: 11.5, reports: 2 });
+
+    stubOrigins({ companyApi: companyApi(), modernSlavery: modernSlaveryOrigin });
+    await refreshD1Source(env, ukModernSlaveryStatementsSource);
+    await env.CACHE.delete('lookup:uk-company-profiles:company_number=12345678');
+    const both = (await lookup('company_number=12345678')).data[0];
+    expect(both?.esg?.modern_slavery).toMatchObject({
+      parent_name: null,
+      group_submission: false,
+      includes: { due_diligence: true, goals: false },
+    });
+    expect(both?.esg?.modern_slavery?.statement_years).toHaveLength(2);
+    expect(both?.esg?.gender_pay_gap?.median_hourly_pct).toBe(-2.3);
+    // The dissolved fixture company is in neither register.
+    const other = (await lookup(`company_number=${dissolved.profile.company_number}`)).data[0];
+    expect(other?.esg).toBeNull();
   });
 });
 

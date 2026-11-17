@@ -39,6 +39,8 @@ describe('registry', () => {
       'uk-company-profiles',
       'uk-payment-practices',
       'uk-company-accounts',
+      'uk-modern-slavery-statements',
+      'uk-gender-pay-gap',
     ]);
   });
 });

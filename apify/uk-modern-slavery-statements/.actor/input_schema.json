@@ -1,0 +1,113 @@
+{
+  "title": "UK Modern Slavery Statements Registry (by Company Number) — filters",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "mode": {
+      "title": "Mode",
+      "type": "string",
+      "description": "Current statement summaries (default), or only those added or changed since a date — schedule a daily run in changes mode to watch your supplier list and pay only for what changed.",
+      "editor": "select",
+      "enum": ["data", "changes"],
+      "enumTitles": ["Current statement summaries", "Changes since a date (monitor)"],
+      "default": "data"
+    },
+    "since": {
+      "title": "Changes since",
+      "type": "string",
+      "description": "Changes mode only: YYYY-MM-DD. Default: the last 7 days. The feed keeps 90 days.",
+      "editor": "textfield",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "change": {
+      "title": "Change type",
+      "type": "string",
+      "description": "Changes mode only: one kind of change. Default: all three.",
+      "editor": "select",
+      "enum": ["added", "removed", "changed"],
+      "enumTitles": ["Added to the register", "Removed from the register", "Changed"]
+    },
+    "company_number": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Company number",
+      "description": "Companies House number as the registry writes it, e.g. 00445790 or SC123456 — every statement covering the company."
+    },
+    "organisation": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Organisation name contains",
+      "description": "Organisation name (case-insensitive substring)."
+    },
+    "parent_name": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Group parent contains",
+      "description": "Members of group statements submitted by this parent (case-insensitive substring)."
+    },
+    "statement_year": {
+      "type": "integer",
+      "editor": "number",
+      "title": "Registry year",
+      "description": "Only statements filed under this registry year, e.g. 2026."
+    },
+    "turnover_band": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Turnover band contains",
+      "description": "E.g. \"Over £500 million\" or \"£36 million to £60 million\"."
+    },
+    "sectors": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Sector contains",
+      "description": "E.g. \"Construction\" or \"Healthcare\"."
+    },
+    "sector_type": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Private or Public",
+      "description": "\"Private\" or \"Public\"."
+    },
+    "group_submission": {
+      "type": "boolean",
+      "editor": "checkbox",
+      "title": "Group statements only",
+      "description": "Tick for statements that cover a group of organisations."
+    },
+    "includes_due_diligence": {
+      "type": "boolean",
+      "editor": "checkbox",
+      "title": "Covers due diligence",
+      "description": "Tick for statements that say they cover due diligence."
+    },
+    "includes_training": {
+      "type": "boolean",
+      "editor": "checkbox",
+      "title": "Covers training",
+      "description": "Tick for statements that say they cover training."
+    },
+    "last_updated_after": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Updated on or after",
+      "description": "Only summaries last updated on or after this date (YYYY-MM-DD)",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "q": {
+      "type": "string",
+      "editor": "textfield",
+      "title": "Free-text search",
+      "description": "Filter: Free-text search (case-insensitive substring match)."
+    },
+    "max_results": {
+      "title": "Maximum results",
+      "type": "integer",
+      "description": "Stop after this many statement summaries (you are charged per result).",
+      "default": 1000,
+      "minimum": 1,
+      "maximum": 100000
+    }
+  },
+  "required": []
+}

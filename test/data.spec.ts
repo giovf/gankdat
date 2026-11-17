@@ -35,6 +35,8 @@ describe('GET /v1/data (sources listing)', () => {
       'uk-company-profiles',
       'uk-payment-practices',
       'uk-company-accounts',
+      'uk-modern-slavery-statements',
+      'uk-gender-pay-gap',
     ]);
     const tenders = body.data.find((s) => s.slug === 'uk-tenders');
     expect(tenders?.supported_params).toEqual(

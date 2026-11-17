@@ -877,6 +877,39 @@
           </p>
         </div>
         <div class="card">
+          <h3>uk-modern-slavery-statements <span>// has this supplier published one?</span></h3>
+          <p>
+            Statement summaries from the UK government's modern slavery statement registry —
+            organisation and company number, registry year and period, whether it is a group
+            statement and under which parent, turnover band, sectors, and what the statement says it
+            covers (risk assessment, due diligence, training, goals), with links to the statement
+            and the registry's PDF. History by company number; the company lookup carries the latest
+            as <code>esg.modern_slavery</code>. The registry is voluntary, so a company without a
+            row is not thereby non-compliant. Signatory names and narrative answers never ingested.
+          </p>
+          <p class="chips">
+            <code>company_number</code><code>organisation</code><code>parent_name</code
+            ><code>statement_year</code><code>turnover_band</code><code>sectors</code
+            ><code>includes_due_diligence</code><code>q</code>
+          </p>
+        </div>
+        <div class="card">
+          <h3>uk-gender-pay-gap <span>// what is this employer's pay gap?</span></h3>
+          <p>
+            The gender pay gap figures every UK employer of 250 or more publishes each year — mean
+            and median hourly and bonus gaps, the share of men and women paid a bonus and in each
+            pay quartile, employer size, SIC codes, and whether the report was late. One record per
+            employer and reporting year, by company number; the company lookup carries the latest as
+            <code>esg.gender_pay_gap</code>. Daily diff: each report as it is submitted.
+            Responsible-person names and addresses never ingested.
+          </p>
+          <p class="chips">
+            <code>company_number</code><code>employer</code><code>reporting_year</code
+            ><code>median_hourly_pct_min</code><code>employer_size</code><code>sic_codes</code
+            ><code>submitted_late</code><code>q</code>
+          </p>
+        </div>
+        <div class="card">
           <h3>uk-company-accounts <span>// is this company solvent?</span></h3>
           <p>
             Headline figures from the accounts UK companies file electronically at Companies House,
@@ -963,10 +996,10 @@
             Every register diffs itself each morning:
             <code>/v1/changes/…?since=YYYY-MM-DD</code> returns what was added, removed or changed —
             food hygiene, charities, care locations, schools, NHS organisations, sponsors,
-            exclusions, gambling licences, payment practices reports, company accounts and the
-            weekly trade-mark journal — with the dataset's own filters, so
-            <code>?classes=09&amp;q=acme</code> is a watch. 90-day history, MCP tool
-            <code>get_changes</code>; the activity per day is on each
+            exclusions, gambling licences, payment practices reports, company accounts, modern
+            slavery statements, pay gap reports and the weekly trade-mark journal — with the
+            dataset's own filters, so <code>?classes=09&amp;q=acme</code> is a watch. 90-day
+            history, MCP tool <code>get_changes</code>; the activity per day is on each
             <a href="/stats">stats page</a>. Poll the delta, not the register — no other source
             publishes official-register deltas.
           </p>

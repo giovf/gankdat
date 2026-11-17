@@ -132,6 +132,9 @@
       "financials": {
         "type": ["object", "null"]
       },
+      "esg": {
+        "type": ["object", "null"]
+      },
       "company_url": {
         "type": ["string", "null"]
       },

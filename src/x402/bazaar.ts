@@ -261,7 +261,33 @@ export function bazaarOutputSchema(source: DataSource): JsonObject {
     unrepresentable: 'any',
   }) as JsonObject;
   delete generated.$schema;
+  if (JSON.stringify(generated).length > OUTPUT_SCHEMA_BUDGET) slimNestedObjects(generated);
   return generated;
+}
+
+/**
+ * The declaration travels base64-encoded in the PAYMENT-REQUIRED header of every 402, and a
+ * record that joins other registers as nested objects (the company lookup: payment practices,
+ * financials, ESG disclosures) grows it past what a header should carry. Over this many bytes
+ * of schema, a record field that is a plain object keeps its type and loses its inner
+ * properties; the output example beside it still shows every nested field with a value.
+ */
+const OUTPUT_SCHEMA_BUDGET = 6_000;
+
+function slimNestedObjects(envelope: JsonObject): void {
+  const data = (envelope.properties as JsonObject | undefined)?.data as JsonObject | undefined;
+  const record = data?.items as JsonObject | undefined;
+  const fields = record?.properties as Record<string, JsonObject> | undefined;
+  if (!fields) return;
+  const slim = (node: JsonObject): void => {
+    if (node.type === 'object' && node.properties) {
+      delete node.properties;
+      delete node.required;
+      delete node.additionalProperties;
+    }
+    for (const branch of (node.anyOf as JsonObject[] | undefined) ?? []) slim(branch);
+  };
+  for (const field of Object.values(fields)) slim(field);
 }
 
 /** The lane's unpaid 402 body: the usual error envelope, so every client reads the same shape. */

@@ -1,0 +1,13 @@
+{
+  "name": "gankdat-apify-uk-modern-slavery-statements",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Apify actor: UK modern slavery statement registry summaries by company number via gankdat.com",
+  "scripts": {
+    "start": "node src/main.mjs"
+  },
+  "dependencies": {
+    "apify": "^3.4.0"
+  }
+}

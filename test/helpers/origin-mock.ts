@@ -22,6 +22,9 @@ const ODS_ORIGIN = 'https://www.odsdatasearchandexport.nhs.uk/api/getReport?repo
 const TMJ_ORIGIN = 'https://www.ipo.gov.uk/t-tmj/tm-journals/';
 const GC_ORIGIN = 'https://www.gamblingcommission.gov.uk/downloads/';
 const PP_ORIGIN = 'https://check-payment-practices.service.gov.uk/export/csv/';
+const MS_ORIGIN =
+  'https://downloads.modern-slavery-statement-registry.service.gov.uk/publicdownloads/StatementSummaries';
+const GPG_ORIGIN = 'https://gender-pay-gap.service.gov.uk/viewing/download-data/';
 const CH_ACCOUNTS_ORIGIN = 'https://download.companieshouse.gov.uk/Accounts_Bulk_Data-';
 
 /**
@@ -58,6 +61,10 @@ export function stubOrigins(handlers: {
   gamblingCommission?: (url: string) => Response;
   /** The payment practices export (one generated CSV). */
   paymentPractices?: () => Response;
+  /** Called with the registry year of the statement summaries file asked for. */
+  modernSlavery?: (year: number) => Response;
+  /** Called with the reporting year of the gender pay gap file asked for. */
+  genderPayGap?: (year: number) => Response;
   /** Called with the daily accounts ZIP URL and the request init (HEAD, or a GET with a Range header). */
   companyAccounts?: (url: string, init?: RequestInit) => Response;
 }): ReturnType<typeof vi.fn> {
@@ -128,6 +135,12 @@ export function stubOrigins(handlers: {
     }
     if (url.startsWith(PP_ORIGIN) && handlers.paymentPractices) {
       return Promise.resolve(handlers.paymentPractices());
+    }
+    if (url.startsWith(MS_ORIGIN) && handlers.modernSlavery) {
+      return Promise.resolve(handlers.modernSlavery(Number(url.slice(MS_ORIGIN.length, -4))));
+    }
+    if (url.startsWith(GPG_ORIGIN) && handlers.genderPayGap) {
+      return Promise.resolve(handlers.genderPayGap(Number(url.slice(GPG_ORIGIN.length))));
     }
     if (url.startsWith(CH_ACCOUNTS_ORIGIN) && handlers.companyAccounts) {
       return Promise.resolve(handlers.companyAccounts(url, init));
