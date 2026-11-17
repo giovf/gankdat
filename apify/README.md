@@ -41,6 +41,23 @@ broken. The README's first line says `Paused` with the date; the actor stays pub
 that folder's `main.mjs` only (the template test checks the call, not the wrapper); remove both when
 the origin republishes (the weekly re-read item restores the source).
 
+## A new actor folder
+
+`npm run actor -- <slug> --name <store-name> --title "…" --description "…"` (from `ventures/gankdat`,
+or `-w @foundry/gankdat` from the root; `scripts/actor.mjs` over `src/apify/scaffold.ts`, 2026-11-17)
+writes `apify/<slug>/` for a registered dataset source: `dataset_schema.json` from the zod record
+schema (types and nullability as the test reads them, `change` / `changed_at` when the source has a
+feed), `input_schema.json` from `queryParams` (date pattern, checkbox, number and select editors, the
+feed inputs, `q`, `max_results`), `main.mjs`, `package.json`, `output_schema.json`, the shared client
+and Dockerfile copied from a shipped folder, and the row in the table below. A title over 63 or a
+description over 300 characters is refused when written. What it cannot derive — the README, each
+filter's description, a title or description not passed — is written as a `TODO` line, and
+`test/apify-schemas.spec.ts` fails while one remains. Then trim the `overview` view to the columns a
+buyer reads first. `--dir <folder>` writes elsewhere (a look before committing); an existing folder
+needs `--force`; a lookup source is refused (copy `uk-company-profiles/`).
+`test/apify-scaffold.spec.ts` holds the scaffold to the shipped folders: the same fields in the same
+order, type-compatible, and exactly the committed schema for the four folders built since 2026-11-12.
+
 ## Published actors (account `faceless-api`, 2026-09-20)
 
 | Folder | Actor id | Console |

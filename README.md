@@ -1,5 +1,5 @@
 > **Public mirror.** This repository is a read-only snapshot of the gankdat service, synced
-> automatically from a private monorepo (commit `29ac9fc35862`, 2026-11-17). Internal planning
+> automatically from a private monorepo (commit `0e1527ed2553`, 2026-11-17). Internal planning
 > documents are not mirrored. Issues are welcome here; pull requests are read and applied upstream.
 > Live service: https://gankdat.com · MCP: https://gankdat.com/mcp · docs: https://gankdat.com/docs
 

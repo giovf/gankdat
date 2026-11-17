@@ -69,6 +69,13 @@ const sources = import.meta.glob<string>('../apify/*/src/*.mjs', {
   import: 'default',
 });
 
+/** Every file of an actor's listing and manifest, as text. */
+const actorFiles = import.meta.glob<string>(['../apify/*/.actor/*', '../apify/*/package.json'], {
+  eager: true,
+  query: '?raw',
+  import: 'default',
+});
+
 const folders = Object.keys(actorSchemas)
   .map((p) => /\.\.\/apify\/([^/]+)\//.exec(p)?.[1] ?? '')
   .filter((f) => f !== 'uk-no-website-leads'); // merged feed with its own row shape
@@ -173,7 +180,10 @@ describe('Apify actor dataset schemas match the source record schemas', () => {
           continue;
         }
         const wanted = jsonTypes(params[field]);
-        const declared = prop.type === 'integer' ? 'number' : prop.type;
+        // Apify's numeric input type is integer: it serves a number param and an integer one
+        // (2026-11-17: an integer param was read as number only, so uk-gender-pay-gap's
+        // `employer_id` filter could not be offered; foundry `gankdat-actor-scaffold`).
+        const declared = prop.type === 'integer' && !wanted.has('integer') ? 'number' : prop.type;
         if (!wanted.has(declared)) {
           problems.push(
             `${field}: API takes ${[...wanted].join('|')}, actor input is ${prop.type}`,
@@ -238,6 +248,16 @@ describe('Apify actor dataset schemas match the source record schemas', () => {
       }
     }
     expect(problems, problems.join('\n')).toEqual([]);
+  });
+
+  it('ships no line the scaffold left for the builder to write', () => {
+    // `npm run actor -- <slug>` (src/apify/scaffold.ts) marks the title, the description, the
+    // README and every filter description it cannot derive with TODO; none may reach a push.
+    const unfinished = Object.entries(actorFiles)
+      .filter(([, text]) => text.includes('TODO'))
+      .map(([file]) => file.replace('../', ''));
+    expect(unfinished, `finish the TODO lines in: ${unfinished.join(', ')}`).toEqual([]);
+    expect(Object.keys(actorFiles).length).toBeGreaterThanOrEqual(folders.length * 5);
   });
 
   it('lists every dataset with an actor folder (the merged lead feed aside)', () => {
