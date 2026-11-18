@@ -108,6 +108,42 @@ async function buildLane(env: CloudflareBindings, lane: X402Lane): Promise<Middl
   return paymentMiddleware(bazaarRoutes(lane, declareDiscoveryExtension), server);
 }
 
+/** What a client is told to wait when the payment server could not start (seconds). */
+export const X402_INIT_RETRY_AFTER_S = 5;
+
+export type LaneOutcome = { response: Response | void } | { unavailable: true };
+
+/**
+ * Runs the payment middleware so that a failure BEFORE the route handler ran — building the lane,
+ * or the resource server's start-up handshake with the facilitator (`initializeHttpServer`, once
+ * per isolate) — is reported, tried once more, and then answered as unavailable instead of thrown
+ * (gankdat `x402-init-failure-answer`, 2026-11-18: the throw went out as a bare HTTP 500 on 1, 2,
+ * 17 and 52 requests a day from 11-13, on every x402 route, and the logged line held only stack
+ * frames). Nothing has been verified, served or settled at that point, so the second attempt
+ * cannot charge or serve twice. A throw once the handler has been entered passes through
+ * unchanged: that is a data error after a verified payment, and repeating it could.
+ */
+export async function guardedLane(
+  run: (next: () => Promise<void>) => Promise<Response | void>,
+  next: () => Promise<void>,
+  report: (error: unknown, attempt: number) => void,
+): Promise<LaneOutcome> {
+  let entered = false;
+  const tracked = (): Promise<void> => {
+    entered = true;
+    return next();
+  };
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return { response: await run(tracked) };
+    } catch (error) {
+      if (entered) throw error;
+      report(error, attempt);
+      if (attempt >= 2) return { unavailable: true };
+    }
+  }
+}
+
 // The paid lane, shared by the data routes and the change feeds (`/x402/changes/:source`,
 // gankdat `x402-change-feed-route`, 2026-11-05: the same middleware, one route table).
 const paidLane: MiddlewareHandler<AppEnv> = async (c, next) => {
@@ -129,16 +165,47 @@ const paidLane: MiddlewareHandler<AppEnv> = async (c, next) => {
   const lane: X402Lane = { baseUrl: publicBaseUrl(c.env), payTo: wallet, price, network };
   const facilitatorKey = c.env.CDP_API_KEY_ID ? 'cdp' : (c.env.X402_FACILITATOR_URL ?? '');
   const key = [lane.baseUrl, wallet, price, network, facilitatorKey].join('|');
-  let middleware = lanes.get(key);
-  if (!middleware) {
-    middleware = buildLane(c.env, lane).catch((error: unknown) => {
-      lanes.delete(key); // a failed build is retried by the next request, not cached
-      throw error;
-    });
-    lanes.set(key, middleware);
-  }
+  const laneMiddleware = (): Promise<MiddlewareHandler> => {
+    let middleware = lanes.get(key);
+    if (!middleware) {
+      middleware = buildLane(c.env, lane).catch((error: unknown) => {
+        lanes.delete(key); // a failed build is retried by the next request, not cached
+        throw error;
+      });
+      lanes.set(key, middleware);
+    }
+    return middleware;
+  };
 
-  const response = await (await middleware)(c, next);
+  const guarded = await guardedLane(
+    async (tracked) => (await laneMiddleware())(c, tracked),
+    next,
+    (error, attempt) => {
+      const err = error instanceof Error ? error : new Error(String(error));
+      console.error(
+        JSON.stringify({
+          level: 'error',
+          event: 'x402_init_failed',
+          attempt,
+          path: c.req.path,
+          name: err.name,
+          message: err.message.slice(0, 500),
+          cause: err.cause === undefined ? undefined : String(err.cause).slice(0, 300),
+        }),
+      );
+    },
+  );
+  if ('unavailable' in guarded) {
+    c.header('Retry-After', String(X402_INIT_RETRY_AFTER_S));
+    return c.json(
+      failure(
+        'unavailable',
+        `x402 payment terms are briefly unavailable; retry in ${X402_INIT_RETRY_AFTER_S} s`,
+      ),
+      503,
+    );
+  }
+  const response = guarded.response;
   // The middleware returns its own 402/5xx; on a settled payment it sets c.res (the
   // data response plus the PAYMENT-RESPONSE receipt). Only that receipt marks a sale.
   const outcome = response ?? c.res;
