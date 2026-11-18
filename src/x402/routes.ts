@@ -66,8 +66,18 @@ export function withoutCodegenError(
 ): (...args: unknown[]) => void {
   return (...args: unknown[]): void => {
     if (args[0] === AJV_COMPILE_ERROR && args.length === 2 && typeof args[1] === 'string') return;
+    // @x402/hono's own `console.error(error)` before it answers 500 is the only place the
+    // start-up failure's Error object surfaces (see `guardedLane`); keep it for the report.
+    if (args.length === 1 && args[0] instanceof Error) lastLibraryError = args[0];
     error(...args);
   };
+}
+let lastLibraryError: Error | null = null;
+/** The Error the payment library last logged, taken once. */
+function takeLibraryError(): Error | null {
+  const error = lastLibraryError;
+  lastLibraryError = null;
+  return error;
 }
 let codegenNoiseMuted = false;
 function muteCodegenNoise(): void {
@@ -122,11 +132,14 @@ export type LaneOutcome = { response: Response | void } | { unavailable: true };
  * frames). Nothing has been verified, served or settled at that point, so the second attempt
  * cannot charge or serve twice. A throw once the handler has been entered passes through
  * unchanged: that is a data error after a verified payment, and repeating it could.
+ * A failure may also come back as a RESPONSE rather than a throw (`failureOf`); it is treated the
+ * same way, and only while the handler has not been entered.
  */
 export async function guardedLane(
   run: (next: () => Promise<void>) => Promise<Response | void>,
   next: () => Promise<void>,
   report: (error: unknown, attempt: number) => void,
+  failureOf: (response: Response) => unknown = () => null,
 ): Promise<LaneOutcome> {
   let entered = false;
   const tracked = (): Promise<void> => {
@@ -134,13 +147,21 @@ export async function guardedLane(
     return next();
   };
   for (let attempt = 1; ; attempt += 1) {
+    let failure: unknown;
     try {
-      return { response: await run(tracked) };
+      const response = await run(tracked);
+      // The library does not throw its start-up failure: it logs it and RETURNS a 500 (or a 502
+      // for a facilitator refusal). Live on 11-18 17:52, 18:06 and 18:20 the first version of this
+      // guard, which only caught throws, let six such 500s through. `failureOf` names a response
+      // that is such a failure; it is one only while the handler has not been entered.
+      failure = !entered && response instanceof Response ? failureOf(response) : null;
+      if (failure === null || failure === undefined) return { response };
     } catch (error) {
       if (entered) throw error;
-      report(error, attempt);
-      if (attempt >= 2) return { unavailable: true };
+      failure = error;
     }
+    report(failure, attempt);
+    if (attempt >= 2) return { unavailable: true };
   }
 }
 
@@ -177,6 +198,7 @@ const paidLane: MiddlewareHandler<AppEnv> = async (c, next) => {
     return middleware;
   };
 
+  takeLibraryError(); // an Error logged for an earlier request is not this one's
   const guarded = await guardedLane(
     async (tracked) => (await laneMiddleware())(c, tracked),
     next,
@@ -193,6 +215,13 @@ const paidLane: MiddlewareHandler<AppEnv> = async (c, next) => {
           cause: err.cause === undefined ? undefined : String(err.cause).slice(0, 300),
         }),
       );
+    },
+    // @x402/hono 2.29 answers its own failures before the handler: `internalErrorResponse` (500,
+    // after `console.error(error)`) for a failed start-up or request processing, and
+    // `facilitatorErrorResponse` (502, the facilitator's message in the body).
+    (response) => {
+      if (response.status !== 500 && response.status !== 502) return null;
+      return takeLibraryError() ?? new Error(`payment middleware answered HTTP ${response.status}`);
     },
   );
   if ('unavailable' in guarded) {
