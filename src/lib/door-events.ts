@@ -70,3 +70,28 @@ export function doorEventsReport(rows: DoorRow[], days: number): string[] {
     ...sorted.map((r) => `  ${doorEventLine(r)}`),
   ];
 }
+
+/** The 24 h read behind `toolWalkNote`: one row per keyless call to a protected tool. */
+export const TOOL_WALK_QUERY =
+  "SELECT blob6 AS client, blob5 AS tool FROM gankdat_traffic WHERE blob1 = 'mcp_denied' AND blob4 = 'protected_tool' AND blob6 != '' AND timestamp > NOW() - INTERVAL '1' DAY LIMIT 1000";
+
+/**
+ * ` (tool-list walk: 1 client — buy_credits, confirm_credit_purchase)` after the `wanted:` counts
+ * when one client called two or more different protected tools inside the day: nobody buys credits
+ * and confirms the purchase without signing in between, so the pair is a crawler calling every
+ * tool it was listed (2026-11-15 07:19 UTC: four tools in three seconds from one client, read as
+ * the first request to buy for three days). Empty when no client did.
+ */
+export function toolWalkNote(rows: { client: string | null; tool: string | null }[]): string {
+  const byClient = new Map<string, Set<string>>();
+  for (const row of rows) {
+    if (!row.client) continue;
+    const tools = byClient.get(row.client) ?? new Set<string>();
+    for (const tool of (row.tool ?? '').split(',')) if (tool.trim()) tools.add(tool.trim());
+    byClient.set(row.client, tools);
+  }
+  const walkers = [...byClient.values()].filter((tools) => tools.size >= 2);
+  if (walkers.length === 0) return '';
+  const tools = [...new Set(walkers.flatMap((set) => [...set]))].sort();
+  return ` (tool-list walk: ${walkers.length} client${walkers.length === 1 ? '' : 's'} — ${tools.join(', ').replace(/[|;]/g, '/').slice(0, 120)})`;
+}

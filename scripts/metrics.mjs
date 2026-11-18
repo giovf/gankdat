@@ -26,6 +26,7 @@ import {
   zoneStatsRows,
 } from '../src/lib/crawler-hits.ts';
 import { afterWallNote, connectCallersNote, oauthFunnelNote } from '../src/lib/oauth-funnel.ts';
+import { TOOL_WALK_QUERY, toolWalkNote } from '../src/lib/door-events.ts';
 import { changesByUaNote } from '../src/lib/change-feed-callers.ts';
 import { restByUaNote } from '../src/lib/rest-callers.ts';
 import { x402CallsBySlug, x402Paid30dNote, x402PaidClause } from '../src/lib/x402-sales.ts';
@@ -216,8 +217,11 @@ const paywall = n(
 const wanted = await ae(
   "SELECT blob5 AS tool, SUM(_sample_interval * double1) AS n FROM gankdat_traffic WHERE blob1 = 'mcp_denied' AND blob5 != '' AND timestamp > NOW() - INTERVAL '1' DAY GROUP BY tool ORDER BY n DESC LIMIT 3",
 );
+// A client that called two or more different protected tools in the day is walking the tool list,
+// not asking to buy (gankdat mcp-buy-attempt-read-2026-11-16): the clause says so next to the counts.
+const toolWalk = toolWalkNote(await ae(TOOL_WALK_QUERY).catch(() => []));
 const wantedNote = wanted.length
-  ? `; wanted: ${wanted.map((r) => `${r.tool} ${Math.round(Number(r.n))}`).join(', ')}`
+  ? `; wanted: ${wanted.map((r) => `${r.tool} ${Math.round(Number(r.n))}`).join(', ')}${toolWalk}`
   : '';
 
 // STRATEGY §4 targets "change-feed calls / week: 50" and change-feed-upsell /

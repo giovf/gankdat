@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { doorEventLine, doorEventsQueries, doorEventsReport } from '../src/lib/door-events';
+import {
+  doorEventLine,
+  doorEventsQueries,
+  doorEventsReport,
+  toolWalkNote,
+} from '../src/lib/door-events';
 
 // The event-by-event reading of the door (gankdat mcp-buy-attempt-read-2026-11-16): rows as
 // Analytics Engine hands them over, rendered for the probe dispatch's job log.
@@ -77,5 +82,26 @@ describe('doorEventsReport', () => {
     expect(lines[0]).toBe('door events 7d: 2 point(s), oldest first');
     expect(lines[1]).toContain('2026-11-16 23:00:00 | oauth | authorize | (no client) | (no UA)');
     expect(lines[2]).toContain('2026-11-17 01:00:00');
+  });
+});
+
+describe('toolWalkNote', () => {
+  it('tags a client that called two different protected tools in the day', () => {
+    expect(
+      toolWalkNote([
+        { client: '80ecdbcc', tool: 'buy_credits' },
+        { client: '80ecdbcc', tool: 'confirm_credit_purchase' },
+        { client: 'be5a4e66', tool: 'connect_account' },
+        { client: 'be5a4e66', tool: 'connect_account' },
+      ]),
+    ).toBe(' (tool-list walk: 1 client — buy_credits, confirm_credit_purchase)');
+  });
+
+  it('reads a batched call naming several tools as a walk too, and says nothing otherwise', () => {
+    expect(toolWalkNote([{ client: 'a', tool: 'buy_credits,connect_account' }])).toBe(
+      ' (tool-list walk: 1 client — buy_credits, connect_account)',
+    );
+    expect(toolWalkNote([{ client: 'a', tool: 'connect_account' }])).toBe('');
+    expect(toolWalkNote([{ client: '', tool: 'buy_credits' }])).toBe('');
   });
 });
