@@ -24,7 +24,7 @@ import {
   foldErrorLines,
 } from '../src/lib/error-lines.ts';
 import { WAVE_LOG_QUERY_PATH } from '../src/lib/wave-logs.ts';
-import { DOOR_DAYS, doorEventsQuery, doorEventsReport } from '../src/lib/door-events.ts';
+import { DOOR_DAYS, doorEventsQueries, doorEventsReport } from '../src/lib/door-events.ts';
 
 const ACCOUNT_ID = '37e56f3ce4dfe49919e85d4380467f44'; // not a secret
 
@@ -44,21 +44,24 @@ if (!token) {
 const hours = Math.max(1, Math.min(168, Number(flag('hours', ERROR_LOG_HOURS)) || ERROR_LOG_HOURS));
 
 const doorDays = Math.max(1, Number(flag('door-days', DOOR_DAYS)) || DOOR_DAYS);
-try {
-  const doorRes = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/analytics_engine/sql`,
-    {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: doorEventsQuery(doorDays),
-    },
-  );
-  const doorBody = await doorRes.json();
-  if (!doorBody.data) throw new Error(JSON.stringify(doorBody).slice(0, 200));
-  for (const line of doorEventsReport(doorBody.data, doorDays)) console.log(line);
-} catch (err) {
-  console.log(`door events ${doorDays}d: read failed: ${String(err).slice(0, 200)}`);
+const doorRows = [];
+for (const query of doorEventsQueries(doorDays)) {
+  try {
+    const doorRes = await fetch(
+      `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/analytics_engine/sql`,
+      { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: query },
+    );
+    const doorText = await doorRes.text();
+    if (!doorRes.ok) throw new Error(`HTTP ${doorRes.status} ${doorText}`);
+    doorRows.push(...(JSON.parse(doorText).data ?? []));
+  } catch (err) {
+    // The refusal is the reading: the API's own words, and which of the three reads it was.
+    console.log(
+      `door events ${doorDays}d: read failed (${query.split(' AND ')[1]}): ${String(err).replace(/\s+/g, ' ').slice(0, 300)}`,
+    );
+  }
 }
+for (const line of doorEventsReport(doorRows, doorDays)) console.log(line);
 
 const res = await fetch(
   `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}${WAVE_LOG_QUERY_PATH}`,

@@ -27,21 +27,22 @@ export interface DoorRow {
 }
 
 /**
- * One Analytics Engine query for the three kinds of point: a keyless call to a protected tool
- * (connect_account, buy_credits, confirm_credit_purchase), a keyless call to the sign-up tools,
- * and every OAuth leg except the token refreshes (our own connector's hourly traffic).
+ * One Analytics Engine query per kind of point, each a plain AND chain (the single query with the
+ * three kinds OR-ed together was refused by the SQL API on its first live run, 2026-11-18): a
+ * keyless call to a protected tool (connect_account, buy_credits, confirm_credit_purchase), a
+ * keyless call to the sign-up tools, and every OAuth leg except the token refreshes (our own
+ * connector's hourly traffic).
  */
-export function doorEventsQuery(days: number): string {
+export function doorEventsQueries(days: number): string[] {
   const d = Math.max(1, Math.min(DOOR_DAYS_MAX, Math.round(days) || DOOR_DAYS));
-  return (
+  const select =
     'SELECT timestamp AS ts, blob1 AS kind, blob2 AS ua, blob3 AS step, blob4 AS who, blob5 AS detail, blob6 AS client ' +
-    'FROM gankdat_traffic ' +
-    `WHERE timestamp > NOW() - INTERVAL '${d}' DAY AND (` +
-    "(blob1 = 'mcp_denied' AND blob4 = 'protected_tool') " +
-    "OR (blob1 = 'mcp_anon' AND (blob5 LIKE '%request_api_key%' OR blob5 LIKE '%claim_api_key%')) " +
-    "OR (blob1 = 'oauth_funnel' AND blob5 != 'refresh_token')" +
-    ') ORDER BY timestamp ASC LIMIT 1000'
-  );
+    `FROM gankdat_traffic WHERE timestamp > NOW() - INTERVAL '${d}' DAY AND `;
+  return [
+    `${select}blob1 = 'mcp_denied' AND blob4 = 'protected_tool' LIMIT 1000`,
+    `${select}blob1 = 'mcp_anon' AND blob5 LIKE '%_api_key%' LIMIT 1000`,
+    `${select}blob1 = 'oauth_funnel' AND blob5 != 'refresh_token' LIMIT 1000`,
+  ];
 }
 
 const clean = (text: string | null, max: number): string =>

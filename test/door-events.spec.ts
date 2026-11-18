@@ -1,22 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { doorEventLine, doorEventsQuery, doorEventsReport } from '../src/lib/door-events';
+import { doorEventLine, doorEventsQueries, doorEventsReport } from '../src/lib/door-events';
 
 // The event-by-event reading of the door (gankdat mcp-buy-attempt-read-2026-11-16): rows as
 // Analytics Engine hands them over, rendered for the probe dispatch's job log.
 
-describe('doorEventsQuery', () => {
+describe('doorEventsQueries', () => {
   it('reads the three kinds of point and leaves the token refreshes out', () => {
-    const q = doorEventsQuery(4);
-    expect(q).toContain("INTERVAL '4' DAY");
-    expect(q).toContain("blob4 = 'protected_tool'");
-    expect(q).toContain('request_api_key');
-    expect(q).toContain("blob5 != 'refresh_token'");
+    const [denied, signup, funnel] = doorEventsQueries(4);
+    expect(denied).toContain(
+      "INTERVAL '4' DAY AND blob1 = 'mcp_denied' AND blob4 = 'protected_tool'",
+    );
+    expect(signup).toContain("blob1 = 'mcp_anon' AND blob5 LIKE '%_api_key%'");
+    expect(funnel).toContain("blob1 = 'oauth_funnel' AND blob5 != 'refresh_token'");
   });
 
   it('clamps the window', () => {
-    expect(doorEventsQuery(-3)).toContain("INTERVAL '1' DAY");
-    expect(doorEventsQuery(5000)).toContain("INTERVAL '90' DAY");
-    expect(doorEventsQuery(Number.NaN)).toContain("INTERVAL '7' DAY");
+    expect(doorEventsQueries(-3)[0]).toContain("INTERVAL '1' DAY");
+    expect(doorEventsQueries(5000)[0]).toContain("INTERVAL '90' DAY");
+    expect(doorEventsQueries(Number.NaN)[0]).toContain("INTERVAL '7' DAY");
   });
 });
 
