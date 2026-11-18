@@ -12,6 +12,7 @@ import {
   storedCountLine,
   storedCountOf,
   storedCountQuery,
+  withStoredCount,
   type LogQuery,
 } from './log-read.ts';
 
@@ -295,17 +296,20 @@ export async function readErrorLines(
   const query = errorLogQuery(nowMs, hours);
   const read = await readLogEvents(post, query, ERROR_LOG_WANT);
   const rawHead = firstText;
+  let stats = read.stats;
   let stored: string;
   try {
-    stored = storedCountLine(storedCountOf(await post(storedCountQuery(query))));
+    const count = storedCountOf(await post(storedCountQuery(query)));
+    stats = withStoredCount(stats, count);
+    stored = storedCountLine(count);
   } catch (err) {
     stored = storedCountLine(null, String(err).replace(/\s+/g, ' ').slice(0, 160));
   }
   const folded = foldErrorLines(read.body);
   const note = errorLinesNote(folded, hours);
-  const partial = read.stats.partial.length > 0 ? `partial read: ${read.stats.partial[0]}` : '';
+  const partial = stats.partial.length > 0 ? `partial read: ${stats.partial[0]}` : '';
   return {
-    report: [logReadLine(read.stats), stored, ...errorLinesReport(folded, rawHead, hours)],
+    report: [logReadLine(stats), stored, ...errorLinesReport(folded, rawHead, hours)],
     note:
       partial === ''
         ? note

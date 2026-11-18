@@ -28,6 +28,7 @@ import {
   storedCountLine,
   storedCountOf,
   storedCountQuery,
+  withStoredCount,
 } from '../src/lib/log-read.ts';
 
 const ACCOUNT_ID = '37e56f3ce4dfe49919e85d4380467f44'; // not a secret
@@ -117,14 +118,20 @@ async function main() {
     console.error(`worker-logs: ${err.message}`);
     process.exit(1);
   }
-  console.log(logReadLine(read.stats));
-  // What the store holds for the same filters: a sample interval above 1 is loss at ingest. Its
+  // What the store holds for the same filters: the total the read is measured against (a page's own
+  // `events.count` is bounded by the page, run 37) and, by its sample interval, loss at ingest. Its
   // refusal is one line and never stops the read.
+  let stats = read.stats;
+  let storedLine;
   try {
-    console.log(storedCountLine(storedCountOf(await post(storedCountQuery(query)))));
+    const stored = storedCountOf(await post(storedCountQuery(query)));
+    stats = withStoredCount(stats, stored);
+    storedLine = storedCountLine(stored);
   } catch (err) {
-    console.log(storedCountLine(null, String(err.message).replace(/\s+/g, ' ').slice(0, 200)));
+    storedLine = storedCountLine(null, String(err.message).replace(/\s+/g, ' ').slice(0, 200));
   }
+  console.log(logReadLine(stats));
+  console.log(storedLine);
   const body = read.body;
   const events = parseWaveLogEvents(body);
   if (events.length === 0) {

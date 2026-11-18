@@ -42,6 +42,8 @@ export interface LogReadStats {
   rowsRead: number | null;
   /** Highest `statistics.abr_level` among the windows whose events were kept (1 = full data). */
   abrLevel: number;
+  /** Highest ABR level of an answer that was discarded and re-read in halves (1 = none was). */
+  widestAbrLevel: number;
   /** Windows the timeframe ended up split into. */
   windows: number;
   /** POSTs made. */
@@ -67,6 +69,8 @@ const numberOf = (v: unknown): number | null => {
   const n = typeof v === 'string' && v.trim() !== '' ? Number(v) : v;
   return typeof n === 'number' && Number.isFinite(n) ? n : null;
 };
+
+const n = (v: number): string => v.toLocaleString('en-GB', { maximumFractionDigits: 1 });
 
 const resultOf = (body: unknown): Record<string, unknown> => {
   if (!isRecord(body)) return {};
@@ -131,6 +135,7 @@ export async function readLogEvents(
     matched: null,
     rowsRead: null,
     abrLevel: 1,
+    widestAbrLevel: 1,
     windows: 0,
     requests: 0,
     want,
@@ -177,6 +182,7 @@ export async function readLogEvents(
       span >= 2 * MIN_WINDOW_MS &&
       stats.requests + pending.length + 2 <= maxRequests
     ) {
+      stats.widestAbrLevel = Math.max(stats.widestAbrLevel, firstStats.abrLevel);
       const mid = window.from + Math.floor(span / 2);
       pending.unshift({ from: mid, to: window.to }, { from: window.from, to: mid });
       continue;
@@ -243,10 +249,36 @@ export function storedCountQuery(query: LogQuery): LogQuery {
   };
 }
 
+export interface StoredCount {
+  count: number;
+  sampleInterval: number | null;
+  /** ABR level of the count's own answer; above 1 the count is an estimate. */
+  abrLevel: number;
+}
+
+/**
+ * Hold a finished read against the store's count for the same filters. The first live read
+ * (worker logs run 37, 2026-11-18) answered `events.count: 5` for a `limit: 5` page while the count
+ * calculation said 177: `events.count` is bounded by the page, so the store's count is the total
+ * a read is measured against. A shortfall beyond 2 % (requests land between the two calls) is
+ * named in `partial`.
+ */
+export function withStoredCount(stats: LogReadStats, stored: StoredCount | null): LogReadStats {
+  if (stored === null) return stats;
+  const short = stats.returned < stored.count * 0.98 - 2;
+  const why =
+    stats.returned >= stats.want
+      ? `limit ${stats.want} reached`
+      : `the store counts ${n(stored.count)} for the same filters`;
+  return {
+    ...stats,
+    matched: Math.max(stored.count, stats.returned),
+    partial: short && stats.partial.length === 0 ? [why] : stats.partial,
+  };
+}
+
 /** `count` and `sampleInterval` of the first aggregate of a calculations response, when carried. */
-export function storedCountOf(
-  body: unknown,
-): { count: number; sampleInterval: number | null } | null {
+export function storedCountOf(body: unknown): StoredCount | null {
   const calculations = resultOf(body).calculations;
   if (!Array.isArray(calculations)) return null;
   for (const calculation of calculations) {
@@ -259,13 +291,12 @@ export function storedCountOf(
       return {
         count,
         sampleInterval: numberOf(aggregate.sampleInterval) ?? numberOf(aggregate.interval),
+        abrLevel: pageStats(body).abrLevel,
       };
     }
   }
   return null;
 }
-
-const n = (v: number): string => v.toLocaleString('en-GB', { maximumFractionDigits: 1 });
 
 /**
  * The head line of a read: `log read: 140 returned of 12,034 matched — complete` or
@@ -273,6 +304,7 @@ const n = (v: number): string => v.toLocaleString('en-GB', { maximumFractionDigi
  */
 export function logReadLine(stats: LogReadStats): string {
   const matched = stats.matched === null ? 'matched n/a' : `of ${n(stats.matched)} matched`;
+  // (`matched` is the store's count once `withStoredCount` has run; a page's own count before it.)
   const verdict =
     stats.partial.length > 0
       ? `PARTIAL: ${stats.partial.join('; ')}`
@@ -282,18 +314,21 @@ export function logReadLine(stats: LogReadStats): string {
   const how =
     `${stats.requests} request${stats.requests === 1 ? '' : 's'}, ` +
     `${stats.windows} window${stats.windows === 1 ? '' : 's'}, ABR level ${stats.abrLevel}` +
+    (stats.widestAbrLevel > 1
+      ? ` after halving (the whole window was answered at level ${stats.widestAbrLevel}, sampled)`
+      : '') +
     (stats.rowsRead === null ? '' : `, ${n(stats.rowsRead)} rows scanned`);
   return `log read: ${n(stats.returned)} returned ${matched} — ${verdict} (${how})`;
 }
 
 /** The ingest line: what the store holds for the same filters, and whether it was sampled. */
-export function storedCountLine(
-  stored: { count: number; sampleInterval: number | null } | null,
-  why = '',
-): string {
+export function storedCountLine(stored: StoredCount | null, why = ''): string {
   if (stored === null) return `log store: count n/a${why ? ` (${why})` : ''}`;
   const interval = stored.sampleInterval;
   if (interval === null) return `log store: about ${n(stored.count)} events, sample interval n/a`;
+  if (stored.abrLevel > 1 && interval <= 1) {
+    return `log store: about ${n(stored.count)} events (estimated: the count was answered at ABR level ${stored.abrLevel}), sample interval 1`;
+  }
   return interval > 1
     ? `log store: about ${n(stored.count)} events estimated, SAMPLED AT INGEST: sample interval ${n(interval)} (about 1 event in ${n(interval)} was stored; the rest cannot be read)`
     : `log store: ${n(stored.count)} events, sample interval 1 (nothing dropped at ingest)`;

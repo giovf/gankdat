@@ -7,6 +7,7 @@ import {
   storedCountLine,
   storedCountOf,
   storedCountQuery,
+  withStoredCount,
   type LogQuery,
 } from '../src/lib/log-read.js';
 import { readErrorLines } from '../src/lib/error-lines.js';
@@ -129,6 +130,51 @@ describe('complete Workers Logs read', () => {
     );
     expect(cut.events).toHaveLength(50);
     expect(logReadLine(cut.stats)).toContain('50 returned of 12,000 matched — PARTIAL: limit 50');
+  });
+
+  it('measures a read against the store count, not the page-bound events.count (run 37)', async () => {
+    // Live shape 2026-11-18: limit 5 answered count 5 while the store held 177.
+    const read = await readLogEvents(
+      (q) =>
+        Promise.resolve(
+          q.timeframe.to - q.timeframe.from > 2 * HOUR
+            ? page([], 0, 3)
+            : page(
+                Array.from({ length: Number(q.limit) }, (_, i) => ev(`${q.timeframe.from}-${i}`)),
+                Number(q.limit),
+              ),
+        ),
+      query,
+      5,
+    );
+    const stored = { count: 177, sampleInterval: 1, abrLevel: 1 };
+    const line = logReadLine(withStoredCount(read.stats, stored));
+    expect(line).toContain('5 returned of 177 matched — PARTIAL: limit 5 reached');
+    expect(line).toContain('ABR level 1 after halving (the whole window was answered at level 3');
+    // A read that stopped short with no other reason is named from the store's count.
+    const quiet = await readLogEvents(() => Promise.resolve(page([ev('a')], 1)), query, 50);
+    expect(withStoredCount(quiet.stats, stored).partial).toEqual([
+      'the store counts 177 for the same filters',
+    ]);
+    expect(withStoredCount(quiet.stats, { ...stored, count: 1 }).partial).toEqual([]);
+    // Run 38's shape: one full-data page of exactly the limit, the page's count equal to the limit.
+    const full = await readLogEvents(
+      (q) =>
+        Promise.resolve(
+          page(
+            Array.from({ length: Number(q.limit) }, (_, i) => ev(`f${i}`)),
+            Number(q.limit),
+          ),
+        ),
+      query,
+      5,
+    );
+    expect(logReadLine(withStoredCount(full.stats, stored))).toContain(
+      '5 returned of 177 matched — PARTIAL: limit 5 reached',
+    );
+    expect(storedCountLine({ count: 177, sampleInterval: 1, abrLevel: 4 })).toContain(
+      'estimated: the count was answered at ABR level 4',
+    );
   });
 
   it('says completeness is unknown when the response carries no count', async () => {
