@@ -3,6 +3,7 @@ import type { Context } from 'hono';
 import { publicBaseUrl } from '../lib/constants';
 import { failure } from '../lib/envelope';
 import { isolateRateLimit } from '../metering/ratelimit';
+import { D1_OVERLOAD_RETRY_AFTER_S, isD1Overloaded } from '../sources/d1pace';
 import { queryD1Changes } from '../sources/d1store';
 import type { ChangeRow } from '../sources/d1store';
 import { getSource, hasChangeFeed, listSources } from '../sources/registry';
@@ -139,6 +140,44 @@ function resolve(
   return { page: { source, facet: { spec, value, label: listed.label } } };
 }
 
+/** How long a rendered feed stays in KV as the copy served when D1 refuses the rebuild. */
+export const FEED_STALE_SECONDS = 7 * 86_400;
+
+export interface FeedCopy {
+  xml: string;
+  /** When the copy was rendered (ms); null for a copy stored before 2026-11-18, which expired within the hour. */
+  builtAt: number | null;
+}
+
+export type FeedAnswer = { xml: string; state: 'hit' | 'miss' | 'stale' } | { busy: true };
+
+/**
+ * The feed body for one request (gankdat `feeds-d1-overload-answer`, 2026-11-18): the KV copy
+ * while it is under an hour old, else a rebuild from D1 — and when D1's 10-second throttle refuses
+ * the rebuild, the last copy however old, else `busy`. One client fetching every feed in a burst
+ * on 2026-11-18 14:03 UTC got HTTP 500 on 23 of them: each expired feed cost a D1 read, the
+ * window filled, and the error went out raw. A reader that meets a 500 may drop the feed; a
+ * day-old feed or a 503 with Retry-After keeps it. Any other error still throws. No I/O of its own.
+ */
+export async function feedAnswer(
+  copy: FeedCopy | null,
+  build: () => Promise<string>,
+  store: (xml: string) => Promise<void>,
+  nowMs: number,
+): Promise<FeedAnswer> {
+  if (copy && (copy.builtAt === null || nowMs - copy.builtAt < FEED_CACHE_SECONDS * 1000)) {
+    return { xml: copy.xml, state: 'hit' };
+  }
+  try {
+    const xml = await build();
+    await store(xml);
+    return { xml, state: 'miss' };
+  } catch (err) {
+    if (!isD1Overloaded(err)) throw err;
+    return copy ? { xml: copy.xml, state: 'stale' } : { busy: true };
+  }
+}
+
 /** Builds (or serves from KV) one feed; one D1 read per feed per cache window. */
 async function serveFeed(
   c: Context<AppEnv>,
@@ -150,37 +189,55 @@ async function serveFeed(
   if ('error' in resolved) return c.json(failure('not_found', resolved.error), 404);
   const { page } = resolved;
   const key = feedKey(slug, segment, value);
-  let xml = await c.env.CACHE.get(key, 'text').catch(() => null);
-  let hit = true;
-  if (!xml) {
-    hit = false;
-    const since = new Date(Date.now() - FEED_DAYS * 86_400_000).toISOString();
-    const filters = page.facet ? { [page.facet.spec.field]: page.facet.value } : {};
-    const { rows } = await queryD1Changes(c.env, page.source, {
-      since,
-      page: 1,
-      per_page: FEED_MAX_ENTRIES,
-      filters,
-    });
-    xml = renderAtom(publicBaseUrl(c.env), page, rows, new Date().toISOString());
-    await c.env.CACHE.put(key, xml, { expirationTtl: FEED_CACHE_SECONDS }).catch(() => undefined);
+  const cached = await c.env.CACHE.getWithMetadata<{ builtAt?: number }>(key, 'text').catch(
+    () => null,
+  );
+  const copy: FeedCopy | null = cached?.value
+    ? { xml: cached.value, builtAt: cached.metadata?.builtAt ?? null }
+    : null;
+  const now = Date.now();
+  const answer = await feedAnswer(
+    copy,
+    async () => {
+      const since = new Date(now - FEED_DAYS * 86_400_000).toISOString();
+      const filters = page.facet ? { [page.facet.spec.field]: page.facet.value } : {};
+      const { rows } = await queryD1Changes(c.env, page.source, {
+        since,
+        page: 1,
+        per_page: FEED_MAX_ENTRIES,
+        filters,
+      });
+      return renderAtom(publicBaseUrl(c.env), page, rows, new Date(now).toISOString());
+    },
+    (built) =>
+      c.env.CACHE.put(key, built, {
+        expirationTtl: FEED_STALE_SECONDS,
+        metadata: { builtAt: now },
+      }).catch(() => undefined),
+    now,
+  );
+  if ('busy' in answer) {
+    c.header('Retry-After', String(D1_OVERLOAD_RETRY_AFTER_S));
+    return c.json(
+      failure('unavailable', `Feed is busy, retry in ${D1_OVERLOAD_RETRY_AFTER_S} s`),
+      503,
+    );
   }
+  const { xml, state } = answer;
   try {
     c.env.TRAFFIC.writeDataPoint({
-      blobs: [
-        'rest_feed',
-        c.req.header('User-Agent') ?? '',
-        c.req.path,
-        hit ? 'hit' : 'miss',
-        slug,
-      ],
+      blobs: ['rest_feed', c.req.header('User-Agent') ?? '', c.req.path, state, slug],
       doubles: [1],
       indexes: ['rest_feed'],
     });
   } catch {
     // Analytics never fails a feed.
   }
-  c.header('Cache-Control', `public, max-age=${FEED_CACHE_SECONDS}`);
+  // A stale copy is not cached downstream for the hour: the next fetch should try the rebuild.
+  c.header(
+    'Cache-Control',
+    `public, max-age=${state === 'stale' ? D1_OVERLOAD_RETRY_AFTER_S : FEED_CACHE_SECONDS}`,
+  );
   return c.body(xml, 200, { 'Content-Type': 'application/atom+xml; charset=utf-8' });
 }
 

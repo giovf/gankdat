@@ -3,7 +3,15 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { refreshD1Source } from '../src/sources/d1store';
 import type { ChangeRow } from '../src/sources/d1store';
 import { ukCareLocationsSource } from '../src/sources/uk-care-locations';
-import { entryTitle, feedUrl, listFeeds, renderAtom, renderOpml } from '../src/routes/feeds';
+import {
+  FEED_CACHE_SECONDS,
+  entryTitle,
+  feedAnswer,
+  feedUrl,
+  listFeeds,
+  renderAtom,
+  renderOpml,
+} from '../src/routes/feeds';
 import { hasChangeFeed, listSources } from '../src/sources/registry';
 import { stubOrigins } from './helpers/origin-mock';
 
@@ -192,5 +200,55 @@ describe('GET /feeds', () => {
     expect(await (await SELF.fetch('https://example.com/llms.txt')).text()).toContain(
       'https://gankdat.com/feeds/opml',
     );
+  });
+});
+
+describe('feedAnswer', () => {
+  const overloaded = (): Promise<string> =>
+    Promise.reject(
+      new Error(
+        'D1_ERROR: D1 DB is overloaded. Too many resources consumed within a 10 second window.',
+      ),
+    );
+  const NOW = Date.UTC(2026, 10, 18, 14, 3);
+  const HOUR = FEED_CACHE_SECONDS * 1000;
+
+  it('serves the copy inside the hour without a build, and rebuilds and stores after it', async () => {
+    const build = vi.fn(() => Promise.resolve('<feed>new</feed>'));
+    const store = vi.fn(() => Promise.resolve());
+    const fresh = { xml: '<feed>old</feed>', builtAt: NOW - HOUR + 1000 };
+    expect(await feedAnswer(fresh, build, store, NOW)).toEqual({ xml: fresh.xml, state: 'hit' });
+    expect(build).not.toHaveBeenCalled();
+    // A copy stored before the change carries no build time and had a one-hour TTL: still fresh.
+    expect(await feedAnswer({ xml: 'x', builtAt: null }, build, store, NOW)).toEqual({
+      xml: 'x',
+      state: 'hit',
+    });
+
+    const old = { xml: '<feed>old</feed>', builtAt: NOW - HOUR - 1 };
+    expect(await feedAnswer(old, build, store, NOW)).toEqual({
+      xml: '<feed>new</feed>',
+      state: 'miss',
+    });
+    expect(store).toHaveBeenCalledWith('<feed>new</feed>');
+  });
+
+  it('answers the last copy when D1 refuses the rebuild, busy when there is none', async () => {
+    const store = vi.fn(() => Promise.resolve());
+    const old = { xml: '<feed>old</feed>', builtAt: NOW - 30 * HOUR };
+    expect(await feedAnswer(old, overloaded, store, NOW)).toEqual({ xml: old.xml, state: 'stale' });
+    expect(await feedAnswer(null, overloaded, store, NOW)).toEqual({ busy: true });
+    expect(store).not.toHaveBeenCalled();
+  });
+
+  it('lets any other failure through', async () => {
+    await expect(
+      feedAnswer(
+        null,
+        () => Promise.reject(new Error('no such table')),
+        () => Promise.resolve(),
+        NOW,
+      ),
+    ).rejects.toThrow('no such table');
   });
 });
