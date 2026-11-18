@@ -17,13 +17,9 @@
 // Exit 0 with the lines (or a `worker errors body:` head when there are none), 1 only when the
 // token is missing or the API refuses (a 403 names the missing Workers Observability Read scope).
 
-import {
-  ERROR_LOG_HOURS,
-  errorLinesReport,
-  errorLogQuery,
-  foldErrorLines,
-} from '../src/lib/error-lines.ts';
+import { ERROR_LOG_HOURS } from '../src/lib/error-lines.ts';
 import { WAVE_LOG_QUERY_PATH } from '../src/lib/wave-logs.ts';
+import { readErrorLines } from '../src/lib/error-lines.ts';
 import { DOOR_DAYS, doorEventsQueries, doorEventsReport } from '../src/lib/door-events.ts';
 
 const ACCOUNT_ID = '37e56f3ce4dfe49919e85d4380467f44'; // not a secret
@@ -63,20 +59,17 @@ for (const query of doorEventsQueries(doorDays)) {
 }
 for (const line of doorEventsReport(doorRows, doorDays)) console.log(line);
 
-const res = await fetch(
-  `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}${WAVE_LOG_QUERY_PATH}`,
-  {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-    body: JSON.stringify(errorLogQuery(Date.now(), hours)),
-  },
-);
-const text = await res.text();
-if (!res.ok) {
-  console.error(
-    `HTTP ${res.status}${res.status === 403 ? ' (token lacks Workers Observability Read)' : ` ${text.replace(/\s+/g, ' ').slice(0, 160)}`}`,
+// The read is paged and re-read in halves when sampled; its first two lines say how complete it is
+// (gankdat `worker-logs-read-completeness`, 2026-11-18, src/lib/log-read.ts).
+try {
+  const reading = await readErrorLines(
+    `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}${WAVE_LOG_QUERY_PATH}`,
+    { Authorization: `Bearer ${token}` },
+    Date.now(),
+    hours,
   );
+  for (const line of reading.report) console.log(line);
+} catch (err) {
+  console.error(err.message);
   process.exit(1);
 }
-for (const line of errorLinesReport(foldErrorLines(JSON.parse(text)), text, hours))
-  console.log(line);

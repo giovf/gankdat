@@ -6,9 +6,19 @@
 // numbers row counted refresh errors only). The row now names the day's error messages, most
 // frequent first, so a 500 on any route is diagnosable from the repo the next morning.
 import { STATS_LOG_SERVICE } from './crawler-hits.ts';
+import {
+  logReadLine,
+  readLogEvents,
+  storedCountLine,
+  storedCountOf,
+  storedCountQuery,
+  type LogQuery,
+} from './log-read.ts';
 
 export const ERROR_LOG_HOURS = 24;
 export const ERROR_LOG_LIMIT = 500;
+/** Most error lines one reading collects over its pages (gankdat `worker-logs-read-completeness`). */
+export const ERROR_LOG_WANT = 6000;
 const TOP = 3;
 const MESSAGE_CHARS = 90;
 
@@ -17,7 +27,7 @@ export function errorLogQuery(
   nowMs: number,
   hours = ERROR_LOG_HOURS,
   limit = ERROR_LOG_LIMIT,
-): Record<string, unknown> {
+): LogQuery {
   return {
     queryId: 'worker-error-lines',
     timeframe: { from: nowMs - hours * 60 * 60 * 1000, to: nowMs },
@@ -242,4 +252,65 @@ export function errorLinesReport(
   if (folded.lines === 0) out.push(`worker errors body: ${rawBody.slice(0, 400)}`);
   out.push(errorLinesNote(folded, hours));
   return out;
+}
+
+export interface ErrorLinesReading {
+  /** The job-log lines: the read's completeness head, the store's sampling, then the report. */
+  report: string[];
+  /** The Daily numbers clause; a partial reading carries `, partial read: <why>` inside it. */
+  note: string;
+}
+
+/**
+ * The whole reading both callers make (gankdat `worker-logs-read-completeness`, 2026-11-18): the
+ * error lines read through `readLogEvents` — paged past one page's 2000, a sampled window re-read in
+ * halves — with the head line saying how many of the matched lines came back, and one `count`
+ * calculation for the store's sample interval. On 11-18 the same query printed 160 lines and, ninety
+ * seconds later, 0, and the 0 would have been the row. Throws `HTTP <status> …` when the API refuses
+ * the events read; a refused count is one `log store: count n/a` line.
+ */
+export async function readErrorLines(
+  url: string,
+  headers: Record<string, string>,
+  nowMs: number,
+  hours = ERROR_LOG_HOURS,
+  fetcher: typeof fetch = fetch,
+): Promise<ErrorLinesReading> {
+  let firstText = '';
+  const post = async (query: LogQuery): Promise<unknown> => {
+    const res = await fetcher(url, {
+      method: 'POST',
+      headers: { ...headers, 'content-type': 'application/json' },
+      body: JSON.stringify(query),
+    });
+    const body = await res.text();
+    if (!res.ok) {
+      throw new Error(
+        `HTTP ${res.status}${res.status === 403 ? ' (token lacks Workers Observability Read)' : ` ${body.replace(/\s+/g, ' ').slice(0, 160)}`}`,
+      );
+    }
+    if (firstText === '') firstText = body;
+    return JSON.parse(body) as unknown;
+  };
+  const query = errorLogQuery(nowMs, hours);
+  const read = await readLogEvents(post, query, ERROR_LOG_WANT);
+  const rawHead = firstText;
+  let stored: string;
+  try {
+    stored = storedCountLine(storedCountOf(await post(storedCountQuery(query))));
+  } catch (err) {
+    stored = storedCountLine(null, String(err).replace(/\s+/g, ' ').slice(0, 160));
+  }
+  const folded = foldErrorLines(read.body);
+  const note = errorLinesNote(folded, hours);
+  const partial = read.stats.partial.length > 0 ? `partial read: ${read.stats.partial[0]}` : '';
+  return {
+    report: [logReadLine(read.stats), stored, ...errorLinesReport(folded, rawHead, hours)],
+    note:
+      partial === ''
+        ? note
+        : note.endsWith(')')
+          ? `${note.slice(0, -1)}; ${partial})`
+          : `${note} (${partial})`,
+  };
 }

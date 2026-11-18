@@ -710,28 +710,19 @@ const claudeCallersNote = await (async () => {
 // Apify's QA runner got that 500 from the company lookup for three days before anyone could read
 // the message (no sandbox reads Workers Logs). src/lib/error-lines.ts folds the lines by message;
 // a missing token or permission reads `n/a (<why>)` and the rest of the row survives.
-const { errorLogQuery, foldErrorLines, errorLinesNote, errorLinesReport } =
-  await import('../src/lib/error-lines.ts');
+// Completeness (gankdat `worker-logs-read-completeness`, 2026-11-18): the read is paged and a
+// sampled window re-read in halves; a reading that is still partial says so in the row's clause.
+const { readErrorLines } = await import('../src/lib/error-lines.ts');
 const workerErrorsNote = await (async () => {
-  const res = await fetch(
+  const reading = await readErrorLines(
     `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/workers/observability/telemetry/query`,
-    {
-      method: 'POST',
-      headers: { ...headers, 'content-type': 'application/json' },
-      body: JSON.stringify(errorLogQuery(Date.now())),
-    },
+    headers,
+    Date.now(),
   );
-  const text = await res.text();
-  if (!res.ok) {
-    throw new Error(
-      `HTTP ${res.status}${res.status === 403 ? ' (token lacks Workers Observability Read)' : ` ${text.replace(/\s+/g, ' ').slice(0, 160)}`}`,
-    );
-  }
-  const folded = foldErrorLines(JSON.parse(text));
   // One plain line per message (GitHub's log masking mangles JSON braces, 2026-10-29 19:40); the
   // same lines the `probe` dispatch prints through scripts/error-lines.mjs (2026-11-02).
-  for (const line of errorLinesReport(folded, text)) console.log(line);
-  return errorLinesNote(folded);
+  for (const line of reading.report) console.log(line);
+  return reading.note;
 })().catch((e) => `worker errors 24h: n/a (${e.message.slice(0, 100)})`);
 
 // Per-dataset authed queries over 30 days (build 2026-10-04, queue `metrics-dataset-queries-30d`):
