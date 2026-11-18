@@ -6,7 +6,13 @@
 // 91 minutes). The Daily numbers job prints the same lines (src/lib/error-lines.ts
 // `errorLinesReport`) before it writes the row's `worker errors 24h:` clause.
 //
-//   CLOUDFLARE_API_TOKEN=… node --disable-warning=ExperimentalWarning ventures/gankdat/scripts/error-lines.mjs [--hours=24]
+//   CLOUDFLARE_API_TOKEN=… node --disable-warning=ExperimentalWarning ventures/gankdat/scripts/error-lines.mjs [--hours=24] [--door-days=7]
+//
+// Before the error lines it prints the door, event by event (gankdat `mcp-buy-attempt-read-2026-11-16`,
+// 2026-11-18, src/lib/door-events.ts): every keyless call to a protected or sign-up tool and every
+// OAuth leg of the last 7 days from Analytics Engine, in time order — Workers Logs keep about one
+// request in a hundred, so who asked to buy or opened the sign-in page is read here. A refusal of
+// that read is one line and never stops the error lines.
 //
 // Exit 0 with the lines (or a `worker errors body:` head when there are none), 1 only when the
 // token is missing or the API refuses (a 403 names the missing Workers Observability Read scope).
@@ -18,6 +24,7 @@ import {
   foldErrorLines,
 } from '../src/lib/error-lines.ts';
 import { WAVE_LOG_QUERY_PATH } from '../src/lib/wave-logs.ts';
+import { DOOR_DAYS, doorEventsQuery, doorEventsReport } from '../src/lib/door-events.ts';
 
 const ACCOUNT_ID = '37e56f3ce4dfe49919e85d4380467f44'; // not a secret
 
@@ -35,6 +42,23 @@ if (!token) {
   process.exit(1);
 }
 const hours = Math.max(1, Math.min(168, Number(flag('hours', ERROR_LOG_HOURS)) || ERROR_LOG_HOURS));
+
+const doorDays = Math.max(1, Number(flag('door-days', DOOR_DAYS)) || DOOR_DAYS);
+try {
+  const doorRes = await fetch(
+    `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/analytics_engine/sql`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: doorEventsQuery(doorDays),
+    },
+  );
+  const doorBody = await doorRes.json();
+  if (!doorBody.data) throw new Error(JSON.stringify(doorBody).slice(0, 200));
+  for (const line of doorEventsReport(doorBody.data, doorDays)) console.log(line);
+} catch (err) {
+  console.log(`door events ${doorDays}d: read failed: ${String(err).slice(0, 200)}`);
+}
 
 const res = await fetch(
   `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}${WAVE_LOG_QUERY_PATH}`,
