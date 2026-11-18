@@ -4,6 +4,8 @@ import { computeStats } from '../src/lib/stats';
 import { putSourceStats, snapshotWrites } from '../src/sources/cache';
 import { getSource, listSources } from '../src/sources/registry';
 import { isRunnerFed, refreshAllSources } from '../src/sources/store';
+import { nextWave } from '../src/lib/next-wave';
+import { filterSitemap, unloadedStatsSlugs } from '../src/routes/sitemap';
 import { planningResponse, stubOrigins, tendersResponse } from './helpers/origin-mock';
 
 function stubBoth(): void {
@@ -338,12 +340,76 @@ describe('GET /stats', () => {
     }
   });
 
-  it('returns 503 (never refreshes) for a source whose stats are not yet computed', async () => {
-    // Public page must not drive a refresh; before any cron/refresh it warms.
-    const res = await SELF.fetch('https://example.com/stats/uk-tenders');
+  it('answers a short dated page, 503 + Retry-After past the wave, for a source not yet loaded', async () => {
+    // Public page must not drive a refresh; before any cron/refresh it says when the load runs.
+    const res = await SELF.fetch('https://example.com/stats/uk-gender-pay-gap');
     expect(res.status).toBe(503);
-    const body = (await res.json()) as { ok: boolean; error: { code: string } };
-    expect(body.error.code).toBe('unavailable');
+    expect(res.headers.get('content-type')).toContain('text/html');
+    expect(res.headers.get('X-Robots-Tag')).toBe('noindex');
+    expect(res.headers.get('Cache-Control')).toBe('no-store');
+    // Wave 2 is 05:15 UTC: the retry lands within a day plus the 20-minute margin, after the wave.
+    const retry = Number(res.headers.get('Retry-After'));
+    expect(retry).toBeGreaterThan(20 * 60);
+    expect(retry).toBeLessThanOrEqual(24 * 3600 + 20 * 60);
+    const html = await res.text();
+    expect(html).toContain('<b>Not loaded yet.</b>');
+    expect(html).toMatch(/Its next load runs (today|tomorrow) at 05:15 UTC/);
+    expect(html).toContain(getSource('uk-gender-pay-gap')!.description.slice(0, 20));
+    expect(await env.CACHE.get('data:uk-gender-pay-gap')).toBeNull(); // nothing was refreshed
+  });
+
+  it('nextWave reads a daily cron against the clock', () => {
+    const at = (iso: string): number => Date.parse(iso);
+    expect(nextWave('15 5 * * *', at('2026-11-18T05:00:00Z'))).toEqual({
+      at: '05:15',
+      day: 'today',
+      inSeconds: 900,
+    });
+    expect(nextWave('15 5 * * *', at('2026-11-18T05:15:00Z'))).toEqual({
+      at: '05:15',
+      day: 'tomorrow',
+      inSeconds: 86_400,
+    });
+    expect(nextWave('5 6 * * *', at('2026-11-18T23:42:00Z'))?.inSeconds).toBe(6 * 3600 + 23 * 60);
+    expect(nextWave(null, 0)).toBeNull();
+    expect(nextWave('*/5 * * * *', 0)).toBeNull();
+  });
+
+  it('the sitemap leaves out the stats pages of registers with nothing loaded', async () => {
+    const xml = [
+      '<urlset>',
+      '  <url><loc>https://gankdat.com/</loc></url>',
+      '  <url><loc>https://gankdat.com/stats</loc></url>',
+      '  <url><loc>https://gankdat.com/stats/uk-tenders</loc></url>',
+      '  <url><loc>https://gankdat.com/stats/uk-gender-pay-gap</loc></url>',
+      '  <url>\n    <loc>https://gankdat.com/stats/uk-gender-pay-gap/year/2025</loc>\n  </url>',
+      '  <url><loc>https://gankdat.com/feeds/uk-gender-pay-gap.xml</loc></url>',
+      '</urlset>',
+      '',
+    ].join('\n');
+    const filtered = filterSitemap(xml, ['uk-gender-pay-gap']);
+    expect(filtered).toBe(
+      [
+        '<urlset>',
+        '  <url><loc>https://gankdat.com/</loc></url>',
+        '  <url><loc>https://gankdat.com/stats</loc></url>',
+        '  <url><loc>https://gankdat.com/stats/uk-tenders</loc></url>',
+        '  <url><loc>https://gankdat.com/feeds/uk-gender-pay-gap.xml</loc></url>',
+        '</urlset>',
+        '',
+      ].join('\n'),
+    );
+    expect(filterSitemap(xml, [])).toBe(xml);
+
+    // Nothing is loaded in a fresh test: every wave-fed register without a notice is listed,
+    // a loaded one is not, and lookup and paused sources (which always answer a page) never are.
+    const tenders = getSource('uk-tenders')!;
+    await putSourceStats(env, tenders, computeStats([], tenders.stats), '2026-11-18T05:00:00Z');
+    const unloaded = await unloadedStatsSlugs(env);
+    expect(unloaded).toContain('uk-gender-pay-gap');
+    expect(unloaded).not.toContain('uk-tenders');
+    expect(unloaded).not.toContain('uk-company-profiles');
+    expect(unloaded).not.toContain('uk-planning');
   });
 
   it('serves a citable page per source from precomputed stats', async () => {

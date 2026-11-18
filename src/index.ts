@@ -9,6 +9,7 @@ import { meterCredits } from './metering/middleware';
 import { rateLimit } from './metering/ratelimit';
 import { canonicalHost, staticAssets } from './middleware/canonical';
 import { noindexWalls } from './middleware/robots';
+import { sitemapWithoutUnloaded } from './routes/sitemap';
 import { structuredLogger } from './middleware/logging';
 import { restTraffic } from './middleware/traffic';
 import { refreshAllSources } from './sources/store';
@@ -38,6 +39,8 @@ const app = new Hono<AppEnv>();
 // static files via the assets binding (their CSP comes from public/_headers and
 // must not pass through secureHeaders below), then the dynamic middleware.
 app.use('*', canonicalHost());
+// The sitemap leaves out a stats page whose register has not loaded yet (routes/sitemap.ts, 2026-11-18).
+app.use('*', sitemapWithoutUnloaded());
 app.use('*', staticAssets());
 // Every 401/402 wall answers `X-Robots-Tag: noindex` (Search Console 2026-10-15; middleware/robots.ts).
 app.use('*', noindexWalls());

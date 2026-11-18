@@ -6,7 +6,8 @@ import type { FacetPage, FacetStats, MonthlyTrend, SourceStats, StatsGroup } fro
 import { isolateRateLimit } from '../metering/ratelimit';
 import { isLookup } from '../sources/lookup';
 import { getSource, hasChangeFeed, listSources } from '../sources/registry';
-import { sourceStats } from '../sources/store';
+import { nextWave } from '../lib/next-wave';
+import { cronOfSource, sourceStats } from '../sources/store';
 import type { DataSource } from '../sources/types';
 import type { AppEnv } from '../types';
 
@@ -464,6 +465,39 @@ its URL and the last-refreshed date.</p>
 </main></body></html>`;
 }
 
+/** A wave runs up to 15 minutes; a crawler told to come back is told to come back after it. */
+const WAVE_MARGIN_S = 20 * 60;
+
+/** The page of a register with nothing loaded yet: what it is and when its first numbers arrive. */
+function preparingPageHtml(
+  source: DataSource,
+  baseUrl: string,
+  wave: { at: string; day: 'today' | 'tomorrow' } | null,
+): string {
+  const when = wave
+    ? `Its next load runs ${wave.day} at ${wave.at} UTC; the statistics appear here a few minutes after.`
+    : 'Its statistics appear here after the next daily refresh.';
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" href="/favicon.png">
+<title>${esc(source.title)} — statistics | gankdat</title>
+<link rel="canonical" href="${baseUrl}/stats/${source.slug}">
+<style>${STYLE}</style>
+</head>
+<body><main>
+<p class="muted"><a href="/">gankdat</a> / <a href="/stats">stats</a></p>
+<h1>${esc(source.title)} — <b>statistics</b></h1>
+<p class="muted">${esc(source.description)}</p>
+<p><b>Not loaded yet.</b> ${esc(when)}</p>
+<p class="muted">The dataset's fields and filters are already in the <a href="/docs">docs</a>;
+other registers' statistics are on the <a href="/stats">stats index</a>.</p>
+</main></body></html>`;
+}
+
 export const statsRoutes = new Hono<AppEnv>()
   .use('*', async (c, next) => {
     const ip = c.req.header('CF-Connecting-IP') ?? 'unknown';
@@ -512,11 +546,14 @@ export const statsRoutes = new Hono<AppEnv>()
         c.header('Cache-Control', 'public, max-age=3600');
         return c.html(pausedPageHtml(source, publicBaseUrl(c.env)));
       }
-      c.header('Retry-After', '3600');
-      return c.json(
-        failure('unavailable', 'Statistics are being prepared for this dataset; check back soon'),
-        503,
-      );
+      // Not loaded yet (a register's first evening, or a blob that expired): a short dated page,
+      // 503 with Retry-After to just past its wave, never indexed (2026-11-18,
+      // `stats-page-before-first-load` — crawlers met a bare JSON 503 on both ESG registers).
+      const wave = nextWave(cronOfSource(source), Date.now());
+      c.header('Retry-After', String(wave ? wave.inSeconds + WAVE_MARGIN_S : 3600));
+      c.header('X-Robots-Tag', 'noindex');
+      c.header('Cache-Control', 'no-store');
+      return c.html(preparingPageHtml(source, publicBaseUrl(c.env), wave), 503);
     }
     c.header('Cache-Control', 'public, max-age=3600');
     return c.html(pageHtml(source, result.stats, result.last_refreshed_at, publicBaseUrl(c.env)));
