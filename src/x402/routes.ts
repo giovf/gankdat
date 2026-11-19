@@ -27,7 +27,8 @@ import { bazaarRoutes, isX402Network, X402_NETWORKS, type X402Lane } from './baz
 // ≈2.4 s of module evaluation (gankdat-test-setup, 2026-10-06) and weighs on every
 // Worker cold start while the lane ships dark. The resource server is then kept per
 // configuration for the isolate's life: its facilitator handshake (GET /supported)
-// runs once, not per request, and the 17 route declarations are built once.
+// runs until it has succeeded once (each cold request its own — see `startedPerRequest`), and
+// the route declarations are built once.
 
 const DEFAULT_PRICE_USD = X402_DEFAULT_PRICE_USD;
 const DEFAULT_NETWORK = 'base';
@@ -90,8 +91,8 @@ function muteCodegenNoise(): void {
 async function buildLane(env: CloudflareBindings, lane: X402Lane): Promise<MiddlewareHandler> {
   muteCodegenNoise();
   const [
-    { paymentMiddleware },
-    { HTTPFacilitatorClient, x402ResourceServer },
+    { paymentMiddlewareFromHTTPServer },
+    { HTTPFacilitatorClient, x402HTTPResourceServer, x402ResourceServer },
     { ExactEvmScheme },
     { bazaarResourceServerExtension, declareDiscoveryExtension },
     { createFacilitatorConfig },
@@ -115,7 +116,41 @@ async function buildLane(env: CloudflareBindings, lane: X402Lane): Promise<Middl
   const server = new x402ResourceServer(new HTTPFacilitatorClient(facilitator))
     .register(X402_NETWORKS[lane.network], new ExactEvmScheme())
     .registerExtension(bazaarResourceServerExtension);
-  return paymentMiddleware(bazaarRoutes(lane, declareDiscoveryExtension), server);
+  // The handshake is ours to run, not the library's (gankdat `x402-init-failure-cause-read`,
+  // 2026-11-19). `paymentMiddleware` starts `initialize()` when it is built — inside whichever
+  // request met the cold isolate — and every later request awaits that one promise. workerd
+  // settles a promise only in the request that created it: when that first request ended early
+  // (a sweeping client that hung up), everyone behind it got "This promise was created by a
+  // request that has since ended, so it can never settle" — the whole of the 1, 2, 17, 52
+  // failures a day since 11-13 (11 of 11 `x402_init_failed` lines in the 15 h to 11-19 09:10,
+  // all attempt 1). So the library is told not to sync (`false`) and each request runs its own
+  // handshake until one has succeeded (`startedPerRequest`).
+  const httpServer = new x402HTTPResourceServer(
+    server,
+    bazaarRoutes(lane, declareDiscoveryExtension),
+  );
+  const middleware = paymentMiddlewareFromHTTPServer(httpServer, undefined, undefined, false);
+  const started = startedPerRequest(() => httpServer.initialize());
+  return async (c, next) => {
+    await started(); // a throw here is before the handler: `guardedLane` retries it once
+    return middleware(c, next);
+  };
+}
+
+/**
+ * A one-time start that no request ever awaits on another's behalf: until one call of `start`
+ * has succeeded, every caller runs its own — a promise made in one request is never handed to
+ * the next (workerd drops its settlement once the request that made it has ended). Concurrent
+ * cold requests each pay one start; after the first success nobody calls it again. A failed
+ * start is simply not remembered.
+ */
+export function startedPerRequest(start: () => Promise<void>): () => Promise<void> {
+  let done = false;
+  return async (): Promise<void> => {
+    if (done) return;
+    await start();
+    done = true;
+  };
 }
 
 /** What a client is told to wait when the payment server could not start (seconds). */

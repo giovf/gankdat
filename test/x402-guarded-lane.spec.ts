@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { guardedLane } from '../src/x402/routes';
+import { guardedLane, startedPerRequest } from '../src/x402/routes';
 
 // gankdat x402-init-failure-answer (2026-11-18): a payment-server start-up failure is retried
 // once and then answered as unavailable; a failure after the handler ran is never repeated.
@@ -82,5 +82,44 @@ describe('guardedLane', () => {
     expect('response' in outcome && outcome.response?.status).toBe(500);
     expect(run).toHaveBeenCalledTimes(1);
     expect(report).not.toHaveBeenCalled();
+  });
+});
+
+// gankdat x402-init-failure-cause-read (2026-11-19): the live message was workerd's "This promise
+// was created by a request that has since ended, so it can never settle" — the library's one
+// start-up promise, made in the first request and awaited by all. Each request now runs its own.
+describe('startedPerRequest', () => {
+  it("never makes a second request wait on the first request's start", async () => {
+    let calls = 0;
+    // The first caller's start never settles, as when its request ended; the second's does.
+    const start = vi.fn((): Promise<void> => {
+      calls += 1;
+      return calls === 1 ? new Promise<void>(() => undefined) : Promise.resolve();
+    });
+    const started = startedPerRequest(start);
+    void started();
+    await expect(started()).resolves.toBeUndefined();
+    expect(start).toHaveBeenCalledTimes(2);
+  });
+
+  it('stops calling start after the first success', async () => {
+    const start = vi.fn(() => Promise.resolve());
+    const started = startedPerRequest(start);
+    await started();
+    await started();
+    await started();
+    expect(start).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not remember a failed start', async () => {
+    const start = vi
+      .fn<() => Promise<void>>()
+      .mockRejectedValueOnce(new Error('Facilitator getSupported failed (503)'))
+      .mockResolvedValueOnce();
+    const started = startedPerRequest(start);
+    await expect(started()).rejects.toThrow('getSupported failed');
+    await expect(started()).resolves.toBeUndefined();
+    await started();
+    expect(start).toHaveBeenCalledTimes(2);
   });
 });
