@@ -8,6 +8,7 @@ import {
   storedCountOf,
   storedCountQuery,
   withStoredCount,
+  withTransientRetry,
   type LogQuery,
 } from '../src/lib/log-read.js';
 import { readErrorLines } from '../src/lib/error-lines.js';
@@ -225,5 +226,55 @@ describe('complete Workers Logs read', () => {
     await expect(readErrorLines('https://example.test/q', {}, 1, 24, refused)).rejects.toThrow(
       'HTTP 403 (token lacks Workers Observability Read)',
     );
+  });
+});
+
+describe('withTransientRetry', () => {
+  const waits: number[] = [];
+  const sleep = (ms: number): Promise<void> => {
+    waits.push(ms);
+    return Promise.resolve();
+  };
+
+  it('tries a 5xx again and returns the later answer', async () => {
+    waits.length = 0;
+    let calls = 0;
+    const post = withTransientRetry(
+      (q: string): Promise<string> => {
+        calls += 1;
+        return calls < 3
+          ? Promise.reject(new Error(`HTTP ${calls === 1 ? 500 : 504}: Internal error`))
+          : Promise.resolve(`ok ${q}`);
+      },
+      [1, 2],
+      sleep,
+    );
+    await expect(post('a')).resolves.toBe('ok a');
+    expect(calls).toBe(3);
+    expect(waits).toEqual([1, 2]);
+  });
+
+  it('throws a refusal at once and a lasting 5xx with the number of tries', async () => {
+    waits.length = 0;
+    let calls = 0;
+    const refused = withTransientRetry(
+      (): Promise<never> => {
+        calls += 1;
+        return Promise.reject(new Error('HTTP 403 (token lacks Workers Observability Read)'));
+      },
+      [1, 2],
+      sleep,
+    );
+    await expect(refused(undefined)).rejects.toThrow('HTTP 403');
+    expect(calls).toBe(1);
+    expect(waits).toEqual([]);
+
+    const down = withTransientRetry(
+      (): Promise<never> => Promise.reject(new Error('HTTP 500: Internal error')),
+      [1, 2],
+      sleep,
+    );
+    await expect(down(undefined)).rejects.toThrow('HTTP 500: Internal error (after 3 tries)');
+    expect(waits).toEqual([1, 2]);
   });
 });

@@ -33,6 +33,43 @@ const MIN_WINDOW_MS = 60 * 1000;
 
 export type LogQuery = Record<string, unknown> & { timeframe: { from: number; to: number } };
 
+/** Waits before the second and third try of a POST the API answered 429 or 5xx. */
+export const LOG_POST_RETRY_DELAYS_MS: readonly number[] = [3000, 10000];
+
+/** True for the `HTTP <status>` errors both callers throw when the status is 429 or 5xx. */
+export function isTransientLogError(err: unknown): boolean {
+  return /^HTTP (429|5\d\d)\b/.test(err instanceof Error ? err.message : String(err));
+}
+
+/**
+ * A `post` that tries again when Workers Logs answers 429 or 5xx (foundry `ci-worker-logs-failing`,
+ * 2026-11-19): the query API answered `HTTP 500 Internal error` to a 1,500-minute read (run 41) and
+ * 504 the day before (run 34), each a one-off the next dispatch did not see, and one refusal failed
+ * the whole job. A 4xx (bad token, bad query) is thrown at once; the last transient error is thrown
+ * with the number of tries, so a real outage still fails loudly.
+ */
+export function withTransientRetry<Q, R>(
+  post: (query: Q) => Promise<R>,
+  delaysMs: readonly number[] = LOG_POST_RETRY_DELAYS_MS,
+  sleep: (ms: number) => Promise<void> = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+): (query: Q) => Promise<R> {
+  return async (query: Q): Promise<R> => {
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        return await post(query);
+      } catch (err) {
+        if (!isTransientLogError(err)) throw err;
+        const delay = delaysMs[attempt];
+        if (delay === undefined) {
+          const message = err instanceof Error ? err.message : String(err);
+          throw new Error(`${message} (after ${attempt + 1} tries)`, { cause: err });
+        }
+        await sleep(delay);
+      }
+    }
+  };
+}
+
 export interface LogReadStats {
   /** Distinct events collected. */
   returned: number;

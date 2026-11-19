@@ -13,6 +13,7 @@ import {
   storedCountOf,
   storedCountQuery,
   withStoredCount,
+  withTransientRetry,
   type LogQuery,
 } from './log-read.ts';
 
@@ -278,7 +279,8 @@ export async function readErrorLines(
   fetcher: typeof fetch = fetch,
 ): Promise<ErrorLinesReading> {
   let firstText = '';
-  const post = async (query: LogQuery): Promise<unknown> => {
+  // A 429 or 5xx is tried three times in all (log-read.ts withTransientRetry, 2026-11-19).
+  const post = withTransientRetry(async (query: LogQuery): Promise<unknown> => {
     const res = await fetcher(url, {
       method: 'POST',
       headers: { ...headers, 'content-type': 'application/json' },
@@ -292,7 +294,7 @@ export async function readErrorLines(
     }
     if (firstText === '') firstText = body;
     return JSON.parse(body) as unknown;
-  };
+  });
   const query = errorLogQuery(nowMs, hours);
   const read = await readLogEvents(post, query, ERROR_LOG_WANT);
   const rawHead = firstText;

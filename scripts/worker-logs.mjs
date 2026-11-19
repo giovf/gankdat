@@ -11,7 +11,8 @@
 //   CLOUDFLARE_API_TOKEN=… node ventures/gankdat/scripts/worker-logs.mjs \
 //     [--needle=/v1/uk-company-profiles] [--request-id=…] [--level=error] [--since-minutes=60] [--limit=50]
 //
-// Exit 0 with lines (or `no lines`), 1 only when the API refuses or the token is missing.
+// Exit 0 with lines (or `no lines`), 1 only when the API refuses (a 429 or 5xx three times running,
+// any other error at once) or the token is missing.
 //
 // Completeness (gankdat `worker-logs-read-completeness`, 2026-11-18, src/lib/log-read.ts): the head
 // of the output is `log read: N returned of M matched — complete | PARTIAL: <why>` and `log store:
@@ -29,6 +30,7 @@ import {
   storedCountOf,
   storedCountQuery,
   withStoredCount,
+  withTransientRetry,
 } from '../src/lib/log-read.ts';
 
 const ACCOUNT_ID = '37e56f3ce4dfe49919e85d4380467f44'; // not a secret
@@ -94,7 +96,8 @@ async function main() {
       (options.level ? `, level ${options.level}` : '') +
       `, limit ${options.limit}`,
   );
-  const post = async (q) => {
+  // A 429 or 5xx is tried three times in all (run 41: one HTTP 500 failed the job; log-read.ts).
+  const post = withTransientRetry(async (q) => {
     const res = await fetch(`${API}${WAVE_LOG_QUERY_PATH}`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'content-type': 'application/json' },
@@ -110,7 +113,7 @@ async function main() {
     } catch {
       throw new Error(`unparseable body: ${bodyText.slice(0, 400)}`);
     }
-  };
+  });
   let read;
   try {
     read = await readLogEvents(post, query, options.limit);
